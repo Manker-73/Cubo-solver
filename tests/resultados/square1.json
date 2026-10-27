@@ -6,7 +6,7 @@
   "msPorScramble": 0.71,
   "barrasMedias": 15.2,
   "casos": 100,
-  "fecha": "2026-10-27T23:43:11.656Z",
+  "fecha": "2026-10-27T23:52:04.984Z",
   "formasCapa": 29,
   "combinacionesFormas": 170,
   "combinacionesConGiros": 19305,
@@ -14,27 +14,27 @@
   "paridad": "sin restricción: grupo en forma de cubo = 8!·8!·2; todas las formas con las 4 combinaciones paridad/medio",
   "scramble": {
     "scrambles": 100,
-    "longitudMedia": 23.98,
+    "longitudMedia": 23.83,
     "longitudMin": 17,
     "longitudMax": 31,
-    "msPorScramble": 92.76,
-    "barrasMedias": 11.69,
-    "movimientosWCAMedios": 24.25,
-    "giroMetricaMedia": 32.56,
+    "msPorScramble": 91.04,
+    "barrasMedias": 11.71,
+    "movimientosWCAMedios": 24.28,
+    "giroMetricaMedia": 32.62,
     "minMovimientosWCA": 19,
     "empiezanPorBarra": 0
   },
   "solver": {
     "resueltos": "100/100 (100.0%)",
-    "barrasMedia": 11.47,
+    "barrasMedia": 11.49,
     "barrasMax": 15,
-    "movimientosWCAMedia": 23.87,
+    "movimientosWCAMedia": 23.91,
     "movimientosWCAMax": 31,
-    "giroMetricaMedia": 31.93,
+    "giroMetricaMedia": 31.99,
     "giroMetricaMax": 45,
-    "msMedio": 208.3,
-    "msMax": 337,
-    "msInicializacion": 848,
+    "msMedio": 207.9,
+    "msMax": 325.7,
+    "msInicializacion": 951,
     "casosQueEmpiezanSinBarraPosible": 42
   },
   "girosImposibles": {
@@ -42,8 +42,8 @@
     "empezabanSinBarraPosible": 59,
     "estrella6": 10,
     "ochoAristas2": 10,
-    "msMedioPrimeraSolucion": 6.7,
-    "msMax": 59.5,
+    "msMedioPrimeraSolucion": 5.4,
+    "msMax": 56.9,
     "barrasMax": 16
   }
 }

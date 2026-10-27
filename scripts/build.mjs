@@ -1,22 +1,13 @@
 // Construye la app en un único HTML autocontenido:
 //   dist/index.html    -> documento completo (abrir con doble clic, sin servidor)
 //   dist/artifact.html -> el mismo contenido sin <html>/<head>/<body> (para publicarlo como artifact)
-import { build } from 'esbuild';
+//   El Web Worker se empaqueta aparte y va incrustado como texto: la app lo crea desde un blob.
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { construirApp, raiz } from './construir.mjs';
 
-const raiz = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
-const r = await build({
-  entryPoints: [path.join(raiz, 'src/app/main.js')],
-  bundle: true,
-  format: 'iife',
-  minify: true,
-  target: ['es2020'],
-  write: false,
-  legalComments: 'none',
-});
-const js = r.outputFiles[0].text.replace(/<\/script/gi, '<\\/script');
+const { app } = await construirApp();
+const js = app.replace(/<\/script/gi, '<\\/script');
 const css = fs.readFileSync(path.join(raiz, 'src/app/estilos.css'), 'utf8');
 const plantilla = fs.readFileSync(path.join(raiz, 'src/app/plantilla.html'), 'utf8');
 const cuerpo = plantilla.replace('/*ESTILOS*/', () => css).replace('/*SCRIPT*/', () => js);

@@ -1,25 +1,33 @@
 // Interfaz web: selector de puzzle, scrambles, editor de estado y reproducción de la solución.
-// Solo usa la interfaz común de los puzzles (ver ARQUITECTURA.md).
+// Solo usa la interfaz común de los puzzles (ver ARQUITECTURA.md). Lo pesado
+// (tablas, scrambles de estado aleatorio, validación y búsquedas) va a un Web
+// Worker a través de motor.js, con el hilo principal como alternativa.
 
 import { PUZZLES } from '../puzzles/index.js';
-import { rngSeguro } from '../core/rng.js';
+import { crearMotor } from './motor.js';
+
+/* global __CODIGO_WORKER__ */
+const CODIGO_WORKER = typeof __CODIGO_WORKER__ !== 'undefined' ? __CODIGO_WORKER__ : null;
 
 const $ = (id) => document.getElementById(id);
-const rng = rngSeguro();
 
 const st = {
   p: null,
   scramble: [],
   estadoScramble: null,
   editor: null,
-  color: 0,
-  sol: null,     // { movimientos, base, ms }
+  color: 0,       // índice en paleta + herramientas
+  seleccion: null, // primer toque de una herramienta de dos toques
+  sol: null,       // { movimientos, base, ms }
   paso: 0,
   timer: null,
   ocupado: false,
+  listos: new Set(), // puzzles con las tablas ya generadas (donde se calcula)
 };
 
 const esperarPintado = () => new Promise((r) => requestAnimationFrame(() => setTimeout(r, 30)));
+
+let motor = null;
 
 function puedeResolver(p) {
   return p.capacidades.resolver && p.capacidades.editar;
@@ -47,6 +55,11 @@ async function seleccionar(id) {
   pararReproduccion();
   st.p = p;
   st.color = 0;
+  if (p.herramientaInicial && p.herramientas) {
+    const k = p.herramientas.findIndex((h) => h.id === p.herramientaInicial);
+    if (k >= 0) st.color = p.paleta.length + k;
+  }
+  st.seleccion = null;
   st.editor = p.estadoResuelto();
   st.sol = null;
   try { localStorage.setItem('cubo-solver:puzzle', id); } catch { /* sin almacenamiento */ }
@@ -58,23 +71,35 @@ async function seleccionar(id) {
   $('tipo-scramble').textContent = p.tipoScramble || '';
   for (const b of ['resetear', 'cargar', 'resolver']) $(b).disabled = !activo;
   pintarPaleta();
+  pintarAccionesEditor();
   limpiarMensajes();
   pintarEditor();
   await nuevoScramble();
 }
 
-// ---------- Tablas ----------
+// ---------- Tablas (en el Worker o en el hilo principal) ----------
+function textoSegundos(ms) { return (ms / 1000).toFixed(1).replace('.', ',') + ' s'; }
+
 async function asegurarTablas() {
   const p = st.p;
-  if (p.estaInicializado()) return;
+  if (!p.capacidades.resolver || st.listos.has(p.id)) return;
   const aviso = $('aviso-tablas');
   aviso.hidden = false;
-  aviso.textContent = p.avisoInicializacion || 'Generando tablas de búsqueda…';
-  await esperarPintado();
+  aviso.classList.add('cargando');
+  const base = p.avisoInicializacion || 'Generando tablas de búsqueda…';
+  const dondeTxt = () => (motor.modo() === 'worker' ? ' (en segundo plano)' : '');
   const t0 = performance.now();
-  const r = p.inicializar();
-  const ms = Math.round(r && r.ms ? r.ms : performance.now() - t0);
-  aviso.textContent = `Tablas de ${p.nombre} generadas en el navegador en ${ms} ms.`;
+  aviso.textContent = base + dondeTxt();
+  const reloj = setInterval(() => { aviso.textContent = `${base}${dondeTxt()} ${textoSegundos(performance.now() - t0)}`; }, 100);
+  try {
+    const r = await motor.pedir('inicializar', p.id);
+    const ms = r.yaEstaba ? Math.round(performance.now() - t0) : r.ms;
+    st.listos.add(p.id);
+    if (st.p === p) aviso.textContent = `Tablas de ${p.nombre} generadas en ${ms} ms ${motor.modo() === 'worker' ? 'en un Web Worker (la página no se bloquea)' : 'en el hilo principal'}.`;
+  } finally {
+    clearInterval(reloj);
+    aviso.classList.remove('cargando');
+  }
 }
 
 // ---------- Scramble ----------
@@ -86,8 +111,13 @@ async function nuevoScramble() {
   try {
     if (p.capacidades.resolver) await asegurarTablas();
     else $('aviso-tablas').hidden = true;
-    st.scramble = p.generarScramble(rng);
+    const r = await motor.pedir('scramble', p.id);
+    if (st.p !== p) return;
+    st.scramble = r.movimientos;
     st.estadoScramble = p.aplicarSecuencia(p.estadoResuelto(), st.scramble);
+  } catch (err) {
+    mensaje('error', `No se pudo generar el scramble: ${err.message}`);
+    return;
   } finally {
     st.ocupado = false;
     $('nuevo').disabled = false;
@@ -101,21 +131,69 @@ async function nuevoScramble() {
 }
 
 // ---------- Editor ----------
+function entradaPaleta(i) {
+  const p = st.p;
+  if (i < p.paleta.length) return { tipo: 'color', ...p.paleta[i] };
+  const h = (p.herramientas || [])[i - p.paleta.length];
+  return h ? { tipo: 'herramienta', ...h } : null;
+}
+
 function pintarPaleta() {
   const cont = $('paleta');
   cont.innerHTML = '';
-  st.p.paleta.forEach((c, i) => {
+  const p = st.p;
+  const n = p.paleta.length + (p.herramientas ? p.herramientas.length : 0);
+  for (let i = 0; i < n; i++) {
+    const ent = entradaPaleta(i);
     const b = document.createElement('button');
     b.type = 'button';
-    b.className = 'color';
-    b.style.background = c.hex;
     b.setAttribute('role', 'radio');
     b.setAttribute('aria-checked', String(i === st.color));
-    b.setAttribute('aria-label', c.nombre);
-    b.title = c.nombre;
-    b.addEventListener('click', () => { st.color = i; pintarPaleta(); });
+    b.setAttribute('aria-label', ent.nombre);
+    b.title = ent.nombre;
+    if (ent.tipo === 'color') {
+      b.className = 'color';
+      b.style.background = ent.hex;
+    } else {
+      b.className = 'herramienta';
+      b.dataset.herramienta = ent.id;
+      b.innerHTML = `<span aria-hidden="true">${ent.icono || ''}</span>${ent.nombre}`;
+    }
+    b.addEventListener('click', () => {
+      st.color = i;
+      pintarPaleta();
+      if (st.seleccion !== null) { st.seleccion = null; pintarEditor(); }
+    });
     cont.appendChild(b);
-  });
+  }
+}
+
+function pintarAccionesEditor() {
+  const cont = $('acciones-editor');
+  cont.innerHTML = '';
+  const acciones = st.p.accionesEditor || [];
+  cont.hidden = acciones.length === 0 || !puedeResolver(st.p);
+  for (const a of acciones) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'boton pequeno';
+    b.dataset.accion = a.id;
+    b.textContent = a.etiqueta;
+    if (a.titulo) b.title = a.titulo;
+    b.addEventListener('click', () => {
+      if (st.sol) { st.editor = estadoMostrado(); quitarSolucion(); }
+      try {
+        st.editor = st.p.aplicarAccion(st.editor, a.id);
+        limpiarMensajes();
+      } catch (err) {
+        limpiarMensajes();
+        mensaje('error', err.message);
+      }
+      st.seleccion = null;
+      pintarEditor();
+    });
+    cont.appendChild(b);
+  }
 }
 
 function estadoMostrado() {
@@ -126,8 +204,9 @@ function estadoMostrado() {
 function pintarEditor() {
   const p = st.p;
   const editable = puedeResolver(p);
-  const editables = editable ? new Set(p.pegatinasEditables(estadoMostrado())) : null;
-  $('vista-editor').innerHTML = p.renderizar(estadoMostrado(), { editable, editables });
+  const mostrado = estadoMostrado();
+  const editables = editable ? new Set(p.pegatinasEditables(mostrado)) : null;
+  $('vista-editor').innerHTML = p.renderizar(mostrado, { editable, editables, seleccion: st.seleccion });
   pintarSolucion();
 }
 
@@ -136,8 +215,24 @@ function alPulsarPegatina(ev) {
   if (!t || !puedeResolver(st.p)) return;
   const i = parseInt(t.getAttribute('data-i'), 10);
   if (st.sol) { st.editor = estadoMostrado(); quitarSolucion(); }
-  st.editor = st.p.pintar(st.editor, i, st.color);
   limpiarMensajes();
+  const ent = entradaPaleta(st.color);
+  if (ent && ent.tipo === 'herramienta') {
+    const inmediato = (ent.inmediatos || []).includes(i) || (st.p.indicesInmediatos || []).includes(i);
+    if (inmediato) { st.editor = st.p.pintar(st.editor, i, null); st.seleccion = null; } else if ((ent.toques || 1) === 1) {
+      try { st.editor = st.p.usarHerramienta(st.editor, ent.id, [i]); } catch (err) { mensaje('error', err.message); }
+    } else if (st.seleccion === null) {
+      st.seleccion = i;
+    } else {
+      const primero = st.seleccion;
+      st.seleccion = null;
+      if (primero !== i) {
+        try { st.editor = st.p.usarHerramienta(st.editor, ent.id, [primero, i]); } catch (err) { mensaje('error', err.message); }
+      }
+    }
+  } else {
+    st.editor = st.p.pintar(st.editor, i, st.color);
+  }
   pintarEditor();
 }
 
@@ -155,24 +250,26 @@ async function resolver() {
   const p = st.p;
   if (!puedeResolver(p) || st.ocupado) return;
   if (st.sol) { st.editor = st.sol.base; quitarSolucion(); }
+  st.seleccion = null;
   limpiarMensajes();
-  const v = p.validar(st.editor);
-  if (!v.valido) {
-    mensaje('error', 'Este estado no es posible:');
-    v.errores.forEach((e) => mensaje('error', e));
-    pintarEditor();
-    return;
-  }
   st.ocupado = true;
   $('resolver').disabled = true;
-  mensaje('info', 'Buscando solución…');
   try {
     await asegurarTablas();
+    const v = await motor.pedir('validar', p.id, { estado: st.editor });
+    if (st.p !== p) return;
+    if (!v.valido) {
+      mensaje('error', 'Este estado no es posible:');
+      v.errores.forEach((e) => mensaje('error', e));
+      return;
+    }
+    mensaje('info', 'Buscando solución…');
     await esperarPintado();
-    const r = p.resolver(st.editor);
+    const r = await motor.pedir('resolver', p.id, { estado: st.editor });
+    if (st.p !== p) return;
     limpiarMensajes();
     if (!r.ok) {
-      (r.errores || ['No se pudo resolver.']).forEach((e) => mensaje('error', e));
+      (r.errores.length ? r.errores : ['No se pudo resolver.']).forEach((e) => mensaje('error', e));
       return;
     }
     if (r.movimientos.length === 0) {
@@ -182,9 +279,12 @@ async function resolver() {
     st.sol = { movimientos: r.movimientos, base: p.clonar(st.editor), ms: r.ms };
     st.paso = 0;
     mensaje('ok', 'Estado válido. Sigue la solución paso a paso con los controles.');
+  } catch (err) {
+    limpiarMensajes();
+    mensaje('error', `Error al resolver: ${err.message}`);
   } finally {
     st.ocupado = false;
-    $('resolver').disabled = false;
+    $('resolver').disabled = !puedeResolver(st.p);
     pintarEditor();
   }
 }
@@ -200,7 +300,8 @@ function pintarSolucion() {
   if (!st.sol) { caja.hidden = true; return; }
   caja.hidden = false;
   const n = st.sol.movimientos.length;
-  $('sol-resumen').textContent = `${n} movimiento${n === 1 ? '' : 's'} · ${Math.max(1, Math.round(st.sol.ms))} ms`;
+  const largo = st.p.describirLongitud ? st.p.describirLongitud(st.sol.movimientos) : `${n} movimiento${n === 1 ? '' : 's'}`;
+  $('sol-resumen').textContent = `${largo} · ${Math.max(1, Math.round(st.sol.ms))} ms`;
   const ol = $('movs');
   ol.innerHTML = '';
   st.sol.movimientos.forEach((m, i) => {
@@ -253,11 +354,25 @@ async function copiar(texto, boton) {
 
 // ---------- Arranque ----------
 function iniciar() {
+  motor = crearMotor({
+    codigoWorker: CODIGO_WORKER,
+    alCambiarModo: (modo, motivo) => {
+      const el = $('modo-calculo');
+      if (!el) return;
+      el.textContent = modo === 'worker'
+        ? 'Cálculos en un Web Worker: la página no se bloquea.'
+        : `Cálculos en el hilo principal${motivo ? ` (${motivo})` : ''}.`;
+      el.dataset.modo = modo;
+      // si el Worker falló, las tablas que tuviera se han perdido
+      if (modo === 'local') st.listos.clear();
+    },
+  });
   $('nuevo').addEventListener('click', nuevoScramble);
   $('vista-editor').addEventListener('click', alPulsarPegatina);
-  $('resetear').addEventListener('click', () => { quitarSolucion(); st.editor = st.p.estadoResuelto(); limpiarMensajes(); pintarEditor(); });
+  $('resetear').addEventListener('click', () => { quitarSolucion(); st.seleccion = null; st.editor = st.p.estadoResuelto(); limpiarMensajes(); pintarEditor(); });
   $('cargar').addEventListener('click', () => {
     quitarSolucion();
+    st.seleccion = null;
     st.editor = st.estadoScramble ? st.p.clonar(st.estadoScramble) : st.p.estadoResuelto();
     limpiarMensajes();
     pintarEditor();
@@ -273,7 +388,7 @@ function iniciar() {
   let inicial = '3x3';
   try { inicial = localStorage.getItem('cubo-solver:puzzle') || inicial; } catch { /* sin almacenamiento */ }
   if (!PUZZLES.some((p) => p.id === inicial)) inicial = '3x3';
-  seleccionar(inicial);
+  motor.listo.then(() => seleccionar(inicial));
 }
 
 iniciar();

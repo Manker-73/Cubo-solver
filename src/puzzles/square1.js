@@ -499,6 +499,7 @@ export default definirPuzzle({
   paleta: PALETA,
   herramientas: [{ id: 'mover', nombre: 'Mover piezas', icono: '⇄', toques: 2 }],
   herramientaInicial: 'mover',
+  indicesInmediatos: [INDICE_MEDIO], // con una herramienta, tocar la barra del medio la voltea sin más
   accionesEditor: ACCIONES.map(({ id, etiqueta, titulo }) => ({ id, etiqueta, titulo })),
   estadoResuelto,
   clonar,

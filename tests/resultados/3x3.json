@@ -1,16 +1,16 @@
 {
-  "msTablas": 789,
+  "msTablas": 791,
   "casos": 100,
-  "fecha": "2026-10-27T23:42:00.170Z",
+  "fecha": "2026-10-27T23:50:54.249Z",
   "scrambles": 100,
   "longitudMedia": 20.74,
   "longitudMin": 19,
   "longitudMax": 21,
-  "msPorScramble": 21.98,
+  "msPorScramble": 22.09,
   "resueltos": "100/100 (100.0%)",
-  "longitudMediaSolucion": 19.76,
-  "longitudMaxSolucion": 20,
-  "msMedioSolucion": 75.6,
-  "msMaxSolucion": 952.4,
-  "msInicializacion": 789
+  "longitudMediaSolucion": 19.77,
+  "longitudMaxSolucion": 21,
+  "msMedioSolucion": 77.03,
+  "msMaxSolucion": 1001.1,
+  "msInicializacion": 791
 }
