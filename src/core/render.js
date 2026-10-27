@@ -32,7 +32,7 @@ export function svgDePegatinas(pegatinas, colores, paleta, opciones = {}) {
   const w = caja.x1 - caja.x0, h = caja.y1 - caja.y0;
   const m = Math.max(w, h) * margen * 0.5;
   const vb = [caja.x0 - m, caja.y0 - m, w + 2 * m, h + 2 * m].map(r2).join(' ');
-  const trazo = Math.max(w, h) * 0.006;
+  const trazo = Math.max(w, h) * 0.006 * (opciones.grosor ?? 1);
   let s = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb}" class="puzzle-svg${opciones.editable ? ' editable' : ''}">`;
   for (const f of fondos) {
     s += `<polygon points="${f.map(([x, y]) => r2(x) + ',' + r2(y)).join(' ')}" fill="#1b1b1f" />`;

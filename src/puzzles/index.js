@@ -7,6 +7,8 @@ import cubo3 from './cubo3.js';
 import { crearNxN } from './nxn.js';
 import pyraminx from './pyraminx.js';
 import skewb from './skewb.js';
+import square1 from './square1.js';
+import megaminx from './megaminx.js';
 
 export const PUZZLES = [
   cubo2,
@@ -17,6 +19,8 @@ export const PUZZLES = [
   crearNxN(7),
   pyraminx,
   skewb,
+  square1,
+  megaminx,
 ];
 
 export const obtenerPuzzle = (id) => PUZZLES.find((p) => p.id === id);
