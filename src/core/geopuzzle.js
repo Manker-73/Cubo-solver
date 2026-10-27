@@ -36,7 +36,7 @@ export function crearGeoPuzzle(def) {
   // Despliegue 2D
   const pegatinas2D = new Array(n);
   for (const arbol of def.red.arboles) {
-    const mapas = desplegar(def.caras, arbol, arbol.origen || [0, 0]);
+    const mapas = desplegar(def.caras, arbol, arbol.origen || [0, 0], def.red.hueco || 0);
     const incluidas = new Set([arbol.raiz, ...arbol.hijos.map((h) => h[0])]);
     pegatinas.forEach((p, i) => {
       if (!incluidas.has(p.cara)) return;

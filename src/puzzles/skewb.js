@@ -40,7 +40,7 @@ const geo = crearGeoPuzzle({
   cortes: [[1, 1, 1], [1, 1, -1], [1, -1, 1], [-1, 1, 1]].map((n) => ({ n: n.map((x) => x / Math.sqrt(3)), h: 0 })),
   giros,
   rotaciones: [{ eje: [1, 0, 0], ang: Math.PI / 2 }, { eje: [0, 1, 0], ang: Math.PI / 2 }],
-  red: { arboles: [{ raiz: 2, arriba: [0, 1, 0], hijos: [[0, 2], [3, 2], [4, 2], [1, 2], [5, 1]] }] },
+  red: { hueco: 0.12, arboles: [{ raiz: 2, arriba: [0, 1, 0], hijos: [[0, 2], [3, 2], [4, 2], [1, 2], [5, 1]] }] },
   encoger: 0.88,
 });
 if (geo.n !== 30) throw new Error('Skewb: se esperaban 30 pegatinas y hay ' + geo.n);

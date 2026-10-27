@@ -42,7 +42,7 @@ const geo = crearGeoPuzzle({
   cortes: VN.flatMap((v) => [{ n: unit(VERT[v]), h: 5 / 3 }, { n: unit(VERT[v]), h: 1 / 3 }]),
   giros,
   rotaciones: [{ eje: VERT.U, ang: T }, { eje: VERT.L, ang: T }],
-  red: { arboles: [{ raiz: 0, arriba: [0, 1, 0], hijos: [[1, 0], [2, 0], [3, 0]] }] },
+  red: { hueco: 0.25, arboles: [{ raiz: 0, arriba: [0, 1, 0], hijos: [[1, 0], [2, 0], [3, 0]] }] },
   encoger: 0.86,
 });
 if (geo.n !== 36) throw new Error('Pyraminx: se esperaban 36 pegatinas y hay ' + geo.n);

@@ -1,0 +1,76 @@
+<title>Cubo Solver</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>/*ESTILOS*/</style>
+<div class="app">
+  <header class="cabecera">
+    <div class="marca">
+      <h1>Cubo Solver</h1>
+      <p class="sub">Scrambles WCA, validador y solucionador</p>
+    </div>
+    <nav class="selector" id="selector" aria-label="Puzzle"></nav>
+  </header>
+
+  <main class="paneles">
+    <section class="panel" aria-labelledby="t-scramble">
+      <div class="panel-cab">
+        <h2 id="t-scramble">Scramble</h2>
+        <span class="etiqueta" id="tipo-scramble"></span>
+      </div>
+      <div class="scramble-caja">
+        <p class="scramble" id="scramble" aria-live="polite"></p>
+        <div class="scramble-meta">
+          <span id="longitud"></span>
+          <button type="button" class="boton-texto" id="copiar">Copiar</button>
+        </div>
+      </div>
+      <div class="vista" id="vista-scramble"></div>
+      <div class="acciones">
+        <button type="button" class="boton principal" id="nuevo">Nuevo scramble</button>
+      </div>
+      <p class="aviso" id="aviso-tablas" hidden></p>
+    </section>
+
+    <section class="panel" aria-labelledby="t-resolver" id="panel-resolver">
+      <div class="panel-cab">
+        <h2 id="t-resolver">Resolver</h2>
+        
+      </div>
+      <p class="desc" id="desc-solver"></p>
+      <div class="proximamente" id="proximamente" hidden>
+        <strong>Próximamente</strong>
+        <span>El editor y el solucionador de este puzzle llegarán en una próxima versión.</span>
+      </div>
+      <div class="editor" id="editor">
+        <div class="paleta" id="paleta" role="radiogroup" aria-label="Color para pintar"></div>
+        <div class="vista editable" id="vista-editor"></div>
+        <div class="acciones">
+          <button type="button" class="boton" id="resetear">Resetear</button>
+          <button type="button" class="boton" id="cargar">Cargar scramble actual</button>
+          <button type="button" class="boton principal" id="resolver">Resolver</button>
+        </div>
+        <div class="mensajes" id="mensajes" aria-live="polite"></div>
+        <div class="solucion" id="solucion" hidden>
+          <div class="solucion-cab">
+            <span id="sol-resumen"></span>
+            <button type="button" class="boton-texto" id="copiar-sol">Copiar</button>
+          </div>
+          <ol class="movs" id="movs"></ol>
+          <div class="reproductor">
+            <button type="button" class="boton icono" id="r-inicio" aria-label="Ir al inicio">⇤</button>
+            <button type="button" class="boton icono" id="r-atras" aria-label="Paso anterior">‹</button>
+            <button type="button" class="boton icono principal" id="r-play" aria-label="Reproducir">▶</button>
+            <button type="button" class="boton icono" id="r-adelante" aria-label="Paso siguiente">›</button>
+            <button type="button" class="boton icono" id="r-fin" aria-label="Ir al final">⇥</button>
+            <span class="paso" id="paso"></span>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+  <footer class="pie">
+    <span>Notación WCA. Los scrambles de 2x2, 3x3, Pyraminx y Skewb son de estado aleatorio.</span>
+  </footer>
+</div>
+<script>/*SCRIPT*/</script>

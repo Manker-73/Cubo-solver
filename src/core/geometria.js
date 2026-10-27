@@ -175,7 +175,7 @@ export function carasDesdeVertices(vertices, normales) {
  * Devuelve un array de funciones (por cara) que llevan un punto 3D de esa cara a 2D [x, y]
  * (y hacia abajo, como en SVG).
  */
-export function desplegar(caras, arbol, origen2D = [0, 0]) {
+export function desplegar(caras, arbol, origen2D = [0, 0], hueco = 0) {
   const mapas = new Array(caras.length).fill(null);
   const centro3 = caras.map((c) => centroide(c.poligono));
   {
@@ -213,7 +213,7 @@ export function desplegar(caras, arbol, origen2D = [0, 0]) {
       if ((C2[0] - P2[0]) * w2[0] + (C2[1] - P2[1]) * w2[1] > 0) w2 = [-w2[0], -w2[1]];
       mapas[hija] = (x) => {
         const d = res(x, p);
-        const a = dot(d, e), b = dot(d, m);
+        const a = dot(d, e), b = dot(d, m) + hueco;
         return [P2[0] + a * e2[0] + b * w2[0], P2[1] + a * e2[1] + b * w2[1]];
       };
     }

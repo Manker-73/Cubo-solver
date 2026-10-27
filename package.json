@@ -11,6 +11,7 @@
     "bench": "node scripts/bench.mjs"
   },
   "devDependencies": {
-    "esbuild": "^0.24.0"
+    "esbuild": "^0.24.0",
+    "jsdom": "^24.1.3"
   }
 }
