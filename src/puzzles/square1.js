@@ -472,18 +472,18 @@ function dibujarCapa(capa, nCapa, cx, cy, a, espejo, editable, seleccion) {
 function renderizar(e, opts = {}) {
   const editable = !!opts.editable;
   const seleccion = opts.seleccion != null && opts.seleccion !== INDICE_MEDIO ? decodificar(opts.seleccion) : null;
-  const a = 40;
-  let s = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 330 214" class="puzzle-svg">';
-  s += `<text x="80" y="14" font-size="11" text-anchor="middle" fill="currentColor" font-family="sans-serif">arriba</text>`;
-  s += `<text x="250" y="14" font-size="11" text-anchor="middle" fill="currentColor" font-family="sans-serif">abajo (vista desde abajo)</text>`;
-  s += dibujarCapa(e.arriba, 0, 80, 98, a, false, editable, seleccion);
-  s += dibujarCapa(e.abajo, 1, 250, 98, a, true, editable, seleccion);
+  const a = 44;
+  let s = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 316 222" class="puzzle-svg">';
+  s += `<text x="77" y="13" font-size="11" text-anchor="middle" fill="currentColor" font-family="sans-serif">arriba</text>`;
+  s += `<text x="239" y="13" font-size="11" text-anchor="middle" fill="currentColor" font-family="sans-serif">abajo (vista desde abajo)</text>`;
+  s += dibujarCapa(e.arriba, 0, 77, 100, a, false, editable, seleccion);
+  s += dibujarCapa(e.abajo, 1, 239, 100, a, true, editable, seleccion);
   // Capa del medio, vista desde delante: la mitad izquierda fija y la derecha volteada si medio = 1
-  const y = 184, h = 14;
+  const y = 190, h = 14;
   const attrs = editable ? ` class="pegatina" data-i="${INDICE_MEDIO}"` : '';
-  s += `<rect x="111" y="${y}" width="54" height="${h}" fill="${colorHex(LADOS[0])}" stroke="#111" stroke-width="1.2"/>`;
-  s += `<rect x="165" y="${y}" width="54" height="${h}" fill="${colorHex(e.medio ? LADOS[2] : LADOS[0])}" stroke="#111" stroke-width="1.2"${attrs}/>`;
-  s += `<text x="165" y="${y + h + 12}" font-size="10" text-anchor="middle" fill="currentColor" font-family="sans-serif">capa del medio${e.medio ? ' (mitad derecha volteada)' : ''}</text>`;
+  s += `<rect x="104" y="${y}" width="54" height="${h}" fill="${colorHex(LADOS[0])}" stroke="#111" stroke-width="1.2"/>`;
+  s += `<rect x="158" y="${y}" width="54" height="${h}" fill="${colorHex(e.medio ? LADOS[2] : LADOS[0])}" stroke="#111" stroke-width="1.2"${attrs}/>`;
+  s += `<text x="158" y="${y + h + 12}" font-size="10" text-anchor="middle" fill="currentColor" font-family="sans-serif">capa del medio${e.medio ? ' (mitad derecha volteada)' : ''}</text>`;
   s += '</svg>';
   return s;
 }
