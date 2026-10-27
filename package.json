@@ -1,0 +1,16 @@
+{
+  "name": "cubo-solver",
+  "version": "0.1.0",
+  "description": "Generador de scrambles WCA, validador de estado y solucionador visual de puzzles (web, sin servidor)",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test --test-reporter=spec tests/",
+    "test:rapido": "CASOS=100 node --test --test-reporter=spec tests/",
+    "build": "node scripts/build.mjs",
+    "bench": "node scripts/bench.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.0"
+  }
+}
