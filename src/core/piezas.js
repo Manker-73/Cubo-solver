@@ -169,31 +169,37 @@ export function crearBuscador({ coords, movs, ejes, podas, objetivo }) {
   });
 
   const tablasPoda = podas.map((lista) => {
+    const L = lista.length;
     const tams = lista.map((ci) => coords[ci].tam);
+    const tabs = lista.map((ci) => tablas[ci]);
     const total = tams.reduce((a, b) => a * b, 1);
     const prof = new Int8Array(total).fill(-1);
     const idxDe = (vals) => vals.reduce((a, v, k) => a * tams[k] + v, 0);
-    const valsDe = (idx) => {
-      const v = new Array(lista.length);
-      for (let k = lista.length - 1; k >= 0; k--) { v[k] = idx % tams[k]; idx = Math.floor(idx / tams[k]); }
-      return v;
-    };
     prof[idxDe(lista.map((ci) => objetivo[ci]))] = 0;
-    let d = 0, cambiado = true;
-    while (cambiado) {
-      cambiado = false;
+    const vals = new Int32Array(L);
+    let d = 0, hechos = 1;
+    for (;;) {
+      // hacia delante mientras haya pocos visitados; después hacia atrás
+      const atras = hechos > total / 2;
+      let nuevos = 0;
       for (let i = 0; i < total; i++) {
-        if (prof[i] !== d) continue;
-        const v = valsDe(i);
+        const pi = prof[i];
+        if (atras ? pi !== -1 : pi !== d) continue;
+        let r = i;
+        for (let k = L - 1; k >= 0; k--) { const t = tams[k]; const v = r % t; vals[k] = v; r = (r - v) / t; }
         for (let m = 0; m < nM; m++) {
-          const w = v.map((x, k) => tablas[lista[k]][x * nM + m]);
-          const j = idxDe(w);
-          if (prof[j] < 0) { prof[j] = d + 1; cambiado = true; }
+          let j = 0;
+          for (let k = 0; k < L; k++) j = j * tams[k] + tabs[k][vals[k] * nM + m];
+          if (atras) {
+            if (prof[j] === d) { prof[i] = d + 1; nuevos++; break; }
+          } else if (prof[j] === -1) { prof[j] = d + 1; nuevos++; }
         }
       }
+      if (nuevos === 0) break;
+      hechos += nuevos;
       d++;
     }
-    return { lista, tams, prof, idxDe };
+    return { lista, tams, prof, idxDe, alcanzables: hechos, profMax: d };
   });
   const msInit = Date.now() - t0;
 

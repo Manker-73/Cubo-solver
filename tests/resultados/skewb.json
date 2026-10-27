@@ -1,0 +1,15 @@
+{
+  "scrambles": 1000,
+  "longitudMedia": 8.44,
+  "longitudMin": 7,
+  "longitudMax": 10,
+  "msPorScramble": 0.22,
+  "casos": 1000,
+  "fecha": "2026-10-27T22:05:59.187Z",
+  "resueltos": "1000/1000 (100.0%)",
+  "longitudMediaSolucion": 8.42,
+  "longitudMaxSolucion": 10,
+  "msMedioSolucion": 0.19,
+  "msMaxSolucion": 4.3,
+  "msInicializacion": 200
+}
