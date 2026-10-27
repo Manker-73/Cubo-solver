@@ -126,7 +126,7 @@ function estadoMostrado() {
 function pintarEditor() {
   const p = st.p;
   const editable = puedeResolver(p);
-  const editables = editable ? new Set(p.pegatinasEditables()) : null;
+  const editables = editable ? new Set(p.pegatinasEditables(estadoMostrado())) : null;
   $('vista-editor').innerHTML = p.renderizar(estadoMostrado(), { editable, editables });
   pintarSolucion();
 }
@@ -179,7 +179,7 @@ async function resolver() {
       mensaje('ok', 'El puzzle ya está resuelto.');
       return;
     }
-    st.sol = { movimientos: r.movimientos, base: st.editor.slice(), ms: r.ms };
+    st.sol = { movimientos: r.movimientos, base: p.clonar(st.editor), ms: r.ms };
     st.paso = 0;
     mensaje('ok', 'Estado válido. Sigue la solución paso a paso con los controles.');
   } finally {
@@ -258,7 +258,7 @@ function iniciar() {
   $('resetear').addEventListener('click', () => { quitarSolucion(); st.editor = st.p.estadoResuelto(); limpiarMensajes(); pintarEditor(); });
   $('cargar').addEventListener('click', () => {
     quitarSolucion();
-    st.editor = st.estadoScramble ? st.estadoScramble.slice() : st.p.estadoResuelto();
+    st.editor = st.estadoScramble ? st.p.clonar(st.estadoScramble) : st.p.estadoResuelto();
     limpiarMensajes();
     pintarEditor();
   });

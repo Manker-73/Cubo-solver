@@ -51,6 +51,8 @@ export function definirPuzzle(def) {
       // Edición: por defecto el estado es un array de colores por pegatina
       pegatinasEditables() { return []; },
       pintar(estado, i, color) { const e = estado.slice(); e[i] = color; return e; },
+      // Copia independiente de un estado (por defecto: array de colores u objeto JSON)
+      clonar(estado) { return Array.isArray(estado) ? estado.slice() : JSON.parse(JSON.stringify(estado)); },
     },
     def,
   );
