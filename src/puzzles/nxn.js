@@ -69,7 +69,7 @@ export function geometriaNxN(N) {
     const a = NORMAL[cara];
     const P = identidad(pos.length);
     pos.forEach((p, j) => {
-      if (dot(p, a) > N - 2 * prof) {
+      if (prof >= N || dot(p, a) > N - 2 * prof) {
         const q = girar(p, a);
         P[indice.get(q.join(','))] = j;
       }

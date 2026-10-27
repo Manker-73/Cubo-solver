@@ -2,14 +2,16 @@
 
 import { definirPuzzle } from '../core/puzzle.js';
 import { crearModeloPiezas } from '../core/piezas.js';
-import { reetiquetar } from '../core/simetria.js';
+import { reetiquetar, cierreGrupo } from '../core/simetria.js';
+import { aplicarPerm, componer } from '../core/perm.js';
 import { barajar, entero, rngSeguro } from '../core/rng.js';
 import { baseNxN } from './nxn.js';
 import {
   piezasCubo, NOMBRES_ESQUINAS, NOMBRES_ARISTAS, comprobarConteo, erroresDePiezas, nombreColor,
 } from './cubo-comun.js';
 import {
-  inicializarKociemba, kociembaListo, resolverKociemba, cuboDesdeIdentificacion, paridad8,
+  inicializarKociemba, kociembaListo, msTablasKociemba, resolverKociemba, cuboDesdeIdentificacion, paridad8,
+  inversaCubo,
 } from './kociemba.js';
 
 const b = baseNxN(3);
@@ -25,6 +27,38 @@ const coloresPieza = [
   aristas.map((pz) => pz.map((f) => RESUELTO[f])),
 ];
 const CENTROS = [4, 13, 22, 31, 40, 49];
+// Rotación de 120° alrededor de la diagonal URF–DBL (U→R→F→U), para buscar
+// la solución también desde otras dos orientaciones del cubo.
+const CARA_DE = (i) => Math.floor(i / 9);
+const ROT_URF = (() => {
+  const g = cierreGrupo([b.geo.rot.x, b.geo.rot.y]);
+  const mapaDe = (P) => CENTROS.map((c) => CARA_DE(P.indexOf(c)));
+  for (const P of g) {
+    const m = mapaDe(P);
+    if (m[0] === 1 && m[1] === 2 && m[2] === 0) return P;
+  }
+  throw new Error('no se encontró la rotación URF');
+})();
+
+/** Variantes (3 orientaciones x normal/inversa) de un estado ya normalizado. */
+function variantes(norm, cubo) {
+  const res = [{ cubo }, { cubo: inversaCubo(cubo), inversa: true }];
+  let P = ROT_URF;
+  for (let k = 1; k <= 2; k++) {
+    const rot = aplicarPerm(norm, P);
+    const sigma = new Array(6);
+    CENTROS.forEach((c, f) => { sigma[rot[c]] = f; });
+    const v = reetiquetar(rot, sigma);
+    const c = cuboDesdeIdentificacion(modelo.identificar(v).orbitas);
+    // la cara f del original pasa a ser la cara gk(f) de la variante
+    const gk = CENTROS.map((cc) => CARA_DE(P.indexOf(cc)));
+    const mapa = new Array(6);
+    gk.forEach((h, f) => { mapa[h] = f; });
+    res.push({ cubo: c, mapa }, { cubo: inversaCubo(c), mapa, inversa: true });
+    P = componer(P, ROT_URF);
+  }
+  return res;
+}
 const NOMBRE_CARA = ['arriba (U)', 'derecha (R)', 'delante (F)', 'abajo (D)', 'izquierda (L)', 'detrás (B)'];
 
 /** Comprueba los centros y devuelve la permutación de colores que los deja en su sitio. */
@@ -82,7 +116,7 @@ function analizar(estado) {
     errores.push('Dos piezas están intercambiadas: la paridad de la permutación de las esquinas no coincide con la de las aristas.');
   }
   if (errores.length) return { valido: false, errores };
-  return { valido: true, errores: [], cubo: cuboDesdeIdentificacion(ident.orbitas) };
+  return { valido: true, errores: [], cubo: cuboDesdeIdentificacion(ident.orbitas), norm };
 }
 
 function resolver(estado, opciones = {}) {
@@ -90,7 +124,7 @@ function resolver(estado, opciones = {}) {
   const msTablas = inicializarKociemba();
   const a = analizar(estado);
   if (!a.valido) return { ok: false, errores: a.errores };
-  const r = resolverKociemba(a.cubo, { objetivo: opciones.objetivo ?? 20, msMax: opciones.msMax ?? 1000 });
+  const r = resolverKociemba(variantes(a.norm, a.cubo), { objetivo: opciones.objetivo ?? 20, msMax: opciones.msMax ?? 1000 });
   if (!r) return { ok: false, errores: ['No se encontró solución (esto no debería pasar).'] };
   return { ok: true, movimientos: r.movimientos, ms: performance.now() - t0 - msTablas };
 }
@@ -118,7 +152,7 @@ function generarScramble(rng = rngSeguro(), opciones = {}) {
   inicializarKociemba();
   for (;;) {
     const c = cuboAleatorio(rng);
-    const r = resolverKociemba(c, { objetivo: opciones.objetivo ?? 21, msMax: opciones.msMax ?? 1000 });
+    const r = resolverKociemba(variantes(cuboAPegatinas(c), c), { objetivo: opciones.objetivo ?? 21, msMax: opciones.msMax ?? 1000 });
     if (r.movimientos.length < 2) continue; // como TNoodle: mínimo 2 movimientos
     return r.movimientos.slice().reverse().map(b.invertirMovimiento);
   }
@@ -139,7 +173,7 @@ export default definirPuzzle({
   buscarRedundancia: b.buscarRedundancia,
   renderizar: b.renderizar,
   pegatinasEditables: () => RESUELTO.map((_, i) => i),
-  inicializar: () => ({ ms: inicializarKociemba() }),
+  inicializar: () => { inicializarKociemba(); return { ms: msTablasKociemba() }; },
   estaInicializado: kociembaListo,
   avisoInicializacion: 'Generando las tablas de Kociemba en el navegador…',
   validar: (e) => { const a = analizar(e); return { valido: a.valido, errores: a.errores }; },

@@ -26,7 +26,7 @@ const sigmas = rotacionesColorCubo(2);
 
 let buscador = null;
 function inicializar() {
-  if (buscador) return { ms: 0 };
+  if (buscador) return { ms: buscador.msInit, yaEstaba: true };
   buscador = crearBuscador({
     coords: [modelo.coordPerm(0), modelo.coordOri(0)],
     movs: MOVS,

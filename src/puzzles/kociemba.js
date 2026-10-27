@@ -97,6 +97,7 @@ const ES_F2 = new Array(N_MOV).fill(false);
 MOV_F2.forEach((m) => { ES_F2[m] = true; });
 
 let T = null; // tablas
+let msTablas = 0;
 
 function tablaMov(tam, movs, set, get) {
   const t = new Uint16Array(tam * movs.length);
@@ -138,6 +139,11 @@ function tablaPoda(tamA, movA, tamB, movB, nM) {
 /** Genera todas las tablas (idempotente). Devuelve los milisegundos empleados. */
 export function inicializarKociemba() {
   if (T) return 0;
+  return generarTablas();
+}
+/** Milisegundos que tardó la generación de tablas (0 si aún no se han generado). */
+export const msTablasKociemba = () => msTablas;
+function generarTablas() {
   const t0 = Date.now();
   const todos = Array.from({ length: N_MOV }, (_, i) => i);
   const twist = tablaMov(N_TWIST, todos, setTwist, getTwist);
@@ -152,17 +158,38 @@ export function inicializarKociemba() {
   const podaSC = tablaPoda(N_SPERM, sperm, N_PERM8, cperm, MOV_F2.length);
   const podaSE = tablaPoda(N_SPERM, sperm, N_PERM8, udperm, MOV_F2.length);
   T = { twist, flip, slice, cperm, udperm, sperm, podaST, podaSF, podaTF, podaSC, podaSE };
-  return Date.now() - t0;
+  msTablas = Date.now() - t0;
+  return msTablas;
 }
 
 export const kociembaListo = () => !!T;
 
+/** Inversa de un cubo (cubies). */
+export function inversaCubo(c) {
+  const r = { cp: new Array(8), co: new Array(8), ep: new Array(12), eo: new Array(12) };
+  for (let i = 0; i < 8; i++) r.cp[c.cp[i]] = i;
+  for (let i = 0; i < 8; i++) r.co[i] = (3 - c.co[r.cp[i]]) % 3;
+  for (let i = 0; i < 12; i++) r.ep[c.ep[i]] = i;
+  for (let i = 0; i < 12; i++) r.eo[i] = c.eo[r.ep[i]];
+  return r;
+}
+
 /**
- * Resuelve un cubo (cubies). opciones: { objetivo (longitud con la que parar), msMax, maxLong }
- * Devuelve la lista de movimientos (índices) o null.
+ * Resuelve un cubo (cubies).
+ * entrada: un cubo, o una lista de variantes [{ cubo, mapa, inversa }] del mismo
+ *   estado (el cubo visto desde otra orientación —mapa[cara de la variante] =
+ *   cara original— y/o invertido). Se buscan todas a la vez, intercalando por
+ *   profundidad de fase 1, y se devuelve la solución más corta encontrada
+ *   traducida al estado original. Es la técnica de min2phase y acelera mucho
+ *   la búsqueda de soluciones de 20 movimientos.
+ * opciones: { objetivo (longitud con la que parar), msMax, maxLong }
  */
-export function resolverKociemba(cubo, opciones = {}) {
+export function resolverKociemba(entrada, opciones = {}) {
   inicializarKociemba();
+  const variantes = (Array.isArray(entrada) ? entrada : [{ cubo: entrada }]).map((v) => ({
+    ...v,
+    tw: getTwist(v.cubo), fl: getFlip(v.cubo), sl: getSlice(v.cubo),
+  }));
   const objetivo = opciones.objetivo ?? 20;
   const msMax = opciones.msMax ?? 1000;
   let maxLong = opciones.maxLong ?? 30;
@@ -170,9 +197,16 @@ export function resolverKociemba(cubo, opciones = {}) {
   let mejor = null;
   let tiempoAgotado = false;
   let nodos = 0;
+  let actual = variantes[0];
 
   const cam = new Array(40);
-  const tw0 = getTwist(cubo), fl0 = getFlip(cubo), sl0 = getSlice(cubo);
+
+  function traducir(movs, v) {
+    let r = movs;
+    if (v.inversa) r = r.slice().reverse().map((m) => 3 * ((m / 3) | 0) + (2 - (m % 3)));
+    if (v.mapa) r = r.map((m) => 3 * v.mapa[(m / 3) | 0] + (m % 3));
+    return r;
+  }
 
   function fase2(cp, ud, sp, prof, n1, ultima) {
     // IDA* de la fase 2 con profundidad máxima prof
@@ -200,13 +234,13 @@ export function resolverKociemba(cubo, opciones = {}) {
 
   function alFinalFase1(n1) {
     // Calcula las coordenadas de fase 2 aplicando la fase 1 al cubo
-    let c = cubo;
+    let c = actual.cubo;
     for (let i = 0; i < n1; i++) c = multiplicar(c, MOV_CUBO[cam[i]]);
     const cp = getCPerm(c), ud = getUDPerm(c), sp = getSlicePerm(c);
     const ultima = n1 > 0 ? (cam[n1 - 1] / 3) | 0 : -1;
     const n2 = fase2(cp, ud, sp, maxLong - n1, n1, ultima);
     if (n2 >= 0) {
-      mejor = cam.slice(0, n1 + n2);
+      mejor = traducir(cam.slice(0, n1 + n2), actual);
       maxLong = n1 + n2 - 1;
       if (mejor.length <= objetivo) return true; // suficiente
     }
@@ -227,12 +261,9 @@ export function resolverKociemba(cubo, opciones = {}) {
       const f = (m / 3) | 0;
       if (ultima >= 0 && (f === ultima || (f % 3 === ultima % 3 && f < ultima))) continue;
       const tw2 = T.twist[tw * N_MOV + m], fl2 = T.flip[fl * N_MOV + m], sl2 = T.slice[sl * N_MOV + m];
-      let h = T.podaST[sl2 * N_TWIST + tw2];
-      if (h >= togo) continue;
-      const h2 = T.podaSF[sl2 * N_FLIP + fl2];
-      if (h2 >= togo) continue;
-      const h3 = T.podaTF[tw2 * N_FLIP + fl2];
-      if (h3 >= togo) continue;
+      if (T.podaST[sl2 * N_TWIST + tw2] >= togo) continue;
+      if (T.podaSF[sl2 * N_FLIP + fl2] >= togo) continue;
+      if (T.podaTF[tw2 * N_FLIP + fl2] >= togo) continue;
       cam[k] = m;
       if (dfs1(tw2, fl2, sl2, togo - 1, k + 1, f)) return true;
       if (k + togo > maxLong) return false; // la cota bajó al encontrar una solución
@@ -240,9 +271,16 @@ export function resolverKociemba(cubo, opciones = {}) {
     return false;
   }
 
-  const h0 = Math.max(T.podaST[sl0 * N_TWIST + tw0], T.podaSF[sl0 * N_FLIP + fl0], T.podaTF[tw0 * N_FLIP + fl0]);
-  for (let n1 = h0; n1 <= maxLong; n1++) {
-    if (dfs1(tw0, fl0, sl0, n1, 0, -1)) break;
+  for (const v of variantes) {
+    v.h0 = Math.max(T.podaST[v.sl * N_TWIST + v.tw], T.podaSF[v.sl * N_FLIP + v.fl], T.podaTF[v.tw * N_FLIP + v.fl]);
+  }
+  let fin = false;
+  for (let n1 = Math.min(...variantes.map((v) => v.h0)); n1 <= maxLong && !fin; n1++) {
+    for (const v of variantes) {
+      if (v.h0 > n1 || n1 > maxLong) continue;
+      actual = v;
+      if (dfs1(v.tw, v.fl, v.sl, n1, 0, -1)) { fin = true; break; }
+    }
   }
   return mejor ? { movimientos: mejor.map((m) => NOMBRES_MOV[m]), tiempoAgotado, ms: Date.now() - t0 } : null;
 }
