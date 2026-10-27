@@ -3,7 +3,7 @@
 Decisiones que he tomado yo cuando había dudas, para que puedas revisarlas.
 
 ## Repositorio
-- **No se pudo acceder a `Manker-73/Cubo-solver`.** GitHub respondió que el repositorio no existe o que la app de Claude no tiene acceso (la sesión solo ve `misiones_web` y `abd-p1-odm`). He trabajado en un repositorio git local con commits frecuentes y, como copia de seguridad, he publicado la app como artifact con todo el código fuente, los tests y los documentos adjuntos como ficheros. Para la noche 2: crear el repositorio (o dar acceso a la app de GitHub de Claude) y subir el historial.
+- **No se pudo acceder a `Manker-73/Cubo-solver`.** GitHub respondió que el repositorio no existe o que la app de Claude no tiene acceso (la sesión solo ve `misiones_web` y `abd-p1-odm`). He trabajado en un repositorio git local con commits frecuentes y, como copia de seguridad, he publicado la app como artifact con todo el código fuente, los tests y los documentos adjuntos como ficheros. Al final de la noche el repositorio ya se podía leer, pero el push fue rechazado (403: falta instalar la app de GitHub de Claude). El historial local ya está unido con el "Initial commit" remoto, así que se puede subir tal cual. Para recuperarlo desde el artifact: descargar `fuente/copia-repo.bundle.b64.txt`, `base64 -d copia-repo.bundle.b64.txt > repo.bundle`, `git clone repo.bundle Cubo-solver` y `git push` al remoto.
 
 ## Arquitectura y herramientas
 - Código en módulos ES (`src/`), probado directamente con Node (`node --test`), y empaquetado con **esbuild** en un único HTML autocontenido (`dist/index.html`), que se abre con doble clic sin servidor. esbuild y jsdom son solo dependencias de desarrollo.
