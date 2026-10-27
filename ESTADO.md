@@ -40,7 +40,6 @@ Otras comprobaciones:
 - Superflip del 3x3: 22 movimientos en ~3 s (estado simétrico: las 6 variantes de búsqueda no ayudan).
 
 ## Problemas conocidos
-- **No se pudo hacer push a GitHub.** Al principio de la noche el repositorio no era accesible; al final ya se podía leer (`Manker-73/cubo-solver`, con un "Initial commit"), pero la sesión no tiene permiso de escritura: falta instalar la app de GitHub de Claude para esa cuenta (https://github.com/apps/claude/installations/select_target). Todo el trabajo está en commits locales y como copia en el artifact publicado (código, tests, docs y un `git bundle` con el historial completo).
 - La generación de tablas del 3x3 (~1,5 s) bloquea la página un momento al elegir el 3x3 por primera vez (se muestra un aviso). Se podría mover a un Web Worker.
 - El 3x3 a veces agota el límite de 1 s y devuelve una solución de 21 movimientos.
 - Square-1 usa scrambles de movimientos aleatorios (no de estado aleatorio como TNoodle) hasta que haya solver.
@@ -48,7 +47,6 @@ Otras comprobaciones:
 - La vista previa no se ha comparado una a una con las imágenes de TNoodle.
 
 ## Siguiente paso recomendado (noche 2)
-1. Dar acceso de escritura al repositorio y subir el historial (`git bundle` incluido en el artifact o este repositorio local).
-2. **Square-1**: modelo de piezas (ya existe `square1.js` con `/` legales), solver en dos fases (BFS sobre las formas de las capas para llegar a forma de cubo, y después permutación) y pasar los scrambles a estado aleatorio. Editor específico (no es de pegatinas fijas).
-3. Mover la generación de tablas a un Web Worker.
-4. Después: 4x4+ por reducción (centros → aristas → `kociemba.js` + paridades) y Megaminx (el motor geométrico ya da pegatinas y giros).
+1. **Square-1**: modelo de piezas (ya existe `square1.js` con `/` legales), solver en dos fases (BFS sobre las formas de las capas para llegar a forma de cubo, y después permutación) y pasar los scrambles a estado aleatorio. Editor específico (no es de pegatinas fijas).
+2. Mover la generación de tablas a un Web Worker.
+3. Después: 4x4+ por reducción (centros → aristas → `kociemba.js` + paridades) y Megaminx (el motor geométrico ya da pegatinas y giros).
