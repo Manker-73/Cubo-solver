@@ -96,7 +96,7 @@ async function nuevoScramble() {
   const el = $('scramble');
   el.textContent = texto;
   el.classList.toggle('largo', texto.length > 140);
-  $('longitud').textContent = `${st.scramble.length} movimientos`;
+  $('longitud').textContent = p.describirLongitud ? p.describirLongitud(st.scramble) : `${st.scramble.length} movimientos`;
   $('vista-scramble').innerHTML = p.renderizar(st.estadoScramble, {});
 }
 

@@ -5,11 +5,11 @@
   "longitudMax": 13,
   "msPorScramble": 0.08,
   "casos": 1000,
-  "fecha": "2026-10-27T22:05:42.660Z",
+  "fecha": "2026-10-27T22:23:31.659Z",
   "resueltos": "1000/1000 (100.0%)",
   "longitudMediaSolucion": 10.56,
   "longitudMaxSolucion": 13,
-  "msMedioSolucion": 0.07,
-  "msMaxSolucion": 4.7,
-  "msInicializacion": 490
+  "msMedioSolucion": 0.05,
+  "msMaxSolucion": 2.2,
+  "msInicializacion": 549
 }

@@ -207,6 +207,12 @@ export default definirPuzzle({
     for (const m of movs) s += m === '/' ? '/ ' : m;
     return s.trim();
   },
+  describirLongitud(movs) {
+    const barras = movs.filter((m) => m === '/').length;
+    let metrica = barras;
+    for (const m of movs) if (m !== '/') { const [x, y] = m.slice(1, -1).split(',').map(Number); metrica += (x !== 0) + (y !== 0); }
+    return `${barras} barras · ${metrica} en métrica de giros`;
+  },
   renderizar,
   generarScramble,
   sePuedeCortar,

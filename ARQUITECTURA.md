@@ -61,7 +61,7 @@ Opcional (según `capacidades`):
 | `buscarRedundancia(movs)` | `null` o descripción del problema (por defecto usa `infoMovimiento`) |
 | `parsear(texto)`, `formatear(movs)` | texto ↔ lista (por defecto separado por espacios) |
 | `aplicarSecuencia`, `invertir` | se rellenan automáticamente |
-| `tipoScramble`, `descripcion`, `avisoInicializacion` | textos para la interfaz |
+| `tipoScramble`, `descripcion`, `avisoInicializacion`, `describirLongitud(movs)` | textos para la interfaz |
 
 ## Cómo añadir un puzzle
 
