@@ -1,9 +1,9 @@
 {
-  "scrambles": 100,
+  "scrambles": 1000,
   "longitudMedia": 77,
   "longitudMin": 77,
   "longitudMax": 77,
-  "msPorScramble": 0.16,
-  "casos": 100,
-  "fecha": "2026-10-27T23:50:57.434Z"
+  "msPorScramble": 0.07,
+  "casos": 1000,
+  "fecha": "2026-10-27T23:56:32.305Z"
 }
