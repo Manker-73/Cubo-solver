@@ -21,7 +21,9 @@ src/
     nxn.js          cubos NxN (modelo de pegatinas, notación, dibujo, scramble aleatorio, simplificación de capas)
     nxn-piezas.js   NxN: piezas y órbitas (esquinas, aristas centrales, wings, centros) deducidas de la geometría
     nxn-grupo.js    NxN: demostración de las restricciones (Schreier–Sims + paridades por órbita)
-    cubo-grande.js  4x4–7x7: validador y solver por reducción (conmutadores puros + Kociemba)
+    cubo-grande.js  4x4–7x7: validador y solver por reducción (búsqueda + conmutadores + Kociemba)
+    tpr4.js         4x4: reducción por búsqueda en tres fases (centros y aristas, sin paridades)
+    nxn-centros.js  5x5–7x7: centros por búsqueda en tres etapas (IDA*, dos órbitas a la vez)
     cubo-comun.js   piezas y mensajes compartidos por 2x2/3x3
     cubo2.js        2x2 (validador, IDA* óptimo, estado aleatorio)
     cubo3.js        3x3 (validador, Kociemba, estado aleatorio)
@@ -106,7 +108,11 @@ puzzle no necesita saber nada del Worker, pero su estado debe poder copiarse con
 
 ### Cubos grandes (cómo está hecho)
 - `nxn-piezas.js` agrupa las pegatinas en piezas (por cubie) y órbitas (por movimientos); vale para cualquier N.
-- `cubo-grande.js`: al inicializar busca 3-ciclos puros de cada órbita de centros y wings (conmutadores [X, A·B·A⁻¹] cuyos soportes se cortan en una pieza) y calcula, para cada trío de posiciones, el setup más corto. Resolver = centros (voraz + 3-ciclos) → paridad → aristas (3-ciclos) → paridad PLL → 3x3 con `cubo3.js`. Detalles en DECISIONES.md.
+- `cubo-grande.js`: al inicializar busca 3-ciclos puros de cada órbita de centros y wings (conmutadores [X, A·B·A⁻¹] cuyos soportes se cortan en una pieza) y calcula, para cada trío de posiciones, el setup más corto; también conmutadores "múltiples" (2–4 3-ciclos a la vez).
+- Resolver (noche 4):
+  - **4x4**: `tpr4.js` reduce el cubo (centros + aristas emparejadas, sin paridad OLL ni PLL) en tres fases de búsqueda con tablas que se generan al inicializar; luego 3x3 con `cubo3.js`.
+  - **5x5–7x7**: centros con `nxn-centros.js` (búsqueda por grupos de dos órbitas, que deja además la paridad de las wings arreglada) → centros que falten (oblicuos del 6x6/7x7) con 3-ciclos simples y múltiples → aristas con 3-ciclos simples y múltiples → paridad PLL (N par) → 3x3.
+  - Si una búsqueda no termina dentro de su límite, se usa el método de conmutadores de la noche 3 para lo que falte (siempre correcto). Detalles y cifras en DECISIONES.md y ESTADO.md.
 
 ## Plan para las próximas noches
 - **Megaminx**: el motor geométrico ya genera las 132 pegatinas y los giros; falta validador y un solver por etapas. El enfoque de conmutadores puros de `cubo-grande.js` (búsqueda automática de 3-ciclos + setups por BFS) se puede reutilizar para las últimas piezas.

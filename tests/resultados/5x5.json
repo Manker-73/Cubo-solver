@@ -3,45 +3,45 @@
   "longitudMedia": 60,
   "longitudMin": 60,
   "longitudMax": 60,
-  "msPorScramble": 0.08,
+  "msPorScramble": 0.06,
   "casos": 1000,
-  "fecha": "2026-11-13T11:42:14.560Z",
-  "msTablas": 928,
+  "fecha": "2026-11-13T19:51:24.675Z",
+  "msTablas": 3729,
   "longitudConmutador": 10,
-  "resueltos": "1000/1000 (100.0%)",
-  "casosSolver": 1000,
-  "longitudMediaSolucion": 269.04,
-  "longitudMaxSolucion": 326,
-  "msMedioSolucion": 46.69,
-  "msMaxSolucion": 162,
+  "resueltos": "500/500 (100.0%)",
+  "casosSolver": 500,
+  "longitudMediaSolucion": 159.6,
+  "longitudMaxSolucion": 257,
+  "msMedioSolucion": 1092.7,
+  "msMaxSolucion": 5099.6,
   "fases": {
     "paridad": {
-      "longitudMedia": 0.63,
-      "longitudMax": 4,
-      "msMedio": 0.02,
-      "msMax": 0.4,
-      "casosConFase": 320
+      "longitudMedia": 0.02,
+      "longitudMax": 2,
+      "msMedio": 0.03,
+      "msMax": 0.2,
+      "casosConFase": 5
     },
     "centros": {
-      "longitudMedia": 144.14,
-      "longitudMax": 189,
-      "msMedio": 17.75,
-      "msMax": 49.3,
-      "casosConFase": 1000
+      "longitudMedia": 36.46,
+      "longitudMax": 134,
+      "msMedio": 1030.36,
+      "msMax": 5043.8,
+      "casosConFase": 500
     },
     "aristas": {
-      "longitudMedia": 103.04,
-      "longitudMax": 123,
-      "msMedio": 10.72,
-      "msMax": 23.6,
-      "casosConFase": 1000
+      "longitudMedia": 103.69,
+      "longitudMax": 122,
+      "msMedio": 11.26,
+      "msMax": 28.1,
+      "casosConFase": 500
     },
     "3x3": {
-      "longitudMedia": 21.23,
-      "longitudMax": 22,
-      "msMedio": 17.5,
-      "msMax": 135.3,
-      "casosConFase": 1000
+      "longitudMedia": 19.44,
+      "longitudMax": 21,
+      "msMedio": 50.55,
+      "msMax": 401.4,
+      "casosConFase": 500
     }
   },
   "grupo": {
@@ -55,6 +55,9 @@
     "relacionesVisibles": [
       "esquinas + aristas centrales"
     ],
-    "ms": 3501
-  }
+    "ms": 2598
+  },
+  "cotaInferior": 52,
+  "cociente": 3.07,
+  "cotaSuperior": "130 (demostrada)"
 }

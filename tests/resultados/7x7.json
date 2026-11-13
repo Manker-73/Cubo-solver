@@ -3,45 +3,45 @@
   "longitudMedia": 100,
   "longitudMin": 100,
   "longitudMax": 100,
-  "msPorScramble": 0.11,
+  "msPorScramble": 0.13,
   "casos": 1000,
-  "fecha": "2026-11-13T11:42:14.753Z",
-  "msTablas": 1309,
+  "fecha": "2026-11-13T19:51:24.883Z",
+  "msTablas": 7873,
   "longitudConmutador": 10,
-  "resueltos": "200/200 (100.0%)",
-  "casosSolver": 200,
-  "longitudMediaSolucion": 686.87,
-  "longitudMaxSolucion": 759,
-  "msMedioSolucion": 178.04,
-  "msMaxSolucion": 351.4,
+  "resueltos": "100/100 (100.0%)",
+  "casosSolver": 100,
+  "longitudMediaSolucion": 436.46,
+  "longitudMaxSolucion": 556,
+  "msMedioSolucion": 4224.37,
+  "msMaxSolucion": 11842.2,
   "fases": {
     "paridad": {
-      "longitudMedia": 1.04,
-      "longitudMax": 4,
+      "longitudMedia": 0.14,
+      "longitudMax": 3,
       "msMedio": 0.06,
-      "msMax": 0.6,
-      "casosConFase": 93
+      "msMax": 0.2,
+      "casosConFase": 7
     },
     "centros": {
-      "longitudMedia": 455.93,
-      "longitudMax": 524,
-      "msMedio": 132.46,
-      "msMax": 229.2,
-      "casosConFase": 200
+      "longitudMedia": 228.56,
+      "longitudMax": 350,
+      "msMedio": 4020.98,
+      "msMax": 11693.6,
+      "casosConFase": 100
     },
     "aristas": {
-      "longitudMedia": 208.7,
-      "longitudMax": 236,
-      "msMedio": 27.14,
-      "msMax": 48.1,
-      "casosConFase": 200
+      "longitudMedia": 188.21,
+      "longitudMax": 207,
+      "msMedio": 136.16,
+      "msMax": 229.4,
+      "casosConFase": 100
     },
     "3x3": {
-      "longitudMedia": 21.2,
-      "longitudMax": 22,
-      "msMedio": 16.26,
-      "msMax": 107.8,
-      "casosConFase": 200
+      "longitudMedia": 19.55,
+      "longitudMax": 21,
+      "msMedio": 65.72,
+      "msMax": 401.2,
+      "casosConFase": 100
     }
   },
   "grupo": {
@@ -59,6 +59,9 @@
     "relacionesVisibles": [
       "esquinas + aristas centrales"
     ],
-    "ms": 64878
-  }
+    "ms": 49323
+  },
+  "cotaInferior": 99,
+  "cociente": 4.41,
+  "cotaSuperior": "~120–160 (sin confirmar)"
 }

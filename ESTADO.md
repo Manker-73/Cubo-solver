@@ -1,4 +1,4 @@
-# Estado del proyecto (final de la noche 3 — 13/11/2026)
+# Estado del proyecto (final de la noche 4 — 13/11/2026)
 
 ## Qué funciona
 
@@ -6,11 +6,55 @@
 |---|---|---|---|---|
 | 2x2 | estado aleatorio | sí | óptimo (IDA*, U R F) | sí |
 | 3x3 | estado aleatorio | sí | Kociemba dos fases (~20 mov.) | sí |
-| **4x4 – 7x7** | movimientos aleatorios WCA (40/60/80/100) | **sí** | **reducción (centros → aristas → paridades → 3x3)** | **sí** (+ rellenar cara, cara ampliada) |
+| **4x4 – 7x7** | movimientos aleatorios WCA (40/60/80/100) | sí | **reducción por búsqueda** (4x4: 3 fases estilo TPR; 5x5–7x7: centros por IDA*, resto con conmutadores) → 3x3 | sí (+ rellenar cara, cara ampliada) |
 | Pyraminx | estado aleatorio + puntas | sí | óptimo (BFS completo) + puntas | sí |
 | Skewb | estado aleatorio (uniforme exacto) | sí | óptimo (IDA*) | sí |
 | **Square-1** | **estado aleatorio (uniforme, ≥ 11 mov.)** | **sí** | **dos fases (~11,4 barras)** | **sí** |
 | Megaminx | Pochmann (7×11) | — | próximamente | próximamente |
+
+## Noche 4: soluciones NxN más cortas
+
+### Referencia: número de Dios y cotas (comprobadas)
+Todas en **OBTM** (métrica de la WCA: un giro de cara o de bloque exterior = 1; una capa interior suelta = 2), que es en la que se cuentan nuestras soluciones.
+
+| Cubo | Número de Dios | Cota inferior | Cota superior / estimación | Estado |
+|---|---|---|---|---|
+| 2x2 | 11 | 11 | 11 | Demostrado (búsqueda completa; 11 HTM = OBTM, 14 QTM). |
+| 3x3 | 20 | 20 | 20 | Demostrado (Rokicki, Kociemba, Davidson, Dethridge, 2010; 20 HTM = OBTM). |
+| 4x4 | desconocido | 35 | 55 (demostrada) / ~36–48 (estimada) | Cota inferior 35: conteo (hilo de speedsolving.com) y **recalculada aquí**. 55: demostrada (7+12+16+20). En 2026 se ha publicado en speedsolving.com una prueba asistida por ordenador de **54**, pendiente de verificación independiente. Estimación: **sin confirmar en OBTM** (Hirata, 2024: 41 en una métrica de capas sueltas). |
+| 5x5 | desconocido | 52 | 130 (demostrada) / ~60–80 (estimada) | 52: **calculada aquí** (no encontré fuente publicada con ese valor). 130: xyzzy, speedsolving.com, 2018. Estimación: **sin confirmar** (Hirata: 58 en otra métrica; el solver de xyzzy reduce en ~70–75). |
+| 6x6 | desconocido | 75 | ~90–120 (estimación teórica) | 75: **calculada aquí** (un conteo más tosco en speedsolving da 73). Estimación: **sin confirmar** (no encontré ninguna fuente). |
+| 7x7 | desconocido | 99 | ~120–160 (estimación teórica) | 99: **calculada aquí** (el conteo tosco da 95). Estimación: **sin confirmar**. |
+
+Cálculo de las cotas inferiores (test en `tests/cubo-grande.test.mjs`): posiciones con los centros de un color indistinguibles frente a secuencias canónicas de n movimientos (los del mismo eje conmutan: por eje, C(N−1, j)·3^j elementos con j movimientos). Sale exactamente 35 / 52 / 75 / 99 (y 9 / 18 para 2x2 / 3x3, las cotas clásicas por conteo).
+
+### Resultado (`npm test`: 81 tests, 81 pasan, 45 min)
+500 casos en 4x4 y 5x5, 100 en 6x6 y 7x7, con el cubo reorientado al azar; cada solución se aplica movimiento a movimiento y se comprueba que el cubo queda resuelto y sin tramos simplificables.
+
+| Cubo | Long. media | Long. máxima | Cociente (media / cota inf.) | Objetivo | Cota sup. / estimación | Distancia de la media a ella | Antes (noche 3) |
+|---|---|---|---|---|---|---|---|
+| 4x4 | **54,8** | 216 | **1,57** | ≤ 2,0 ✅ | 55 (demostrada) · ~36–48 | −0,2 · +7 a +19 | 195,1 |
+| 5x5 | **159,6** | 257 | **3,07** | ≤ 3,0 ❌ (por 0,07) | 130 (demostrada) · ~60–80 | +29,6 · +80 a +100 | 269,0 |
+| 6x6 | **357,6** | 392 | **4,77** | ≤ 3,5 ❌ | ~90–120 (sin confirmar) | +238 a +268 | 527,1 |
+| 7x7 | **436,5** | 556 | **4,41** | ≤ 4,0 ❌ | ~120–160 (sin confirmar) | +277 a +317 | 686,9 |
+
+Por fase (longitud media) y tiempos:
+
+| Cubo | Centros | Aristas | Paridad | 3x3 | Tiempo medio (máx.) | Tablas (1.ª vez) |
+|---|---|---|---|---|---|---|
+| 4x4 | 14,8 (fases 1–2) | 20,6 (fase 3) | 0 | 19,4 | 1,2 s (13,7 s) | 4,1 s |
+| 5x5 | 36,5 | 103,7 | 0 | 19,4 | 1,1 s (5,1 s) | 3,7 s |
+| 6x6 | 159,6 | 174,2 | 4,4 | 19,4 | 1,3 s (3,0 s) | 4,0 s |
+| 7x7 | 228,6 | 188,2 | 0,1 | 19,6 | 4,2 s (11,8 s) | 7,9 s |
+
+El tiempo ha subido (antes 30–180 ms por solución): es búsqueda en vez de conmutadores. Sigue siendo en el Web Worker (la página no se bloquea) y con límites: si una búsqueda no termina, se pasa al método de conmutadores, que siempre funciona. En el 4x4 eso ocurre en ~3 de cada 500 casos (de ahí el máximo de 216 movimientos).
+
+### Qué limita y qué haría falta
+- **4x4 (objetivo cumplido)**: la media está en la cota superior demostrada (55). El TPR original llega a ~44 con una tabla de aristas de 12!/16 estados (~30 millones, varios segundos de generación); aquí la fase 3 está partida en dos con tablas pequeñas. Para bajar a ~45–48: esa tabla grande (con simetrías), o más candidatos entre fases.
+- **5x5 (3,07 frente a 3,0)**: limitan las **aristas** (104 de 160 movimientos): se emparejan con 3-ciclos puros (~4,5 movimientos por wing). Con una muestra de 30 casos salió 2,97, así que está en el límite. Haría falta emparejar con búsqueda (fases tipo "dominó" como el solver de xyzzy, que reduce en ~70–75) en vez de con conmutadores.
+- **6x6 (4,77)**: los **centros oblicuos** (~130 movimientos) se hacen con 3-ciclos porque están en las capas 2 y 3 a la vez y no se pueden aislar para la búsqueda por parejas de órbitas; una búsqueda conjunta de 4 órbitas necesitaría tablas combinadas de cientos de MB (lo que hace, p. ej., el solver de dwalton76). Las **aristas** (174) igual que en el 5x5.
+- **7x7 (4,41)**: igual que el 6x6: oblicuos (~150) y aristas (188).
+- Lo probado que no funcionó está en DECISIONES.md.
 
 ## Noche 3: 4x4, 5x5, 6x6 y 7x7 completos
 
@@ -111,10 +155,10 @@ Métricas del Square-1: **barras**; **WCA** = Regulación 12c4 (cada `(x,y)` y c
 - La primera vez que se elige el Square-1 se tarda ~1 s en generar las tablas (en el Worker, la página no se bloquea). En el hilo principal (sin Worker) ese segundo sí bloquea.
 - El editor del Square-1 supone la orientación de referencia (blanco arriba, azul delante, corte según 12c1); no reorienta colores como el de los cubos.
 - La suite completa tarda ~18 min (el Square-1 recorre las 19.305 formas y Schreier–Sims del 7x7 tarda ~70 s); `npm run test:rapido` tarda ~2,5 min (20 casos por tamaño de NxN, Schreier–Sims solo hasta el 5x5).
-- **Las soluciones de 4x4–7x7 son largas** (195 / 269 / 527 / 687 movimientos de media): el método por 3-ciclos es siempre correcto pero no eficiente. Los centros son la mayor parte. Un solver de centros por bloques/búsqueda (como hacen los humanos o el TPR del 4x4) podría dejarlas en ~100–150 en el 4x4.
+- Soluciones NxN: 55 / 160 / 358 / 437 de media (antes 195 / 269 / 527 / 687); ver la sección de la noche 4. El tiempo de resolución ha subido a 1–4 s (máximo medido 13,7 s en un 4x4 que acaba usando el método de respaldo) y las tablas tardan 4–8 s la primera vez.
 - Los scrambles de 4x4–7x7 siguen siendo de movimientos aleatorios (TNoodle usa estado aleatorio en el 4x4).
 - Los colores del Megaminx y la orientación de su red siguen siendo orientativos.
 
-## Siguiente paso recomendado (noche 4)
+## Siguiente paso recomendado (noche 5)
 1. **Megaminx**: el motor geométrico ya da las 132 pegatinas y los giros. Modelo de piezas con `crearModeloPiezas` (o el método de órbitas de `nxn-piezas.js`), validador demostrando las restricciones con `nxn-grupo.js` adaptado, y solver por etapas; las últimas piezas se pueden hacer con el buscador automático de 3-ciclos puros + setups de `cubo-grande.js` (habría que extraerlo a `src/core/`).
-2. Opcional: acortar las soluciones NxN (centros por bloques con búsqueda) y scramble de estado aleatorio para el 4x4.
+2. Opcional: aristas del 5x5 por búsqueda (para bajar del cociente 3,0) y scramble de estado aleatorio para el 4x4 (las tablas de `tpr4.js` sirven de base).

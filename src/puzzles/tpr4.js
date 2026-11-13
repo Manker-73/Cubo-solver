@@ -307,6 +307,7 @@ function crearTPR4() {
             if (f) sols2.push({ c1, movs2, ...f, L12: c1.movs.length + prof });
             return sols2.length >= MAX2 || (probados2 & 255) === 0 && Date.now() > tLimite2 && sols2.length > 0;
           }
+          if ((++probados2 & 4095) === 0 && Date.now() > tLimite2 + msMax * 1.5) { if (sols2.length) return true; throw new Error('TPR4: tiempo agotado'); }
           for (const i of G2) {
             if (!permitido(ult, i)) continue;
             const t = mover2(MOVS[i], s);
@@ -383,7 +384,7 @@ function crearTPR4() {
             sols3a.push({ c, movs3a: movs, s3: s, iE, iU, L: c.L12 + prof, h: c.L12 + prof + Math.max(he, T3b[indice3(s)]) });
             return sols3a.length >= MAX3A;
           }
-          if ((++nodos & 4095) === 0 && Date.now() > tLimite && sols3a.length) return true;
+          if ((++nodos & 4095) === 0 && Date.now() > tLimite) { if (sols3a.length || Date.now() > tLimite + 2500) { if (sols3a.length) return true; throw new Error('TPR4: tiempo agotado'); } }
           for (const i of G3) {
             if (!permitido(ult, i)) continue;
             const m = MOVS[i];
@@ -433,7 +434,7 @@ function crearTPR4() {
         if (ok) { mejor = { c, movs3b: Array.from(camino4.subarray(0, L4)), total: c.L + L4 }; break; }
       }
       nodos += nodosC;
-      if (Date.now() > tLimite + 1500 && mejor) break;
+      if (Date.now() > tLimite + 1500 && mejor || Date.now() > tLimite + 4000) break;
     }
     if (!mejor) return null;
     const nombres = (l) => l.map((i) => MOVS[i].nombre);
@@ -446,5 +447,6 @@ function crearTPR4() {
     };
   }
 
-  return { TQ, F8, reducir, MOVS, hist: () => ({ T1: hist(T1), T2: hist(T2), T3a: hist(T3a), T3b: hist(T3b), TS: hist(TS), TQ: hist(TQ) }), tamTablas: {} };
+  const depurar = () => ({ G3b, MOVS, T3b, TQ, F8, indice3, mover3, visitados3b });
+  return { depurar, TQ, F8, reducir, MOVS, hist: () => ({ T1: hist(T1), T2: hist(T2), T3a: hist(T3a), T3b: hist(T3b), TS: hist(TS), TQ: hist(TQ) }), tamTablas: {} };
 }

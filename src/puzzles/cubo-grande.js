@@ -671,7 +671,7 @@ export function crearCuboGrande(N) {
       const wp = (x, y) => wingPorColores[0].get(x + ',' + y);
       try { r = tablas.tpr.reducir(a.norm, wp, { msMax: opciones.msReduccion ?? 1500, ...opciones.tpr }); } catch (err) { r = null; }
       // segundo intento, con más margen, antes de pasar al método general
-      if (!r) try { r = tablas.tpr.reducir(a.norm, wp, { msMax: 4000, nodos3b: 6e6, cand3b: 40, ...opciones.tpr }); } catch (err) { r = null; }
+      if (!r) try { r = tablas.tpr.reducir(a.norm, wp, { msMax: 3000, nodos3b: 3e6, cand3b: 20, ...opciones.tpr }); } catch (err) { r = null; }
       if (r) {
         fase = 'centros'; aplicar(r.fases[0]); aplicar(r.fases[1]);
         cambiarFase('aristas'); aplicar(r.fases[2]); aplicar(r.fases[3]);
