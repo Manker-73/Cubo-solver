@@ -307,6 +307,90 @@ export function crearCuboGrande(N) {
       return { nS, coste, idx, secuencia, nBases: usadas.length, longitudBase: minimo, destSetup };
     });
 
+    // ---- Conmutadores dobles: dos 3-ciclos a la vez, en dos órbitas del mismo tipo ----
+    // (p. ej. una wing exterior y una interior de la misma arista, o un centro
+    // oblicuo de cada órbita). X: una capa (o dos capas interiores juntas), Y = A·B·A⁻¹.
+    const dobles = [];
+    if (N >= 5) {
+      const Xd = rodajas.concat(simples);
+      for (const c of ['U', 'R', 'F']) for (let p = 3; p < N; p++) for (let v = 1; v <= 3; v++) {
+        Xd.push(op([nombreMovimiento(c, p, v), nombreMovimiento(c, 1, 4 - v)])); // capas 2..p
+      }
+      const Yd = [];
+      for (const A of caras1) for (const B of Xd) {
+        if (ejeDe(A) === ejeDe(B)) continue;
+        Yd.push(op([A.movs[0], ...B.movs, invertirMovimientoNxN(A.movs[0])]));
+      }
+      const vistosD = new Set();
+      for (const x of Xd) for (const y of Yd) {
+        let comun = 0;
+        const pcs = [];
+        for (let w = 0; w < palabras && comun < 3; w++) {
+          let v = x.s[w] & y.s[w];
+          while (v && comun < 3) { const t = v & -v; pcs.push(w * 32 + 31 - Math.clz32(t)); comun++; v ^= t; }
+        }
+        if (comun !== 2) continue;
+        const o1 = orbitaDePieza[pcs[0]], o2 = orbitaDePieza[pcs[1]];
+        if (o1 < 0 || o2 < 0 || orbitas[o1].tipo !== orbitas[o2].tipo) continue;
+        if (orbitas[o1].tipo !== 'centros' && orbitas[o1].tipo !== 'wings') continue;
+        const P = componer(componer(componer(x.P, y.P), invertir(x.P)), invertir(y.P));
+        const movidas = [];
+        for (let i = 0; i < nPeg; i++) if (P[i] !== i) movidas.push(i);
+        const m = orbitas[o1].piezas[0].length;
+        if (movidas.length !== 6 * m) continue;
+        const ciclos = [];
+        let ok = true;
+        const destino = (j) => P.indexOf(j);
+        if (o1 !== o2) {
+          for (const oi of [o1, o2]) {
+            const prim = movidas.filter((i) => primaria[oi].has(i));
+            if (prim.length !== 3) { ok = false; break; }
+            const p1 = prim[0], p2 = destino(p1), p3 = destino(p2);
+            if (destino(p3) !== p1 || !prim.includes(p2) || !prim.includes(p3)) { ok = false; break; }
+            ciclos.push({ oi, c: [p1, p2, p3].map((f) => primaria[oi].get(f)) });
+          }
+        } else {
+          // dos 3-ciclos disjuntos en la misma órbita
+          const prim = movidas.filter((i) => primaria[o1].has(i));
+          if (prim.length !== 6) ok = false;
+          const usados = new Set();
+          for (const p1 of prim) {
+            if (!ok || usados.has(p1)) continue;
+            const p2 = destino(p1), p3 = destino(p2);
+            if (destino(p3) !== p1 || !prim.includes(p2) || !prim.includes(p3) || p2 === p1) { ok = false; break; }
+            [p1, p2, p3].forEach((x) => usados.add(x));
+            ciclos.push({ oi: o1, c: [p1, p2, p3].map((f) => primaria[o1].get(f)) });
+          }
+          if (ciclos.length !== 2) ok = false;
+        }
+        if (!ok || !movidas.every((i) => orbitaDePieza[piezaDe[i]] === o1 || orbitaDePieza[piezaDe[i]] === o2)) continue;
+        const movs = simplificarNxN([...x.movs, ...y.movs, ...invSec(x.movs), ...invSec(y.movs)], N).movimientos;
+        const clave = movs.join(' ');
+        if (vistosD.has(clave)) continue;
+        vistosD.add(clave);
+        dobles.push({ movs, ciclos });
+        dobles.push({ movs: invSec(movs), ciclos: ciclos.map((c) => ({ oi: c.oi, c: [c.c[0], c.c[2], c.c[1]] })) });
+      }
+      // solo los más cortos de cada pareja de órbitas
+      const minimo = new Map();
+      for (const d of dobles) { const k = d.ciclos.map((c) => c.oi).sort().join(); minimo.set(k, Math.min(minimo.get(k) ?? 99, d.movs.length)); }
+      const cortos = dobles.filter((d) => d.movs.length <= minimo.get(d.ciclos.map((c) => c.oi).sort().join()));
+      dobles.length = 0; dobles.push(...cortos);
+    }
+    // setups para los dobles: ninguno, un movimiento (caras y capas anchas) o dos caras
+    const setupsD = [[]];
+    for (const m of setups) setupsD.push([m]);
+    for (const m1 of caras1) for (const m2 of caras1) if (ejeDe(m1) !== ejeDe(m2)) setupsD.push([m1.movs[0], m2.movs[0]]);
+    // para cada setup S y órbita: posición x -> S⁻¹(x) (la base actúa en S(x))
+    const invSetup = setupsD.map((S) => {
+      let Pinv = identidad(nPeg);
+      for (const m of S) Pinv = componer(Pinv, b.permDe(m)); // tras S, en i está lo que había en Pinv[i]
+      return orbitas.map((o, oi) => {
+        if (o.tipo !== 'centros' && o.tipo !== 'wings') return null;
+        return Int8Array.from(o.piezas.map((pz) => primaria[oi].get(Pinv[pz[0]])));
+      });
+    });
+
     // Paridad de wings: una capa interior que mueva la órbita con permutación impar
     const paridadWings = oiWings.map((oi) => {
       for (let p = 2; p <= Math.floor(N / 2); p++) {
@@ -368,7 +452,7 @@ export function crearCuboGrande(N) {
       for (let v = 1; v <= 3; v++) anadirLibre([nombreMovimiento(c, p, v), nombreMovimiento(c, p - 1, 4 - v)]);
     }
     const objCentros = pegCentros.map((f) => RES[f]);
-    tablas = { porOrbita, paridadWings, pll, libres, pegCentros, objCentros, ms: 0, tpr: N === 4 ? tpr4() : null, centros: N >= 5 ? crearCentrosNxN(N, b, orbitas, {
+    tablas = { porOrbita, dobles, setupsD, invSetup, paridadWings, pll, libres, pegCentros, objCentros, ms: 0, tpr: N === 4 ? tpr4() : null, centros: N >= 5 ? crearCentrosNxN(N, b, orbitas, {
       // bit w: la permutación de la órbita de wings w (respecto a su objetivo) es impar
       bits: (e) => oiWings.reduce((acc, oi, w) => {
         const obj = objetivosWings(e, w);
@@ -441,6 +525,71 @@ export function crearCuboGrande(N) {
       aplicar(mejor.sec);
     }
     throw new Error(`Demasiados ciclos en ${orb.nombre}`);
+  }
+
+  /**
+   * Varias órbitas a la vez: en cada paso, el mejor 3-ciclo simple (con su setup
+   * óptimo, como resolverOrbita) o doble (base × setup de 0, 1 o 2 movimientos),
+   * por piezas colocadas por movimiento.
+   */
+  function resolverGrupo(ois, estadoRef, objs, aplicar, costeReal) {
+    const enG = new Set(ois);
+    const dobl = tablas.dobles.filter((d) => d.ciclos.every((c) => enG.has(c.oi)));
+    const leer = (oi) => {
+      const orb = orbitas[oi];
+      return orb.piezas.map((pz) => (orb.tipo === 'wings'
+        ? wingPorColores[oiWings.indexOf(oi)].get(estadoRef.e[pz[0]] + ',' + estadoRef.e[pz[1]])
+        : estadoRef.e[pz[0]]));
+    };
+    const ganancia = (cur, obj, a, b2, c) => (cur[a] === obj[b2]) + (cur[b2] === obj[c]) + (cur[c] === obj[a]) - (cur[a] === obj[a]) - (cur[b2] === obj[b2]) - (cur[c] === obj[c]);
+    for (let iter = 0; iter < 600; iter++) {
+      const cur = {}, obj = objs;
+      let quedan = 0;
+      for (const oi of ois) { cur[oi] = leer(oi); for (let j = 0; j < 24; j++) if (cur[oi][j] !== obj[oi][j]) quedan++; }
+      if (!quedan) return;
+      const cand = [];
+      for (const oi of ois) {
+        const T = tablas.porOrbita[oi];
+        const cu = cur[oi], ob = obj[oi];
+        const mal = [];
+        for (let j = 0; j < 24; j++) if (cu[j] !== ob[j]) mal.push(j);
+        for (const a of mal) for (const b2 of mal) {
+          if (b2 === a || cu[a] !== ob[b2]) continue;
+          for (let c = 0; c < 24; c++) {
+            if (c === a || c === b2) continue;
+            const g = ganancia(cu, ob, a, b2, c);
+            if (g <= 0) continue;
+            const coste = T.coste[T.idx(a, b2, c)];
+            if (coste < 0) continue;
+            cand.push({ valor: g / coste, g, coste, sec: () => T.secuencia(a, b2, c) });
+          }
+        }
+      }
+      for (const d of dobl) {
+        const [c1, c2] = d.ciclos;
+        const cu1 = cur[c1.oi], ob1 = obj[c1.oi], cu2 = cur[c2.oi], ob2 = obj[c2.oi];
+        for (let si = 0; si < tablas.setupsD.length; si++) {
+          const inv = tablas.invSetup[si];
+          const i1 = inv[c1.oi], i2 = inv[c2.oi];
+          const g = ganancia(cu1, ob1, i1[c1.c[0]], i1[c1.c[1]], i1[c1.c[2]]) + ganancia(cu2, ob2, i2[c2.c[0]], i2[c2.c[1]], i2[c2.c[2]]);
+          if (g <= 0) continue;
+          const S = tablas.setupsD[si];
+          const coste = d.movs.length + 2 * S.length;
+          cand.push({ valor: g / coste, g, coste, sec: () => [...S, ...d.movs, ...S.slice().reverse().map(invertirMovimientoNxN)] });
+        }
+      }
+      if (!cand.length) throw new Error(`No se pudo avanzar con ${ois.map((oi) => orbitas[oi].nombre).join(', ')}`);
+      cand.sort((x, y) => y.valor - x.valor || x.coste - y.coste);
+      let mejor = null;
+      for (const x of cand.slice(0, 24)) {
+        const sec = x.sec();
+        const real = costeReal(sec);
+        const valor = x.g / Math.max(1, real);
+        if (!mejor || valor > mejor.valor) mejor = { valor, sec };
+      }
+      aplicar(mejor.sec);
+    }
+    throw new Error('Demasiados ciclos');
   }
 
   /** Mejora voraz de los centros con movimientos sueltos o parejas de movimientos. */
@@ -528,11 +677,9 @@ export function crearCuboGrande(N) {
       if (paridad(destino)) aplicar(tablas.paridadWings[w]);
     });
     if (conBusqueda) {
-      // 1. paridad de las wings (mueve centros, que aún no se han tocado)
-      fase = 'paridad';
-      paridadWings();
-      // 2. centros por búsqueda (nxn-centros.js); los que no se resuelvan, con 3-ciclos
-      cambiarFase('centros');
+      // 1. centros por búsqueda (nxn-centros.js), que dejan además la paridad de las
+      // wings arreglada; los que no se resuelvan, con 3-ciclos
+      fase = 'centros';
       const rc = tablas.centros.resolver(ref.e, opciones.centros);
       aplicar(rc.movimientos);
       // si alguna etapa no se pudo hacer, la paridad puede seguir sin arreglar
@@ -548,11 +695,16 @@ export function crearCuboGrande(N) {
     }
     // 2. centros (3-ciclos; las órbitas ya resueltas no hacen nada)
     cambiarFase('centros');
-    for (const oi of oiCentros) resolverOrbita(oi, ref, orbitas[oi].piezas.map((pz) => RES[pz[0]]), aplicar, costeReal);
+    if (opciones.dobles === false) {
+      for (const oi of oiCentros) resolverOrbita(oi, ref, orbitas[oi].piezas.map((pz) => RES[pz[0]]), aplicar, costeReal);
+    } else {
+      resolverGrupo(oiCentros, ref, Object.fromEntries(oiCentros.map((oi) => [oi, orbitas[oi].piezas.map((pz) => RES[pz[0]])])), aplicar, costeReal);
+    }
     // 3. aristas
     cambiarFase('aristas');
     const necesitaPLL = !impar && paridad(modelo3.identificar(ref.e).orbitas[0].perm) === 1;
-    oiWings.forEach((oi, w) => resolverOrbita(oi, ref, objetivosWings(ref.e, w), aplicar, costeReal));
+    if (opciones.dobles === false) oiWings.forEach((oi, w) => resolverOrbita(oi, ref, objetivosWings(ref.e, w), aplicar, costeReal));
+    else resolverGrupo(oiWings, ref, Object.fromEntries(oiWings.map((oi, w) => [oi, objetivosWings(ref.e, w)])), aplicar, costeReal);
     // 4. paridad PLL
     if (necesitaPLL) {
       cambiarFase('paridad');
@@ -562,7 +714,7 @@ export function crearCuboGrande(N) {
     }
     // 5. 3x3
     cambiarFase('3x3');
-    const r3 = cubo3.resolver(extraer3x3(ref.e), { objetivo: opciones.objetivo ?? 22, msMax: opciones.msMax ?? 300 });
+    const r3 = cubo3.resolver(extraer3x3(ref.e), { objetivo: opciones.objetivo ?? 20, msMax: opciones.msMax ?? 400 });
     if (!r3.ok) return { ok: false, errores: ['Fallo interno en la fase 3x3: ' + r3.errores.join(' ')] };
     aplicar(r3.movimientos);
     cambiarFase('fin');

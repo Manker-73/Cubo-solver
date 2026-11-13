@@ -148,7 +148,7 @@ export function crearCentrosNxN(N, b, orbitas, paridad = null) {
     const B = [busca('X', 'interiores'), busca('+', 'interiores')];
     PASOS = [
       { orbitas: A, etapa: 1, juego: J1 },
-      { orbitas: B, etapa: 1, juego: (m) => J2(m) || (m.capa3 && m.eje !== 1) },
+      { orbitas: B, etapa: 1, juego: (m) => J2(m) || m.capa3, plan: [[1, 6e5], [1.5, 4e5], [3, 6e5], [6, 1e6], [12, 1e6]] },
       { orbitas: A, etapa: 2, juego: J2 },
       { orbitas: B, etapa: 2, juego: (m) => J3(m) || (m.capa3 && m.eje === 1) },
       { orbitas: A, etapa: 3, juego: J3 },
@@ -165,11 +165,35 @@ export function crearCentrosNxN(N, b, orbitas, paridad = null) {
 
   // ---- tablas (por tipo de órbita, juego de movimientos y etapa) ----
   const cacheTablas = new Map();
-  function tablaDe(k, movs, etapa) {
-    const firma = etapa + ':' + [...new Set(movs.map((m) => m.id[k] + '/' + m.coste))].sort().join('|');
+  function tablaDe(k, movs, etapa, par = 0) {
+    // con par != 0 (solo E2): la tabla incluye la paridad de las wings (bits de `par`): índice * 4 + paridad
+    const firma = etapa + ':' + par + ':' + [...new Set(movs.map((m) => m.id[k] + '/' + m.coste + '/' + (m.flip & par)))].sort().join('|');
     if (!cacheTablas.has(firma)) {
-      const perms = [...new Map(movs.map((m) => [m.id[k] + '/' + m.coste, { T: m.T[k], coste: m.coste }])).values()];
-      cacheTablas.set(firma, bfs(TAM[etapa], [meta(k, etapa)], INDICE[etapa], perms));
+      if (!par) {
+        const perms = [...new Map(movs.map((m) => [m.id[k] + '/' + m.coste, { T: m.T[k], coste: m.coste }])).values()];
+        cacheTablas.set(firma, bfs(TAM[etapa], [meta(k, etapa)], INDICE[etapa], perms));
+      } else {
+        const perms = [...new Map(movs.map((m) => [m.id[k] + '/' + m.coste + '/' + (m.flip & par), { T: m.T[k], coste: m.coste, f: m.flip & par }])).values()];
+        const T = new Int8Array(TAM[etapa] * 4).fill(-1);
+        const ind = INDICE[etapa];
+        const cubos = [[meta(k, etapa)], [], []];
+        T[ind(meta(k, etapa)) * 4] = 0;
+        for (let d = 0; cubos[d % 3].length || cubos[(d + 1) % 3].length || cubos[(d + 2) % 3].length; d++) {
+          const actual = cubos[d % 3];
+          cubos[d % 3] = [];
+          for (const s of actual) {
+            const x = s & 0xffffff, pb = s >>> 24;
+            if (T[ind(x) * 4 + pb] !== d) continue;
+            for (const { T: P, coste, f } of perms) {
+              const t = (P[x & 255] | P[256 + ((x >>> 8) & 255)] | P[512 + (x >>> 16)]) >>> 0;
+              const p2 = pb ^ f;
+              const j = ind(t) * 4 + p2;
+              if (T[j] < 0 || T[j] > d + coste) { T[j] = d + coste; cubos[(d + coste) % 3].push((t | (p2 << 24)) >>> 0); }
+            }
+          }
+        }
+        cacheTablas.set(firma, T);
+      }
     }
     return cacheTablas.get(firma);
   }
@@ -205,7 +229,7 @@ export function crearCentrosNxN(N, b, orbitas, paridad = null) {
   function inicializar() {
     if (listo) return;
     for (const p of PASOS) {
-      for (const k of p.orbitas) tablaDe(k, p.movs, p.etapa);
+      for (const k of p.orbitas) tablaDe(k, p.movs, p.etapa, p.etapa === 2 ? p.par : 0);
       if (p.etapa === 3) parejasDe(p);
     }
     listo = true;
@@ -224,7 +248,8 @@ export function crearCentrosNxN(N, b, orbitas, paridad = null) {
     }
     const movs = [...vistos.values()].filter((m) => !(m.id[k1] === ID0[k1] && m.id[k2] === ID0[k2] && !(m.flip & paso.par)));
     const flip = Int8Array.from(movs.map((m) => m.flip & paso.par));
-    const T1 = tablaDe(k1, paso.movs, numEtapa), T2 = tablaDe(k2, paso.movs, numEtapa);
+    const conPar = numEtapa === 2 && paso.par ? 4 : 1;
+    const T1 = tablaDe(k1, paso.movs, numEtapa, conPar > 1 ? paso.par : 0), T2 = tablaDe(k2, paso.movs, numEtapa, conPar > 1 ? paso.par : 0);
     const P = numEtapa === 3 ? parejasDe(paso) : [];
     const M = movs.length;
     const TA = movs.map((m) => m.T[k1]), TC = movs.map((m) => m.T[k2]);
@@ -236,7 +261,7 @@ export function crearCentrosNxN(N, b, orbitas, paridad = null) {
     const W = new Int16Array(64); for (let v = 0; v < 64; v++) W[v] = Math.floor(v * w);
     const P0 = P[0] ? P[0].T : null, P1 = P[1] ? P[1].T : null, P2 = P[2] ? P[2].T : null;
     const e3 = numEtapa === 3, e2 = numEtapa === 2;
-    const hDe = (a, c) => {
+    const hDe = (a, c, pr) => {
       let hv, v2;
       if (e3) {
         hv = T1[(r70[a & 255] * 70 + r70[(a >>> 8) & 255]) * 70 + r70[a >>> 16]];
@@ -245,14 +270,14 @@ export function crearCentrosNxN(N, b, orbitas, paridad = null) {
         v2 = P1[r70[(a >>> 8) & 255] * 70 + r70[(c >>> 8) & 255]]; if (v2 > hv) hv = v2;
         v2 = P2[r70[a >>> 16] * 70 + r70[c >>> 16]]; if (v2 > hv) hv = v2;
       } else if (e2) {
-        hv = T1[r16[(a & 255) | ((a >>> 16) << 8)]];
-        v2 = T2[r16[(c & 255) | ((c >>> 16) << 8)]]; if (v2 > hv) hv = v2;
+        hv = T1[r16[(a & 255) | ((a >>> 16) << 8)] * conPar + (conPar > 1 ? pr : 0)];
+        v2 = T2[r16[(c & 255) | ((c >>> 16) << 8)] * conPar + (conPar > 1 ? pr : 0)]; if (v2 > hv) hv = v2;
       } else {
         hv = T1[rango8(a)]; v2 = T2[rango8(c)]; if (v2 > hv) hv = v2;
       }
       return hv;
     };
-    const h0 = hDe(estado[0], estado[1]);
+    const h0 = hDe(estado[0], estado[1], par0 & paso.par);
     if (h0 === 0 && !(par0 & paso.par)) return [];
     let nodos = 0;
     const camino = new Int16Array(80);
@@ -265,9 +290,9 @@ export function crearCentrosNxN(N, b, orbitas, paridad = null) {
         const ta = TA[j], tc = TC[j];
         const a2 = (ta[a & 255] | ta[256 + ((a >>> 8) & 255)] | ta[512 + (a >>> 16)]) >>> 0;
         const c2 = (tc[c & 255] | tc[256 + ((c >>> 8) & 255)] | tc[512 + (c >>> 16)]) >>> 0;
-        const hv = hDe(a2, c2);
-        const r2 = resto - coste[j];
         const par2 = par ^ flip[j];
+        const hv = hDe(a2, c2, par2);
+        const r2 = resto - coste[j];
         if (hv === 0 && !par2) { camino[prof] = j; largo = prof + 1; return true; }
         if (W[hv] > r2 || hv > r2 || (hv === 0 && r2 === 0)) continue;
         camino[prof] = j;
@@ -275,7 +300,7 @@ export function crearCentrosNxN(N, b, orbitas, paridad = null) {
       }
       return false;
     };
-    for (let L = Math.max(h0, W[h0], 1); L < 80; L++) {
+    for (let L = Math.max(h0, W[h0], 1); L < 150; L++) {
       if (buscar(estado[0], estado[1], L, 0, 0, par0 & paso.par)) return Array.from(camino.subarray(0, largo)).map((j) => movs[j]);
     }
     throw new Error('sin solución');
@@ -283,9 +308,9 @@ export function crearCentrosNxN(N, b, orbitas, paridad = null) {
 
   // [peso de la heurística, límite de nodos] por etapa, en orden
   const PLAN = [
-    [[1, 6e5], [1.3, 3e5]],
-    [[1, 6e5], [1.3, 3e5], [1.7, 2e5]],
-    [[1, 1e5], [1.3, 2e5], [1.7, 2e5], [2.5, 2e5]],
+    [[1, 6e5], [1.3, 3e5], [2.5, 3e5], [5, 5e5]],
+    [[1, 6e5], [1.3, 3e5], [1.7, 2e5], [3, 3e5], [6, 5e5]],
+    [[1, 1e5], [1.3, 2e5], [1.7, 2e5], [2.5, 2e5], [4, 4e5], [8, 6e5]],
   ];
 
   /** norm: estado normalizado (colores = caras). Devuelve { movimientos, porEtapa, resueltas (índices en `orbitas`) }. */
@@ -353,8 +378,8 @@ export function crearCentrosNxN(N, b, orbitas, paridad = null) {
       const mascara = (k) => { let x = 0; pos[k].forEach((s, j) => { if (cols.includes(est[s])) x |= 1 << j; }); return x >>> 0; };
       const ini = paso.orbitas.map(mascara);
       let movs = null;
-      for (const [w, limite] of (opciones.plan ?? PLAN)[paso.etapa - 1]) {
-        try { movs = etapa(paso, ini, ultimo, limite, w, paridad && paso.par ? paridad.bits(est) : 0); break; } catch (err) { if (err.message !== 'límite') throw err; }
+      for (const [w, limite] of paso.plan ?? (opciones.plan ?? PLAN)[paso.etapa - 1]) {
+        try { movs = etapa(paso, ini, ultimo, limite, w, paridad && paso.par ? paridad.bits(est) : 0); break; } catch (err) { if (err.message !== 'límite' && err.message !== 'sin solución') throw err; }
       }
       if (!movs) { paso.orbitas.forEach((k) => fallidas.add(k)); porEtapa.push(null); continue; }
       for (const m of movs) for (const nm of m.nombres) { est = b.aplicarMovimiento(est, nm); res.push(nm); }
