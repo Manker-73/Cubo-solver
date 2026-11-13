@@ -205,7 +205,23 @@ export function baseNxN(N) {
     },
     pegatinas,
     renderizar(estado, opciones = {}) {
-      return svgDePegatinas(pegatinas, estado, PALETA_CUBO, opciones);
+      const k = opciones.vista ? CARAS.indexOf(opciones.vista) : -1;
+      if (k < 0) return svgDePegatinas(pegatinas, estado, PALETA_CUBO, opciones);
+      // una sola cara, ampliada (para editar cubos grandes en pantallas pequeñas)
+      const solo = Array.from({ length: N * N }, (_, i) => k * N * N + i);
+      return svgDePegatinas(pegatinas, estado, PALETA_CUBO, { ...opciones, solo, margen: 0.04 });
+    },
+    // Vistas del editor: la red completa o una cara ampliada
+    vistasEditor: [{ id: 'red', nombre: 'Red' }].concat(CARAS.map((c) => ({ id: c, nombre: c }))),
+    // "Rellenar cara": pinta toda la cara de la pegatina tocada con el último color elegido
+    herramientas: [{ id: 'rellenar', nombre: 'Rellenar cara', icono: '▦', toques: 1, usaColor: true, titulo: 'Toca una pegatina para pintar toda su cara con el último color elegido' }],
+    usarHerramienta(estado, id, indices, contexto = {}) {
+      if (id !== 'rellenar') throw new Error(`Herramienta desconocida: ${id}`);
+      const color = contexto.color ?? 0;
+      const f = Math.floor(indices[0] / (N * N));
+      const e = estado.slice();
+      for (let i = f * N * N; i < (f + 1) * N * N; i++) e[i] = color;
+      return e;
     },
   };
 }

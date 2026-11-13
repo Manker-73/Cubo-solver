@@ -97,6 +97,10 @@ body { font-family: var(--f-texto); font-size: 15px; line-height: 1.5; }
 .herramienta:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
 .boton.pequeno { padding: 6px 10px; font-size: 0.84rem; }
 .acciones-editor { margin-top: -6px; }
+.herramienta .muestra { width: 14px; height: 14px; border-radius: 4px; border: 1px solid var(--linea); display: inline-block; }
+.vistas-editor { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: -4px; }
+.vistas-editor .etiqueta { margin-right: 2px; }
+.chip.pequeno { padding: 4px 10px; font-size: 0.82rem; min-width: 2.4em; justify-content: center; }
 
 .editor { display: flex; flex-direction: column; gap: 14px; }
 .editor.desactivado { opacity: 0.4; pointer-events: none; user-select: none; }
@@ -111,12 +115,31 @@ body { font-family: var(--f-texto); font-size: 15px; line-height: 1.5; }
 
 .solucion { border-top: 1px solid var(--linea); padding-top: 12px; display: flex; flex-direction: column; gap: 10px; }
 .solucion-cab { display: flex; justify-content: space-between; align-items: center; font-size: 0.88rem; color: var(--tenue); font-variant-numeric: tabular-nums; }
-.movs { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 5px; }
+.movs { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 5px; max-height: 232px; overflow-y: auto; position: relative; }
 .movs li {
   font-family: var(--f-mono); font-size: 0.95rem; padding: 3px 8px; border-radius: 6px;
   background: var(--fondo); cursor: pointer; min-width: 2.3em; text-align: center;
 }
 .movs li.hecho { color: var(--tenue); }
+.movs li.inicio-fase { box-shadow: -3px 0 0 var(--tinta); margin-left: 4px; }
+.movs li.f-paridad:not(.actual) { background: var(--error-suave); }
+.movs li.f-centros:not(.actual) { background: var(--acento-suave); }
+.movs li.f-aristas:not(.actual) { background: var(--ok-suave); }
+.fases { display: flex; flex-wrap: wrap; gap: 6px; }
+.fase {
+  font: 600 0.8rem var(--f-texto); border: 1px solid var(--linea); border-radius: 8px; background: var(--superficie);
+  color: var(--tinta); padding: 5px 9px; cursor: pointer; display: inline-flex; gap: 6px; align-items: baseline;
+}
+.fase small { font: 500 0.74rem var(--f-mono); color: var(--tenue); }
+.fase.f-paridad { border-left: 4px solid var(--error); }
+.fase.f-centros { border-left: 4px solid var(--acento); }
+.fase.f-aristas { border-left: 4px solid var(--ok); }
+.fase.f-3x3 { border-left: 4px solid var(--tenue); }
+.fase.hecha { opacity: 0.6; }
+.fase.actual { background: var(--tinta); color: var(--fondo); }
+.fase.actual small { color: var(--fondo); }
+.fase:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
+.boton.velocidad { font: 600 0.85rem var(--f-mono); }
 .movs li.actual { background: var(--acento); color: var(--acento-tinta); }
 .reproductor { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .paso { margin-left: auto; font-size: 0.85rem; color: var(--tenue); font-variant-numeric: tabular-nums; }

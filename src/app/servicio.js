@@ -15,7 +15,7 @@ const ahora = () => (globalThis.performance || Date).now();
  *   inicializar               -> { ms, yaEstaba }
  *   scramble                  -> { movimientos, ms }
  *   validar   (estado)        -> { valido, errores }
- *   resolver  (estado)        -> { ok, movimientos, errores, ms }
+ *   resolver  (estado)        -> { ok, movimientos, errores, ms, fases }
  */
 export function atender(msg) {
   if (msg.op === 'ping') return 'ok';
@@ -41,7 +41,7 @@ export function atender(msg) {
     case 'resolver': {
       if (!p.capacidades.resolver) throw new Error(`${p.nombre} no tiene solucionador`);
       const r = p.resolver(msg.estado, msg.opciones || {});
-      return { ok: r.ok, movimientos: r.movimientos || [], errores: r.errores || [], ms: r.ms };
+      return { ok: r.ok, movimientos: r.movimientos || [], errores: r.errores || [], ms: r.ms, fases: r.fases || null };
     }
     default:
       throw new Error(`Operación desconocida: ${msg.op}`);

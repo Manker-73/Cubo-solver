@@ -17,6 +17,9 @@ const st = {
   estadoScramble: null,
   editor: null,
   color: 0,       // índice en paleta + herramientas
+  ultimoColor: 0, // último color de la paleta elegido (lo usan las herramientas con usaColor)
+  vista: null,    // vista del editor (vistasEditor), p. ej. una cara ampliada
+  velocidad: 1,   // multiplicador de la reproducción
   seleccion: null, // primer toque de una herramienta de dos toques
   sol: null,       // { movimientos, base, ms }
   paso: 0,
@@ -55,6 +58,8 @@ async function seleccionar(id) {
   pararReproduccion();
   st.p = p;
   st.color = 0;
+  st.ultimoColor = 0;
+  st.vista = p.vistasEditor ? p.vistasEditor[0].id : null;
   if (p.herramientaInicial && p.herramientas) {
     const k = p.herramientas.findIndex((h) => h.id === p.herramientaInicial);
     if (k >= 0) st.color = p.paleta.length + k;
@@ -72,6 +77,7 @@ async function seleccionar(id) {
   for (const b of ['resetear', 'cargar', 'resolver']) $(b).disabled = !activo;
   pintarPaleta();
   pintarAccionesEditor();
+  pintarVistas();
   limpiarMensajes();
   pintarEditor();
   await nuevoScramble();
@@ -158,9 +164,18 @@ function pintarPaleta() {
       b.className = 'herramienta';
       b.dataset.herramienta = ent.id;
       b.innerHTML = `<span aria-hidden="true">${ent.icono || ''}</span>${ent.nombre}`;
+      if (ent.titulo) b.title = ent.titulo;
+      if (ent.usaColor) {
+        const m = document.createElement('i');
+        m.className = 'muestra';
+        m.style.background = p.paleta[st.ultimoColor].hex;
+        m.setAttribute('aria-hidden', 'true');
+        b.appendChild(m);
+      }
     }
     b.addEventListener('click', () => {
       st.color = i;
+      if (i < p.paleta.length) st.ultimoColor = i;
       pintarPaleta();
       if (st.seleccion !== null) { st.seleccion = null; pintarEditor(); }
     });
@@ -183,7 +198,7 @@ function pintarAccionesEditor() {
     b.addEventListener('click', () => {
       if (st.sol) { st.editor = estadoMostrado(); quitarSolucion(); }
       try {
-        st.editor = st.p.aplicarAccion(st.editor, a.id);
+        st.editor = st.p.aplicarAccion(st.editor, a.id, { color: st.ultimoColor });
         limpiarMensajes();
       } catch (err) {
         limpiarMensajes();
@@ -192,6 +207,29 @@ function pintarAccionesEditor() {
       st.seleccion = null;
       pintarEditor();
     });
+    cont.appendChild(b);
+  }
+}
+
+function pintarVistas() {
+  const cont = $('vistas-editor');
+  cont.innerHTML = '';
+  const vistas = st.p.vistasEditor || [];
+  cont.hidden = vistas.length === 0 || !puedeResolver(st.p);
+  if (cont.hidden) return;
+  const et = document.createElement('span');
+  et.className = 'etiqueta';
+  et.textContent = 'Ver';
+  cont.appendChild(et);
+  for (const v of vistas) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'chip pequeno';
+    b.dataset.vista = v.id;
+    b.textContent = v.nombre;
+    b.title = v.id === vistas[0].id ? 'Ver todas las caras' : `Ampliar la cara ${v.nombre}`;
+    b.setAttribute('aria-pressed', String(st.vista === v.id));
+    b.addEventListener('click', () => { st.vista = v.id; st.seleccion = null; pintarVistas(); pintarEditor(); });
     cont.appendChild(b);
   }
 }
@@ -206,7 +244,7 @@ function pintarEditor() {
   const editable = puedeResolver(p);
   const mostrado = estadoMostrado();
   const editables = editable ? new Set(p.pegatinasEditables(mostrado)) : null;
-  $('vista-editor').innerHTML = p.renderizar(mostrado, { editable, editables, seleccion: st.seleccion });
+  $('vista-editor').innerHTML = p.renderizar(mostrado, { editable, editables, seleccion: st.seleccion, vista: st.vista });
   pintarSolucion();
 }
 
@@ -220,14 +258,14 @@ function alPulsarPegatina(ev) {
   if (ent && ent.tipo === 'herramienta') {
     const inmediato = (ent.inmediatos || []).includes(i) || (st.p.indicesInmediatos || []).includes(i);
     if (inmediato) { st.editor = st.p.pintar(st.editor, i, null); st.seleccion = null; } else if ((ent.toques || 1) === 1) {
-      try { st.editor = st.p.usarHerramienta(st.editor, ent.id, [i]); } catch (err) { mensaje('error', err.message); }
+      try { st.editor = st.p.usarHerramienta(st.editor, ent.id, [i], { color: st.ultimoColor }); } catch (err) { mensaje('error', err.message); }
     } else if (st.seleccion === null) {
       st.seleccion = i;
     } else {
       const primero = st.seleccion;
       st.seleccion = null;
       if (primero !== i) {
-        try { st.editor = st.p.usarHerramienta(st.editor, ent.id, [primero, i]); } catch (err) { mensaje('error', err.message); }
+        try { st.editor = st.p.usarHerramienta(st.editor, ent.id, [primero, i], { color: st.ultimoColor }); } catch (err) { mensaje('error', err.message); }
       }
     }
   } else {
@@ -276,7 +314,7 @@ async function resolver() {
       mensaje('ok', 'El puzzle ya está resuelto.');
       return;
     }
-    st.sol = { movimientos: r.movimientos, base: p.clonar(st.editor), ms: r.ms };
+    st.sol = { movimientos: r.movimientos, base: p.clonar(st.editor), ms: r.ms, fases: r.fases || null };
     st.paso = 0;
     mensaje('ok', 'Estado válido. Sigue la solución paso a paso con los controles.');
   } catch (err) {
@@ -295,6 +333,17 @@ function quitarSolucion() {
   st.paso = 0;
 }
 
+const NOMBRE_FASE = { paridad: 'Paridad', centros: 'Centros', aristas: 'Aristas', '3x3': '3x3' };
+const nombreFase = (f) => NOMBRE_FASE[f] || f;
+
+/** Fase del paso k (el movimiento k-1 acaba de hacerse; en el paso 0, la primera). */
+function faseDelPaso(k) {
+  const fases = st.sol && st.sol.fases;
+  if (!fases || !fases.length) return null;
+  const m = Math.max(0, k - 1);
+  return fases.find((f) => m >= f.inicio && m < f.fin) || fases[fases.length - 1];
+}
+
 function pintarSolucion() {
   const caja = $('solucion');
   if (!st.sol) { caja.hidden = true; return; }
@@ -302,19 +351,55 @@ function pintarSolucion() {
   const n = st.sol.movimientos.length;
   const largo = st.p.describirLongitud ? st.p.describirLongitud(st.sol.movimientos) : `${n} movimiento${n === 1 ? '' : 's'}`;
   $('sol-resumen').textContent = `${largo} · ${Math.max(1, Math.round(st.sol.ms))} ms`;
+  // Fases: un botón por tramo que lleva al final de ese tramo
+  const barra = $('fases');
+  const fases = st.sol.fases || [];
+  barra.hidden = fases.length === 0;
+  barra.innerHTML = '';
+  const actual = faseDelPaso(st.paso);
+  fases.forEach((f) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'fase f-' + f.nombre.replace(/[^a-z0-9]/gi, '');
+    b.dataset.fase = f.nombre;
+    b.dataset.fin = String(f.fin);
+    const hecha = st.paso >= f.fin;
+    if (f === actual && st.paso > 0 && !hecha) b.classList.add('actual');
+    if (hecha) b.classList.add('hecha');
+    b.innerHTML = `<span>${nombreFase(f.nombre)}</span><small>${f.fin - f.inicio}</small>`;
+    b.title = `Ir al final de la fase "${nombreFase(f.nombre)}" (movimientos ${f.inicio + 1}–${f.fin})`;
+    b.addEventListener('click', () => { pararReproduccion(); irA(f.fin); });
+    barra.appendChild(b);
+  });
   const ol = $('movs');
   ol.innerHTML = '';
+  let faseI = 0;
   st.sol.movimientos.forEach((m, i) => {
     const li = document.createElement('li');
     li.textContent = m;
-    if (i < st.paso - 1) li.className = 'hecho';
-    if (i === st.paso - 1) li.className = 'actual';
+    while (fases[faseI] && i >= fases[faseI].fin) faseI++;
+    const cls = [];
+    if (fases[faseI]) {
+      cls.push('f-' + fases[faseI].nombre.replace(/[^a-z0-9]/gi, ''));
+      if (i === fases[faseI].inicio && i > 0) cls.push('inicio-fase');
+    }
+    if (i < st.paso - 1) cls.push('hecho');
+    if (i === st.paso - 1) cls.push('actual');
+    if (cls.length) li.className = cls.join(' ');
     li.addEventListener('click', () => { pararReproduccion(); st.paso = i + 1; pintarEditor(); });
     ol.appendChild(li);
   });
-  $('paso').textContent = st.paso === 0 ? `Inicio · ${n} pasos` : st.paso === n ? `Resuelto (${n}/${n})` : `Paso ${st.paso}/${n}`;
+  // que el movimiento actual se vea dentro de la lista (si tiene scroll)
+  const li = ol.querySelector('li.actual');
+  if (li && ol.scrollHeight > ol.clientHeight && li.offsetTop !== undefined) {
+    const top = li.offsetTop - ol.offsetTop;
+    if (top < ol.scrollTop || top > ol.scrollTop + ol.clientHeight - li.offsetHeight) ol.scrollTop = Math.max(0, top - ol.clientHeight / 2);
+  }
+  const txtFase = actual && st.paso > 0 && st.paso < n ? ` · ${nombreFase(actual.nombre)}` : '';
+  $('paso').textContent = st.paso === 0 ? `Inicio · ${n} pasos` : st.paso === n ? `Resuelto (${n}/${n})` : `Paso ${st.paso}/${n}${txtFase}`;
   $('r-play').textContent = st.timer ? '❚❚' : '▶';
   $('r-play').setAttribute('aria-label', st.timer ? 'Pausar' : 'Reproducir');
+  $('r-velocidad').textContent = `×${st.velocidad}`;
 }
 
 function irA(k) {
@@ -333,7 +418,7 @@ function alternarReproduccion() {
     if (!st.sol || st.paso >= st.sol.movimientos.length) { pararReproduccion(); pintarSolucion(); return; }
     st.paso++;
     pintarEditor();
-  }, 550);
+  }, 550 / st.velocidad);
   pintarSolucion();
 }
 
@@ -383,6 +468,10 @@ function iniciar() {
   $('r-adelante').addEventListener('click', () => { pararReproduccion(); irA(st.paso + 1); });
   $('r-fin').addEventListener('click', () => { pararReproduccion(); irA(Infinity); });
   $('r-play').addEventListener('click', alternarReproduccion);
+  $('r-velocidad').addEventListener('click', () => {
+    st.velocidad = st.velocidad >= 8 ? 1 : st.velocidad * 2;
+    if (st.timer) { pararReproduccion(); alternarReproduccion(); } else pintarSolucion();
+  });
   $('copiar').addEventListener('click', (e) => copiar(st.p.formatear(st.scramble), e.currentTarget));
   $('copiar-sol').addEventListener('click', (e) => st.sol && copiar(st.p.formatear(st.sol.movimientos), e.currentTarget));
   let inicial = '3x3';

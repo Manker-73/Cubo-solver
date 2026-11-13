@@ -44,6 +44,7 @@
       </div>
       <div class="editor" id="editor">
         <div class="paleta" id="paleta" role="radiogroup" aria-label="Color para pintar"></div>
+        <div class="vistas-editor" id="vistas-editor" hidden></div>
         <div class="vista editable" id="vista-editor"></div>
         <div class="acciones acciones-editor" id="acciones-editor" hidden></div>
         <div class="acciones">
@@ -57,6 +58,7 @@
             <span id="sol-resumen"></span>
             <button type="button" class="boton-texto" id="copiar-sol">Copiar</button>
           </div>
+          <div class="fases" id="fases" hidden></div>
           <ol class="movs" id="movs"></ol>
           <div class="reproductor">
             <button type="button" class="boton icono" id="r-inicio" aria-label="Ir al inicio">⇤</button>
@@ -64,6 +66,7 @@
             <button type="button" class="boton icono principal" id="r-play" aria-label="Reproducir">▶</button>
             <button type="button" class="boton icono" id="r-adelante" aria-label="Paso siguiente">›</button>
             <button type="button" class="boton icono" id="r-fin" aria-label="Ir al final">⇥</button>
+            <button type="button" class="boton icono velocidad" id="r-velocidad" aria-label="Velocidad de reproducción" title="Velocidad de reproducción">×1</button>
             <span class="paso" id="paso"></span>
           </div>
         </div>
@@ -71,7 +74,7 @@
     </section>
   </main>
   <footer class="pie">
-    <span>Notación WCA. Los scrambles de 2x2, 3x3, Pyraminx, Skewb y Square-1 son de estado aleatorio.</span>
+    <span>Notación WCA. Los scrambles de 2x2, 3x3, Pyraminx, Skewb y Square-1 son de estado aleatorio; los de 4x4–7x7, de movimientos aleatorios.</span>
     <span id="modo-calculo"></span>
   </footer>
 </div>

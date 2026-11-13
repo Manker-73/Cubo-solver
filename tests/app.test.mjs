@@ -156,6 +156,66 @@ test('app: editor del Square-1 (mover piezas hasta la estrella, girar, cargar, r
   w.close();
 });
 
+test('app: cubos grandes (4x4 y 5x5): vistas, rellenar cara, fases y reproducción', async (t) => {
+  const ctx = await abrir(t);
+  if (!ctx) return;
+  const { w, doc, hasta, errores } = ctx;
+  for (const nombre of ['4x4', '5x5']) {
+    const N = +nombre[0];
+    await elegirPuzzle(ctx, nombre);
+    assert.equal(doc.getElementById('proximamente').hidden, true, `${nombre}: ya no está "próximamente"`);
+    assert.equal(doc.querySelectorAll('#vista-editor .pegatina').length, 6 * N * N);
+    // vista de una cara ampliada: solo se dibujan las N² pegatinas de esa cara
+    doc.querySelector('#vistas-editor [data-vista="F"]').click();
+    assert.equal(doc.querySelectorAll('#vista-editor .pegatina').length, N * N);
+    assert.equal(doc.querySelector('#vistas-editor [data-vista="F"]').getAttribute('aria-pressed'), 'true');
+    // rellenar la cara F de rojo con la herramienta: el validador se queja del número de pegatinas
+    doc.querySelectorAll('#paleta .color')[1].click();
+    doc.querySelector('#paleta [data-herramienta="rellenar"]').click();
+    doc.querySelector('#vista-editor .pegatina').dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
+    const rojas = [...doc.querySelectorAll('#vista-editor .pegatina')].filter((x) => x.getAttribute('fill') === '#d62828').length;
+    assert.equal(rojas, N * N, 'la cara entera queda roja');
+    doc.getElementById('resolver').click();
+    await hasta(() => doc.querySelector('.mensaje.error'));
+    assert.match(doc.getElementById('mensajes').textContent, /debería haber/);
+    // volver a verde con la misma herramienta: vuelve a ser el resuelto
+    doc.querySelectorAll('#paleta .color')[2].click();
+    doc.querySelector('#paleta [data-herramienta="rellenar"]').click();
+    doc.querySelector('#vista-editor .pegatina').dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
+    doc.getElementById('resolver').click();
+    await hasta(() => doc.querySelector('.mensaje.ok'));
+    assert.match(doc.getElementById('mensajes').textContent, /ya está resuelto/);
+    // volver a la red, cargar el scramble y resolver
+    doc.querySelector('#vistas-editor [data-vista="red"]').click();
+    doc.getElementById('cargar').click();
+    doc.getElementById('resolver').click();
+    await hasta(() => !doc.getElementById('solucion').hidden || doc.querySelector('.mensaje.error'));
+    assert.equal(doc.querySelector('.mensaje.error'), null, doc.getElementById('mensajes').textContent);
+    // barra de fases: centros, aristas y 3x3 siempre; los botones llevan al final de cada fase
+    const fases = [...doc.querySelectorAll('#fases .fase')].map((b) => b.dataset.fase);
+    for (const f of ['centros', 'aristas', '3x3']) assert.ok(fases.includes(f), `${nombre}: fase ${f}`);
+    const bCentros = doc.querySelector('#fases [data-fase="centros"]');
+    const finCentros = +bCentros.dataset.fin;
+    bCentros.click();
+    assert.match(doc.getElementById('paso').textContent, new RegExp(`Paso ${finCentros}/`));
+    // un paso más: estamos en la fase de aristas (o de paridad)
+    doc.getElementById('r-adelante').click();
+    assert.match(doc.getElementById('paso').textContent, /· (Aristas|Paridad)/);
+    assert.ok(doc.querySelector('#fases .fase.actual'));
+    // los movimientos tienen la clase de su fase
+    assert.ok(doc.querySelector('#movs li.f-centros') && doc.querySelector('#movs li.f-aristas') && doc.querySelector('#movs li.f-3x3'));
+    // velocidad: ×1 → ×2 → ×4 → ×8 → ×1
+    for (const v of ['×2', '×4', '×8', '×1']) { doc.getElementById('r-velocidad').click(); assert.equal(doc.getElementById('r-velocidad').textContent, v); }
+    // reproducir paso a paso hasta el final
+    const n = doc.querySelectorAll('#movs li').length;
+    for (let i = 0; i < n; i++) doc.getElementById('r-adelante').click();
+    assert.match(doc.getElementById('paso').textContent, /Resuelto/);
+    assert.ok([...doc.querySelectorAll('#fases .fase')].every((b) => b.classList.contains('hecha')));
+  }
+  assert.deepEqual(errores, []);
+  w.close();
+});
+
 /** Worker simulado con worker_threads que ejecuta el código empaquetado real. */
 function instalarWorker(window, registro) {
   const blobs = new Map();
@@ -186,7 +246,7 @@ test('app: con Web Worker (código empaquetado real en worker_threads)', async (
   const { w, doc, errores } = ctx;
   try {
     assert.match(doc.getElementById('modo-calculo').textContent, /Web Worker/);
-    for (const nombre of ['Square-1', '3x3', 'Skewb']) {
+    for (const nombre of ['Square-1', '3x3', 'Skewb', '4x4', '5x5']) {
       await elegirPuzzle(ctx, nombre);
       assert.match(doc.getElementById('aviso-tablas').textContent, /Web Worker/, nombre);
       doc.getElementById('cargar').click();

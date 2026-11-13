@@ -23,12 +23,14 @@ const r2 = (v) => Math.round(v * 100) / 100;
  * pegatinas: [{ poligono: [[x,y],...] }] (en coordenadas 2D)
  * colores: array (por pegatina) de índices de paleta (o -1 = vacío)
  * paleta: [{hex}]
- * opciones: { editable, fondos: [[poligono]] (contornos opcionales), margen }
+ * opciones: { editable, fondos: [[poligono]] (contornos opcionales), margen, solo: [índices] }
  */
 export function svgDePegatinas(pegatinas, colores, paleta, opciones = {}) {
   const margen = opciones.margen ?? 0.1;
   const fondos = opciones.fondos || [];
-  const caja = cajaDe(pegatinas.map((p) => p.poligono).concat(fondos));
+  const solo = opciones.solo || null; // dibujar solo estas pegatinas (índices globales)
+  const lista = solo ? solo.map((i) => [pegatinas[i], i]) : pegatinas.map((p, i) => [p, i]);
+  const caja = cajaDe(lista.map(([p]) => p.poligono).concat(fondos));
   const w = caja.x1 - caja.x0, h = caja.y1 - caja.y0;
   const m = Math.max(w, h) * margen * 0.5;
   const vb = [caja.x0 - m, caja.y0 - m, w + 2 * m, h + 2 * m].map(r2).join(' ');
@@ -37,7 +39,7 @@ export function svgDePegatinas(pegatinas, colores, paleta, opciones = {}) {
   for (const f of fondos) {
     s += `<polygon points="${f.map(([x, y]) => r2(x) + ',' + r2(y)).join(' ')}" fill="#1b1b1f" />`;
   }
-  pegatinas.forEach((p, i) => {
+  lista.forEach(([p, i]) => {
     const c = colores[i];
     const color = c >= 0 && paleta[c] ? paleta[c].hex : '#3a3a40';
     const pts = p.poligono.map(([x, y]) => r2(x) + ',' + r2(y)).join(' ');
