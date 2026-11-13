@@ -4,7 +4,7 @@ Generador de scrambles WCA, validador de estado y solucionador visual de puzzles
 Aplicación web en un único HTML, sin servidor.
 
 - **Scrambles**: 2x2 a 7x7, Square-1, Skewb, Pyraminx y Megaminx (estado aleatorio en 2x2, 3x3, Pyraminx, Skewb y Square-1).
-- **Validador y solucionador**: 2x2 (óptimo), 3x3 (dos fases de Kociemba), Pyraminx (óptimo), Skewb (óptimo) y Square-1 (dos fases: forma de cubo y permutación, solo con giros posibles).
+- **Validador y solucionador**: 2x2 (óptimo), 3x3 (dos fases de Kociemba), 4x4 a 7x7 (reducción: centros, aristas, paridades y 3x3), Pyraminx (óptimo), Skewb (óptimo) y Square-1 (dos fases: forma de cubo y permutación, solo con giros posibles).
 - Las tablas se generan en el navegador dentro de un Web Worker (la página no se bloquea); si no hay Worker, en el hilo principal.
 
 ## Uso
@@ -19,8 +19,8 @@ npm run build
 ## Tests
 
 ```
-npm test            # 1000 casos por puzzle (unos minutos)
-npm run test:rapido # 100 casos por puzzle
+npm test            # 1000 casos por puzzle (200 en 6x6 y 7x7; unos minutos)
+npm run test:rapido # 100 casos por puzzle (20 en 4x4–7x7)
 npm run bench       # benchmark de los solvers (N=200 npm run bench para más casos)
 ```
 

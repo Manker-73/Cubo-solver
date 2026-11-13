@@ -3,7 +3,54 @@
   "longitudMedia": 40,
   "longitudMin": 40,
   "longitudMax": 40,
-  "msPorScramble": 0.06,
+  "msPorScramble": 0.05,
   "casos": 1000,
-  "fecha": "2026-10-27T23:56:32.437Z"
+  "fecha": "2026-11-13T11:42:14.479Z",
+  "msTablas": 1651,
+  "longitudConmutador": 10,
+  "resueltos": "1000/1000 (100.0%)",
+  "casosSolver": 1000,
+  "longitudMediaSolucion": 195.12,
+  "longitudMaxSolucion": 250,
+  "msMedioSolucion": 26.96,
+  "msMaxSolucion": 387.8,
+  "fases": {
+    "paridad": {
+      "longitudMedia": 5.34,
+      "longitudMax": 13,
+      "msMedio": 0.02,
+      "msMax": 0.3,
+      "casosConFase": 658
+    },
+    "centros": {
+      "longitudMedia": 67.17,
+      "longitudMax": 106,
+      "msMedio": 6.63,
+      "msMax": 19.8,
+      "casosConFase": 1000
+    },
+    "aristas": {
+      "longitudMedia": 102.36,
+      "longitudMax": 125,
+      "msMedio": 8.19,
+      "msMax": 20.9,
+      "casosConFase": 1000
+    },
+    "3x3": {
+      "longitudMedia": 20.25,
+      "longitudMax": 22,
+      "msMedio": 11.71,
+      "msMax": 373.7,
+      "casosConFase": 1000
+    }
+  },
+  "grupo": {
+    "ordenH": "707195371192426622240452051915172831683411968000000000",
+    "estados": "7401196841564901869874093974498574336000000000",
+    "relaciones": [
+      "esquinas + centros"
+    ],
+    "relacionesVisibles": [],
+    "ms": 597
+  }
 }

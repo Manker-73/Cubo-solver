@@ -3,7 +3,62 @@
   "longitudMedia": 100,
   "longitudMin": 100,
   "longitudMax": 100,
-  "msPorScramble": 0.12,
+  "msPorScramble": 0.11,
   "casos": 1000,
-  "fecha": "2026-10-27T23:56:32.707Z"
+  "fecha": "2026-11-13T11:42:14.753Z",
+  "msTablas": 1309,
+  "longitudConmutador": 10,
+  "resueltos": "200/200 (100.0%)",
+  "casosSolver": 200,
+  "longitudMediaSolucion": 686.87,
+  "longitudMaxSolucion": 759,
+  "msMedioSolucion": 178.04,
+  "msMaxSolucion": 351.4,
+  "fases": {
+    "paridad": {
+      "longitudMedia": 1.04,
+      "longitudMax": 4,
+      "msMedio": 0.06,
+      "msMax": 0.6,
+      "casosConFase": 93
+    },
+    "centros": {
+      "longitudMedia": 455.93,
+      "longitudMax": 524,
+      "msMedio": 132.46,
+      "msMax": 229.2,
+      "casosConFase": 200
+    },
+    "aristas": {
+      "longitudMedia": 208.7,
+      "longitudMax": 236,
+      "msMedio": 27.14,
+      "msMax": 48.1,
+      "casosConFase": 200
+    },
+    "3x3": {
+      "longitudMedia": 21.2,
+      "longitudMax": 22,
+      "msMedio": 16.26,
+      "msMax": 107.8,
+      "casosConFase": 200
+    }
+  },
+  "grupo": {
+    "ordenH": "14841288742494293811131211592812790126449902279909457255335745506781477789026449207045807257330619800316538795293665546204430425928257835670695234259221271924781093824652902400000000000000000000000000000000000",
+    "estados": "19500551183731307835329126754019748794904992692043434567152132912323232706135469180065278712755853360682328551719137311299993600000000000000000000000000000000000",
+    "relaciones": [
+      "esquinas + wings exteriores + wings interiores + centros oblicuos B",
+      "esquinas + wings exteriores + wings interiores + centros oblicuos A",
+      "esquinas + wings interiores + centros en cruz interiores",
+      "esquinas + wings exteriores + centros en cruz exteriores",
+      "esquinas + centros en X interiores",
+      "esquinas + centros en X exteriores",
+      "esquinas + aristas centrales"
+    ],
+    "relacionesVisibles": [
+      "esquinas + aristas centrales"
+    ],
+    "ms": 64878
+  }
 }

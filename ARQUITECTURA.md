@@ -18,7 +18,10 @@ src/
     grupo.js        orden de un grupo de permutaciones (Schreier–Sims), para demostrar invariantes
   puzzles/        un módulo por puzzle
     index.js        REGISTRO: la única lista de puzzles
-    nxn.js          cubos NxN (modelo, notación, dibujo, scramble aleatorio)
+    nxn.js          cubos NxN (modelo de pegatinas, notación, dibujo, scramble aleatorio, simplificación de capas)
+    nxn-piezas.js   NxN: piezas y órbitas (esquinas, aristas centrales, wings, centros) deducidas de la geometría
+    nxn-grupo.js    NxN: demostración de las restricciones (Schreier–Sims + paridades por órbita)
+    cubo-grande.js  4x4–7x7: validador y solver por reducción (conmutadores puros + Kociemba)
     cubo-comun.js   piezas y mensajes compartidos por 2x2/3x3
     cubo2.js        2x2 (validador, IDA* óptimo, estado aleatorio)
     cubo3.js        3x3 (validador, Kociemba, estado aleatorio)
@@ -72,9 +75,12 @@ Opcional (según `capacidades`):
 | `parsear(texto)`, `formatear(movs)` | texto ↔ lista (por defecto separado por espacios) |
 | `clonar(estado)` | copia independiente (por defecto: `slice()` de un array o copia JSON) |
 | `pegatinasEditables(estado)` | puede depender del estado (Square-1); sin estado, del resuelto |
-| `herramientas`, `usarHerramienta(estado, id, indices)` | herramientas del editor `{id, nombre, icono, toques}` (1 o 2 toques); lanza un `Error` con un mensaje claro si no se puede |
+| `herramientas`, `usarHerramienta(estado, id, indices, {color})` | herramientas del editor `{id, nombre, icono, toques, usaColor, titulo}` (1 o 2 toques; `color` = último color elegido); lanza un `Error` con un mensaje claro si no se puede |
 | `herramientaInicial`, `indicesInmediatos` | herramienta elegida al empezar; índices que con una herramienta se aplican al momento (con `pintar`) |
-| `accionesEditor`, `aplicarAccion(estado, id)` | botones extra del editor `{id, etiqueta, titulo}` (p. ej. girar una capa) |
+| `accionesEditor`, `aplicarAccion(estado, id, {color})` | botones extra del editor `{id, etiqueta, titulo}` (p. ej. girar una capa) |
+| `vistasEditor` | `[{id, nombre}]`: vistas del editor (la primera es la de por defecto); `renderizar` recibe `{vista}` (NxN: red completa o una cara ampliada) |
+| `resolver(...).fases` | `[{nombre, inicio, fin}]`: tramos de la solución (la interfaz los muestra en la reproducción) |
+| `buscarRedundanciaSolucion(movs)` | redundancias en una solución (por defecto, la regla de los scrambles; NxN: tramos que se pueden escribir con menos movimientos) |
 | `aplicarSecuencia`, `invertir` | se rellenan automáticamente |
 | `tipoScramble`, `descripcion`, `avisoInicializacion`, `describirLongitud(movs)` | textos para la interfaz |
 
@@ -98,6 +104,9 @@ puzzle no necesita saber nada del Worker, pero su estado debe poder copiarse con
 - Casillas de 30° numeradas desde el corte por el frente; "/" legal si ninguna esquina cruza el corte (el modelo lanza error si no).
 - Fase 1: búsqueda por formas (máscaras de 12 bits) hasta la forma de cubo con la paridad adecuada; fase 2: en forma de cubo, con las dos alineaciones en las que "/" conserva el cubo. Detalles y demostraciones en DECISIONES.md.
 
+### Cubos grandes (cómo está hecho)
+- `nxn-piezas.js` agrupa las pegatinas en piezas (por cubie) y órbitas (por movimientos); vale para cualquier N.
+- `cubo-grande.js`: al inicializar busca 3-ciclos puros de cada órbita de centros y wings (conmutadores [X, A·B·A⁻¹] cuyos soportes se cortan en una pieza) y calcula, para cada trío de posiciones, el setup más corto. Resolver = centros (voraz + 3-ciclos) → paridad → aristas (3-ciclos) → paridad PLL → 3x3 con `cubo3.js`. Detalles en DECISIONES.md.
+
 ## Plan para las próximas noches
-- **4x4+ por reducción**: centros → emparejar aristas → fase 3x3 con `kociemba.js` + paridades. El modelo de pegatinas NxN y la notación ya están.
-- **Megaminx**: el motor geométrico ya genera las 132 pegatinas y los giros; falta validador y un solver por etapas.
+- **Megaminx**: el motor geométrico ya genera las 132 pegatinas y los giros; falta validador y un solver por etapas. El enfoque de conmutadores puros de `cubo-grande.js` (búsqueda automática de 3-ciclos + setups por BFS) se puede reutilizar para las últimas piezas.
