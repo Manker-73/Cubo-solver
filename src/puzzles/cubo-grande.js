@@ -27,6 +27,7 @@ import {
   rotacionesColorCubo, comprobarConteo, erroresDePiezas, nombreColor, listaColores, NOMBRES_ARISTAS,
 } from './cubo-comun.js';
 import cubo3 from './cubo3.js';
+import { tpr4 } from './tpr4.js';
 
 const PLURAL = { blanco: 'blancos', rojo: 'rojos', verde: 'verdes', amarillo: 'amarillos', naranja: 'naranjas', azul: 'azules' };
 const NOMBRE_CARA = ['arriba (U)', 'derecha (R)', 'delante (F)', 'abajo (D)', 'izquierda (L)', 'detrás (B)'];
@@ -366,7 +367,7 @@ export function crearCuboGrande(N) {
       for (let v = 1; v <= 3; v++) anadirLibre([nombreMovimiento(c, p, v), nombreMovimiento(c, p - 1, 4 - v)]);
     }
     const objCentros = pegCentros.map((f) => RES[f]);
-    tablas = { porOrbita, paridadWings, pll, libres, pegCentros, objCentros, ms: 0 };
+    tablas = { porOrbita, paridadWings, pll, libres, pegCentros, objCentros, ms: 0, tpr: N === 4 ? tpr4() : null };
     tablas.ms = Date.now() - t0 + msK;
     return { ms: tablas.ms };
   }
@@ -467,7 +468,7 @@ export function crearCuboGrande(N) {
     const fila = (k) => (k === 0 ? 0 : k === 2 ? N - 1 : medio);
     for (let f = 0; f < 6; f++) {
       for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) {
-        r3.push(r === 1 && c === 1 ? f : e[f * n2 + fila(r) * N + fila(c)]);
+        r3.push(e[f * n2 + fila(r) * N + fila(c)]);
       }
     }
     return r3;
@@ -492,6 +493,20 @@ export function crearCuboGrande(N) {
       return simplificarNxN(cola.concat(sec), N).movimientos.length - simplificarNxN(cola, N).movimientos.length;
     };
     const cambiarFase = (f) => { const ahora = performance.now(); tiempos[fase] = (tiempos[fase] || 0) + ahora - tf; tf = ahora; fase = f; };
+    // 4x4: reducción por búsqueda en tres fases (tpr4.js); si fallara, el método general
+    let reducido = false;
+    if (N === 4 && opciones.metodo !== 'conmutadores') {
+      let r = null;
+      try { r = tablas.tpr.reducir(a.norm, (x, y) => wingPorColores[0].get(x + ',' + y), { msMax: opciones.msReduccion ?? 1500 }); } catch (err) { r = null; }
+      if (r) {
+        fase = 'centros'; aplicar(r.fases[0]); aplicar(r.fases[1]);
+        cambiarFase('aristas'); aplicar(r.fases[2]); aplicar(r.fases[3]);
+        reducido = true;
+      } else {
+        ref.e = a.norm; movs.length = 0; etq.length = 0;
+      }
+    }
+    if (!reducido) {
     // 1. centros con movimientos libres (voraz, mientras compense)
     fase = 'centros';
     centrosLibres(ref, aplicar, opciones.umbralLibre ?? 0.33);
@@ -516,6 +531,7 @@ export function crearCuboGrande(N) {
       cambiarFase('paridad');
       if (tablas.pll) aplicar(tablas.pll);
       else oiWings.forEach((oi, w) => resolverOrbita(oi, ref, objetivosWings(ref.e, w, true), aplicar, costeReal));
+    }
     }
     // 5. 3x3
     cambiarFase('3x3');
