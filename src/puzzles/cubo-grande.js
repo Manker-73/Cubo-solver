@@ -28,6 +28,7 @@ import {
 } from './cubo-comun.js';
 import cubo3 from './cubo3.js';
 import { tpr4 } from './tpr4.js';
+import { crearCentrosNxN } from './nxn-centros.js';
 
 const PLURAL = { blanco: 'blancos', rojo: 'rojos', verde: 'verdes', amarillo: 'amarillos', naranja: 'naranjas', azul: 'azules' };
 const NOMBRE_CARA = ['arriba (U)', 'derecha (R)', 'delante (F)', 'abajo (D)', 'izquierda (L)', 'detrás (B)'];
@@ -367,7 +368,18 @@ export function crearCuboGrande(N) {
       for (let v = 1; v <= 3; v++) anadirLibre([nombreMovimiento(c, p, v), nombreMovimiento(c, p - 1, 4 - v)]);
     }
     const objCentros = pegCentros.map((f) => RES[f]);
-    tablas = { porOrbita, paridadWings, pll, libres, pegCentros, objCentros, ms: 0, tpr: N === 4 ? tpr4() : null };
+    tablas = { porOrbita, paridadWings, pll, libres, pegCentros, objCentros, ms: 0, tpr: N === 4 ? tpr4() : null, centros: N >= 5 ? crearCentrosNxN(N, b, orbitas, {
+      // bit w: la permutación de la órbita de wings w (respecto a su objetivo) es impar
+      bits: (e) => oiWings.reduce((acc, oi, w) => {
+        const obj = objetivosWings(e, w);
+        const cur = orbitas[oi].piezas.map((pz) => wingPorColores[w].get(e[pz[0]] + ',' + e[pz[1]]));
+        return acc | (paridad(cur.map((x) => obj.indexOf(x))) << w);
+      }, 0),
+      todas: (1 << oiWings.length) - 1,
+      exteriores: 1,
+      interiores: 2,
+    }) : null };
+    if (tablas.centros) tablas.centros.inicializar();
     tablas.ms = Date.now() - t0 + msK;
     return { ms: tablas.ms };
   }
@@ -507,19 +519,34 @@ export function crearCuboGrande(N) {
       }
     }
     if (!reducido) {
-    // 1. centros con movimientos libres (voraz, mientras compense)
-    fase = 'centros';
-    centrosLibres(ref, aplicar, opciones.umbralLibre ?? 0.33);
-    cambiarFase('paridad');
-    // 2. paridad de las wings
-    oiWings.forEach((oi, w) => {
+    const conBusqueda = tablas.centros && opciones.metodo !== 'conmutadores';
+    const paridadWings = () => oiWings.forEach((oi, w) => {
       const obj = objetivosWings(ref.e, w);
       const cur = orbitas[oi].piezas.map((pz) => wingPorColores[w].get(ref.e[pz[0]] + ',' + ref.e[pz[1]]));
       // permutación: la pieza de la posición j debe ir a la posición donde obj = cur[j]
       const destino = cur.map((p) => obj.indexOf(p));
       if (paridad(destino)) aplicar(tablas.paridadWings[w]);
     });
-    // 2. centros
+    if (conBusqueda) {
+      // 1. paridad de las wings (mueve centros, que aún no se han tocado)
+      fase = 'paridad';
+      paridadWings();
+      // 2. centros por búsqueda (nxn-centros.js); los que no se resuelvan, con 3-ciclos
+      cambiarFase('centros');
+      const rc = tablas.centros.resolver(ref.e, opciones.centros);
+      aplicar(rc.movimientos);
+      // si alguna etapa no se pudo hacer, la paridad puede seguir sin arreglar
+      cambiarFase('paridad');
+      paridadWings();
+    } else {
+      // 1. centros con movimientos libres (voraz, mientras compense)
+      fase = 'centros';
+      centrosLibres(ref, aplicar, opciones.umbralLibre ?? 0.33);
+      cambiarFase('paridad');
+      // 2. paridad de las wings
+      paridadWings();
+    }
+    // 2. centros (3-ciclos; las órbitas ya resueltas no hacen nada)
     cambiarFase('centros');
     for (const oi of oiCentros) resolverOrbita(oi, ref, orbitas[oi].piezas.map((pz) => RES[pz[0]]), aplicar, costeReal);
     // 3. aristas
