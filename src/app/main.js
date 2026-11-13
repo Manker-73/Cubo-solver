@@ -392,7 +392,7 @@ function pintarSolucion() {
   // que el movimiento actual se vea dentro de la lista (si tiene scroll)
   const li = ol.querySelector('li.actual');
   if (li && ol.scrollHeight > ol.clientHeight && li.offsetTop !== undefined) {
-    const top = li.offsetTop - ol.offsetTop;
+    const top = li.offsetTop; // .movs tiene position: relative
     if (top < ol.scrollTop || top > ol.scrollTop + ol.clientHeight - li.offsetHeight) ol.scrollTop = Math.max(0, top - ol.clientHeight / 2);
   }
   const txtFase = actual && st.paso > 0 && st.paso < n ? ` · ${nombreFase(actual.nombre)}` : '';
