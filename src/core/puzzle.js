@@ -56,6 +56,7 @@ export function definirPuzzle(def) {
     },
     def,
   );
+  if (!p.buscarRedundanciaSolucion) p.buscarRedundanciaSolucion = (movs) => p.buscarRedundancia(movs);
   p.capacidades = cap;
   return p;
 }

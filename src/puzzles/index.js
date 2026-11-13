@@ -4,7 +4,7 @@
 
 import cubo2 from './cubo2.js';
 import cubo3 from './cubo3.js';
-import { crearNxN } from './nxn.js';
+import { crearCuboGrande } from './cubo-grande.js';
 import pyraminx from './pyraminx.js';
 import skewb from './skewb.js';
 import square1 from './square1.js';
@@ -13,10 +13,10 @@ import megaminx from './megaminx.js';
 export const PUZZLES = [
   cubo2,
   cubo3,
-  crearNxN(4),
-  crearNxN(5),
-  crearNxN(6),
-  crearNxN(7),
+  crearCuboGrande(4),
+  crearCuboGrande(5),
+  crearCuboGrande(6),
+  crearCuboGrande(7),
   pyraminx,
   skewb,
   square1,

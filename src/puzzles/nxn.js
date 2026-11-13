@@ -230,3 +230,110 @@ export function crearNxN(N, extra = {}) {
     longitudScramble: LONGITUD_WCA[N],
   }, extra));
 }
+
+// ---------- Simplificación de secuencias (soluciones) ----------
+//
+// Los movimientos de un mismo eje conmutan. Un tramo de movimientos del mismo
+// eje equivale a un vector de giros por capa (en el sentido de U, R o F; capa 1
+// = la de U, R o F). La forma canónica de un vector es la descomposición con
+// menos movimientos WCA (capas anchas de las dos caras del eje, sin rotaciones
+// del cubo entero) y, a igualdad, con capas menos profundas.
+
+const CARA_POS = ['U', 'R', 'F'];
+const CARA_NEG = ['D', 'L', 'B'];
+
+/** Vector de capas de un movimiento: { eje, capas: Int8Array(N) } (giros mod 4). */
+function vectorDe(mov, N) {
+  const { cara, prof, veces } = analizarMovimiento(mov, N);
+  const eje = EJE[cara];
+  const a = new Int8Array(N);
+  if (CARA_POS.includes(cara)) for (let k = 0; k < prof; k++) a[k] = veces;
+  else for (let k = N - prof; k < N; k++) a[k] = (4 - veces) % 4;
+  return { eje, a };
+}
+
+/** Descomposición canónica de un vector de capas (lista de movimientos). */
+export function descomponerTramo(eje, a, N) {
+  // Fronteras j = 1..N-1 entre las capas j y j+1. x_j = giro de la capa ancha de
+  // profundidad j desde la cara positiva; la cara negativa a profundidad N-j gira
+  // (x_j - D_j), con D_j = a_j - a_{j+1}. Restricción: Σ x_j ≡ a_1 (mod 4).
+  const D = [];
+  for (let j = 1; j < N; j++) D[j] = ((a[j - 1] - a[j]) % 4 + 4) % 4;
+  const INF = [1e9, 1e9];
+  let dp = [[0, 0], INF, INF, INF];
+  const elec = []; // elec[j][s] = [x, sPrevio]
+  for (let j = 1; j < N; j++) {
+    const nd = [INF, INF, INF, INF];
+    elec[j] = [];
+    for (let s = 0; s < 4; s++) {
+      if (dp[s][0] >= 1e9) continue;
+      for (let x = 0; x < 4; x++) {
+        const movs = (x !== 0 ? 1 : 0) + (x !== D[j] ? 1 : 0);
+        const prof = (x !== 0 ? j : 0) + (x !== D[j] ? N - j : 0);
+        const c = [dp[s][0] + movs, dp[s][1] + prof];
+        const t = (s + x) % 4;
+        if (c[0] < nd[t][0] || (c[0] === nd[t][0] && c[1] < nd[t][1])) { nd[t] = c; elec[j][t] = [x, s]; }
+      }
+    }
+    dp = nd;
+  }
+  const res = [];
+  let s = ((a[0] % 4) + 4) % 4;
+  if (N === 1) return res;
+  const pos = [], neg = [];
+  for (let j = N - 1; j >= 1; j--) {
+    const [x, sp] = elec[j][s];
+    if (x !== 0) pos.push(nombreMovimiento(CARA_POS[eje], j, x));
+    const u = ((x - D[j]) % 4 + 4) % 4;
+    if (u !== 0) neg.push(nombreMovimiento(CARA_NEG[eje], N - j, (4 - u) % 4));
+    s = sp;
+  }
+  return pos.reverse().concat(neg.sort((p, q) => p.length - q.length || (p < q ? -1 : 1)));
+}
+
+/**
+ * Simplifica una secuencia uniendo los tramos del mismo eje en su forma
+ * canónica (y quitando los que se anulan). `etiquetas` (opcional, una por
+ * movimiento) se conservan: un tramo unido toma la etiqueta de su primer
+ * movimiento. Devuelve { movimientos, etiquetas }.
+ */
+export function simplificarNxN(movs, N, etiquetas = null) {
+  const pila = []; // { eje, a, etiqueta }
+  movs.forEach((m, i) => {
+    const { eje, a } = vectorDe(m, N);
+    const top = pila[pila.length - 1];
+    if (top && top.eje === eje) {
+      for (let k = 0; k < N; k++) top.a[k] = (top.a[k] + a[k]) % 4;
+      if (top.a.every((x) => x === 0)) pila.pop();
+    } else {
+      pila.push({ eje, a, etiqueta: etiquetas ? etiquetas[i] : null });
+    }
+  });
+  const movimientos = [], etq = [];
+  for (const t of pila) {
+    for (const m of descomponerTramo(t.eje, t.a, N)) { movimientos.push(m); etq.push(t.etiqueta); }
+  }
+  return { movimientos, etiquetas: etq };
+}
+
+/**
+ * Comprueba que una solución no tenga tramos simplificables: cada tramo de
+ * movimientos del mismo eje debe ser su forma canónica (la más corta).
+ * Devuelve null o la descripción del problema.
+ */
+export function redundanciaSolucionNxN(movs, N) {
+  for (let i = 0; i < movs.length;) {
+    const { eje } = vectorDe(movs[i], N);
+    let j = i;
+    const a = new Int8Array(N);
+    while (j < movs.length && vectorDe(movs[j], N).eje === eje) {
+      const v = vectorDe(movs[j], N).a;
+      for (let k = 0; k < N; k++) a[k] = (a[k] + v[k]) % 4;
+      j++;
+    }
+    const canon = descomponerTramo(eje, a, N);
+    if (canon.length < j - i) return `tramo simplificable en la posición ${i + 1} (${movs.slice(i, j).join(' ')} → ${canon.join(' ') || 'nada'})`;
+    i = j;
+  }
+  return null;
+}

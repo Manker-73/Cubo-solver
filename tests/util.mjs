@@ -64,7 +64,8 @@ export function probarSolver(puzzle, { semilla = 2, transformar = null, opciones
     const r = puzzle.resolver(e, opciones);
     const dt = performance.now() - t;
     assert.ok(r.ok, `caso ${i}: el solver rechazó un estado válido: ${(r.errores || []).join(' | ')}`);
-    assert.equal(puzzle.buscarRedundancia(r.movimientos), null, `caso ${i}: solución con movimientos redundantes`);
+    const red = puzzle.buscarRedundanciaSolucion(r.movimientos);
+    assert.equal(red, null, `caso ${i}: solución con movimientos redundantes: ${red}`);
     const fin = puzzle.aplicarSecuencia(e, r.movimientos);
     assert.ok(puzzle.estaResuelto(fin), `caso ${i}: la solución no resuelve el puzzle\nscramble: ${puzzle.formatear(s)}\nsolución: ${puzzle.formatear(r.movimientos)}`);
     ok++;
