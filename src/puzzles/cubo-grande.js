@@ -345,7 +345,28 @@ export function crearCuboGrande(N) {
       }));
       if (e.every((x, i) => x === esperado[i])) pll = movs;
     }
-    tablas = { porOrbita, paridadWings, pll, ms: 0 };
+    // Movimientos "libres" para la primera parte de los centros (antes no hay nada
+    // resuelto que proteger): caras y capas anchas hasta N/2 y capas interiores
+    // sueltas, sin mover los centros fijos (N impar). Se guarda su efecto sobre
+    // las pegatinas de centros.
+    const pegCentros = [];
+    for (const oi of oiCentros) for (const pz of orbitas[oi].piezas) pegCentros.push(pz[0]);
+    const posEnCentros = new Map(pegCentros.map((f, k) => [f, k]));
+    const libres = [];
+    const anadirLibre = (movs) => {
+      const P = permSec(movs);
+      const desde = pegCentros.map((f) => posEnCentros.get(P[f]));
+      if (desde.some((x) => x === undefined)) return; // mueve algo que no es centro a un centro (no pasa)
+      if (desde.every((x, k) => x === k)) return;
+      libres.push({ movs, desde, coste: movs.length });
+    };
+    for (const c of CARAS) for (let p = 1; p <= Math.floor(N / 2); p++) for (let v = 1; v <= 3; v++) anadirLibre([nombreMovimiento(c, p, v)]);
+    for (const c of ['U', 'R', 'F']) for (let p = 2; p < N; p++) {
+      if (impar && p === (N + 1) / 2) continue;
+      for (let v = 1; v <= 3; v++) anadirLibre([nombreMovimiento(c, p, v), nombreMovimiento(c, p - 1, 4 - v)]);
+    }
+    const objCentros = pegCentros.map((f) => RES[f]);
+    tablas = { porOrbita, paridadWings, pll, libres, pegCentros, objCentros, ms: 0 };
     tablas.ms = Date.now() - t0 + msK;
     return { ms: tablas.ms };
   }
@@ -368,7 +389,7 @@ export function crearCuboGrande(N) {
   }
 
   /** Resuelve una órbita con 3-ciclos. actual(estado) -> valores por posición; obj: valores objetivo. */
-  function resolverOrbita(oi, estadoRef, obj, aplicar) {
+  function resolverOrbita(oi, estadoRef, obj, aplicar, costeReal) {
     const T = tablas.porOrbita[oi];
     const orb = orbitas[oi];
     const leer = () => orb.piezas.map((pz) => (orb.tipo === 'wings'
@@ -379,7 +400,7 @@ export function crearCuboGrande(N) {
       const mal = [];
       for (let j = 0; j < T.nS; j++) if (cur[j] !== obj[j]) mal.push(j);
       if (!mal.length) return;
-      let mejor = null;
+      const cand = [];
       for (const a of mal) for (const b2 of mal) {
         if (b2 === a || cur[a] !== obj[b2]) continue; // la pieza de a encaja en b
         for (let c = 0; c < T.nS; c++) {
@@ -391,14 +412,53 @@ export function crearCuboGrande(N) {
           if (ganancia <= 0) continue;
           const coste = T.coste[T.idx(a, b2, c)];
           if (coste < 0) continue;
-          const valor = ganancia / coste;
-          if (!mejor || valor > mejor.valor || (valor === mejor.valor && coste < mejor.coste)) mejor = { valor, coste, a, b2, c };
+          cand.push({ valor: ganancia / coste, ganancia, coste, a, b2, c });
         }
       }
-      if (!mejor) throw new Error(`No se pudo avanzar con ${orb.nombre}`);
-      aplicar(T.secuencia(mejor.a, mejor.b2, mejor.c));
+      if (!cand.length) throw new Error(`No se pudo avanzar con ${orb.nombre}`);
+      // Entre los mejores, el que más se acorta al unirse con lo anterior
+      cand.sort((x, y) => y.valor - x.valor || x.coste - y.coste);
+      let mejor = null;
+      for (const x of cand.slice(0, 24)) {
+        const sec = T.secuencia(x.a, x.b2, x.c);
+        const real = costeReal(sec);
+        const valor = x.ganancia / Math.max(1, real);
+        if (!mejor || valor > mejor.valor) mejor = { valor, sec };
+      }
+      aplicar(mejor.sec);
     }
     throw new Error(`Demasiados ciclos en ${orb.nombre}`);
+  }
+
+  /** Mejora voraz de los centros con movimientos sueltos o parejas de movimientos. */
+  function centrosLibres(ref, aplicar, umbral) {
+    const { libres, pegCentros, objCentros } = tablas;
+    const n = pegCentros.length;
+    for (let iter = 0; iter < 200; iter++) {
+      const cur = pegCentros.map((f) => ref.e[f]);
+      const aciertos = (vals) => { let k = 0; for (let i = 0; i < n; i++) if (vals[i] === objCentros[i]) k++; return k; };
+      const base = aciertos(cur);
+      if (base === n) return;
+      let mejor = null;
+      const tras = libres.map((m) => m.desde.map((k) => cur[k]));
+      libres.forEach((m, i) => {
+        const g = aciertos(tras[i]) - base;
+        if (g > 0 && (!mejor || g / m.coste > mejor.valor)) mejor = { valor: g / m.coste, movs: m.movs };
+      });
+      // parejas (pueden ganar donde un movimiento solo no gana)
+      libres.forEach((m1, i) => {
+        const v1 = tras[i];
+        for (const m2 of libres) {
+          if (m2.movs[0][m2.movs[0].search(/[URFDLB]/)] === m1.movs[0][m1.movs[0].search(/[URFDLB]/)]) continue;
+          let k = 0;
+          for (let j = 0; j < n; j++) if (v1[m2.desde[j]] === objCentros[j]) k++;
+          const g = k - base, c = m1.coste + m2.coste;
+          if (g > 0 && (!mejor || g / c > mejor.valor)) mejor = { valor: g / c, movs: [...m1.movs, ...m2.movs] };
+        }
+      });
+      if (!mejor || mejor.valor < umbral) return;
+      aplicar(mejor.movs);
+    }
   }
 
   function extraer3x3(e) {
@@ -426,27 +486,36 @@ export function crearCuboGrande(N) {
     const aplicar = (sec) => {
       for (const m of sec) { ref.e = b.aplicarMovimiento(ref.e, m); movs.push(m); etq.push(fase); }
     };
+    // movimientos que añade de verdad una secuencia, contando lo que se simplifica con el final de la solución
+    const costeReal = (sec) => {
+      const cola = movs.slice(-8);
+      return simplificarNxN(cola.concat(sec), N).movimientos.length - simplificarNxN(cola, N).movimientos.length;
+    };
     const cambiarFase = (f) => { const ahora = performance.now(); tiempos[fase] = (tiempos[fase] || 0) + ahora - tf; tf = ahora; fase = f; };
-    // 1. paridad de las wings
+    // 1. centros con movimientos libres (voraz, mientras compense)
+    fase = 'centros';
+    centrosLibres(ref, aplicar, opciones.umbralLibre ?? 0.33);
+    cambiarFase('paridad');
+    // 2. paridad de las wings
     oiWings.forEach((oi, w) => {
       const obj = objetivosWings(ref.e, w);
-      const cur = a.wings[w];
+      const cur = orbitas[oi].piezas.map((pz) => wingPorColores[w].get(ref.e[pz[0]] + ',' + ref.e[pz[1]]));
       // permutación: la pieza de la posición j debe ir a la posición donde obj = cur[j]
       const destino = cur.map((p) => obj.indexOf(p));
       if (paridad(destino)) aplicar(tablas.paridadWings[w]);
     });
     // 2. centros
     cambiarFase('centros');
-    for (const oi of oiCentros) resolverOrbita(oi, ref, orbitas[oi].piezas.map((pz) => RES[pz[0]]), aplicar);
+    for (const oi of oiCentros) resolverOrbita(oi, ref, orbitas[oi].piezas.map((pz) => RES[pz[0]]), aplicar, costeReal);
     // 3. aristas
     cambiarFase('aristas');
-    const necesitaPLL = !impar && paridad(a.esquinas.perm) === 1;
-    oiWings.forEach((oi, w) => resolverOrbita(oi, ref, objetivosWings(ref.e, w), aplicar));
+    const necesitaPLL = !impar && paridad(modelo3.identificar(ref.e).orbitas[0].perm) === 1;
+    oiWings.forEach((oi, w) => resolverOrbita(oi, ref, objetivosWings(ref.e, w), aplicar, costeReal));
     // 4. paridad PLL
     if (necesitaPLL) {
       cambiarFase('paridad');
       if (tablas.pll) aplicar(tablas.pll);
-      else oiWings.forEach((oi, w) => resolverOrbita(oi, ref, objetivosWings(ref.e, w, true), aplicar));
+      else oiWings.forEach((oi, w) => resolverOrbita(oi, ref, objetivosWings(ref.e, w, true), aplicar, costeReal));
     }
     // 5. 3x3
     cambiarFase('3x3');
