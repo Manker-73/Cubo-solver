@@ -7,7 +7,18 @@ Aplicación web en un único HTML, sin servidor.
 - **Validador y solucionador**: 2x2 (óptimo), 3x3 (dos fases de Kociemba), 4x4 a 7x7 (reducción: centros, aristas, paridades y 3x3), Pyraminx (óptimo), Skewb (óptimo) y Square-1 (dos fases: forma de cubo y permutación, solo con giros posibles).
 - Las tablas se generan en el navegador dentro de un Web Worker (la página no se bloquea); si no hay Worker, en el hilo principal.
 
-## Uso
+**App en línea: https://manker-73.github.io/Cubo-solver/**
+
+## Cómo usarla
+
+1. Elige el puzzle en la barra superior (2x2 … 7x7, Pyraminx, Skewb, Square-1, Megaminx).
+2. **Scramble**: pulsa *Nuevo scramble*; *Copiar* lo copia al portapapeles. La primera vez en cada puzzle se generan sus tablas en segundo plano (unos segundos como mucho).
+3. **Resolver** (todos menos Megaminx): pinta el estado de tu puzzle eligiendo un color de la paleta y tocando las pegatinas (o pulsa *Cargar scramble actual*) y luego *Resolver*. Si el estado es imposible, la app dice qué pieza falla.
+4. Recorre la solución con los botones de reproducción (paso a paso, play y velocidad); *Copiar* copia los movimientos.
+
+Funciona sin conexión una vez cargada: todo se calcula en el navegador.
+
+## Uso local
 
 Abre `dist/index.html` en el navegador (doble clic). Para regenerarlo:
 
@@ -15,6 +26,10 @@ Abre `dist/index.html` en el navegador (doble clic). Para regenerarlo:
 npm install
 npm run build
 ```
+
+## Publicación
+
+`.github/workflows/pages.yml` construye `dist/index.html` en cada push a `main` y lo publica en GitHub Pages como `index.html` (requiere *Settings → Pages → Source: GitHub Actions*).
 
 ## Tests
 

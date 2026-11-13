@@ -20,6 +20,7 @@ const completo = `<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 3 3'%3E%3Cpath fill='%23d62828' d='M0 0h1v1H0z'/%3E%3Cpath fill='%23ffd60a' d='M1 0h1v1H1z'/%3E%3Cpath fill='%232a9d4b' d='M2 0h1v1H2z'/%3E%3Cpath fill='%231d5ad8' d='M0 1h1v1H0z'/%3E%3Cpath fill='%23f4f4f4' d='M1 1h1v1H1z'/%3E%3Cpath fill='%23f77f00' d='M2 1h1v1H2z'/%3E%3Cpath fill='%23ffd60a' d='M0 2h1v1H0z'/%3E%3Cpath fill='%23d62828' d='M1 2h1v1H1z'/%3E%3Cpath fill='%232a9d4b' d='M2 2h1v1H2z'/%3E%3C/svg%3E">
 ${cuerpo.slice(0, corte)}
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}</style>
 </head>
