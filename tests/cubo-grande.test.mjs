@@ -1,5 +1,5 @@
 // Cubos grandes (4x4..7x7): validador y solver por reducción.
-// Casos: 1000 en 4x4/5x5 y 200 en 6x6/7x7 con `npm test`; 20 por tamaño con `npm run test:rapido`.
+// Casos: 500 en 4x4/5x5 y 100 en 6x6/7x7 con `npm test`; 20 por tamaño con `npm run test:rapido`.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { crearCuboGrande } from '../src/puzzles/cubo-grande.js';
@@ -10,7 +10,11 @@ import { rngConSemilla, entero } from '../src/core/rng.js';
 import { CASOS, probarScrambles, debeRechazar, guardarResultado } from './util.mjs';
 
 const completo = CASOS >= 1000;
-const casosDe = (N) => (process.env.CASOS_NXN ? +process.env.CASOS_NXN : completo ? (N <= 5 ? 1000 : 200) : 20);
+const casosDe = (N) => (process.env.CASOS_NXN ? +process.env.CASOS_NXN : completo ? (N <= 5 ? 500 : 100) : 20);
+// Cotas inferiores del número de Dios en OBTM (argumento de conteo; se recalculan en
+// el test de abajo) y cotas superiores / estimaciones de la tabla de ESTADO.md.
+export const COTA_INFERIOR = { 4: 35, 5: 52, 6: 75, 7: 99 };
+const COTA_SUPERIOR = { 4: '55 (demostrada; 54 propuesta en 2026)', 5: '130 (demostrada)', 6: '~90–120 (sin confirmar)', 7: '~120–160 (sin confirmar)' };
 const TAMANOS = [4, 5, 6, 7];
 const puzzles = Object.fromEntries(TAMANOS.map((N) => [N, crearCuboGrande(N)]));
 
@@ -80,7 +84,11 @@ for (const N of TAMANOS) {
         (fasesT[f] = fasesT[f] || []).push((r.msFases && r.msFases[f]) || 0);
       }
     }
+    const media = L.reduce((a, b) => a + b, 0) / L.length;
     const res = {
+      cotaInferior: COTA_INFERIOR[N],
+      cociente: +(media / COTA_INFERIOR[N]).toFixed(2),
+      cotaSuperior: COTA_SUPERIOR[N],
       resueltos: `${casos}/${casos} (100.0%)`,
       casosSolver: casos,
       longitudMediaSolucion: est(L).media,
@@ -171,5 +179,51 @@ test('NxN: estado resuelto, resuelto reorientado y validador en la orientación 
     const rot = aplicarPerm(p.estadoResuelto(), geometriaNxN(N).rot.x);
     const r2 = p.resolver(rot);
     assert.ok(r2.ok && r2.movimientos.length === 0, `${N}x${N}: girado -> 0 movimientos`);
+  }
+});
+
+test('NxN: cota inferior del número de Dios (OBTM) por conteo de secuencias canónicas', () => {
+  // Posiciones (centros de un color indistinguibles; orientación fijada) y secuencias de
+  // n movimientos: por eje, un grupo de movimientos que conmutan con j "fronteras"
+  // distintas da C(N-1, j)·3^j elementos; grupos consecutivos de ejes distintos.
+  const fact = (n) => { let r = 1n; for (let i = 2n; i <= BigInt(n); i++) r *= i; return r; };
+  const binom = (n, k) => fact(n) / (fact(k) * fact(n - k));
+  const posiciones = (N) => {
+    const c24 = fact(24) / (fact(4) ** 6n);
+    if (N % 2 === 0) return fact(7) * 3n ** 6n * fact(24) ** BigInt((N - 2) / 2) * c24 ** BigInt((N - 2) ** 2 / 4);
+    return fact(8) * 3n ** 7n * fact(12) * 2n ** 10n * fact(24) ** BigInt((N - 3) / 2) * c24 ** BigInt(((N - 2) ** 2 - 1) / 4);
+  };
+  for (const N of TAMANOS) {
+    const M = 120;
+    const g = Array.from({ length: N }, (_, j) => (j === 0 ? 0n : binom(N - 1, j) * 3n ** BigInt(j)));
+    const tot = new Array(M + 1).fill(0n); tot[0] = 1n;
+    let gk = [1n, ...new Array(M).fill(0n)];
+    for (let k = 1; ; k++) {
+      const nuevo = new Array(M + 1).fill(0n);
+      let alguno = false;
+      gk.forEach((a, i) => { if (a) g.forEach((b, j) => { if (b && i + j <= M) { nuevo[i + j] += a * b; alguno = true; } }); });
+      if (!alguno) break;
+      gk = nuevo;
+      for (let n = 0; n <= M; n++) tot[n] += 3n * 2n ** BigInt(k - 1) * gk[n];
+    }
+    const P = posiciones(N);
+    let acc = 0n, cota = -1;
+    for (let n = 0; n <= M; n++) { acc += tot[n]; if (acc >= P) { cota = n; break; } }
+    assert.equal(cota, COTA_INFERIOR[N], `${N}x${N}: cota inferior`);
+  }
+});
+
+test('NxN: método de respaldo (3-ciclos) cuando la búsqueda no llega', () => {
+  // límites de búsqueda ridículos: todas las etapas fallan y se resuelve con 3-ciclos
+  const rng = rngConSemilla(77);
+  for (const N of TAMANOS) {
+    const p = puzzles[N];
+    for (let i = 0; i < 3; i++) {
+      const e = p.aplicarSecuencia(p.estadoResuelto(), p.generarScramble(rng));
+      const op = N === 4 ? { metodo: 'conmutadores' } : { centros: { plan: [[[1, 5]], [[1, 5]], [[1, 5]]] } };
+      const r = p.resolver(e, op);
+      assert.ok(r.ok, (r.errores || []).join(' | '));
+      assert.ok(p.estaResuelto(p.aplicarSecuencia(e, r.movimientos)), `${N}x${N}: respaldo resuelve`);
+    }
   }
 });

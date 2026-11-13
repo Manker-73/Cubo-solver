@@ -230,7 +230,7 @@ function crearTPR4() {
     // ---- fase 1 ----
     const camino = new Int8Array(40);
     const sols1 = [];
-    const MAX1 = opciones.sols1 ?? 400;
+    const MAX1 = opciones.sols1 ?? 50;
     for (let X = 0; X < 3; X++) {
       const s0 = mascaraDe(centros, [X, X + 3]);
       const h0 = T1[rangoMascara(s0)];
@@ -265,7 +265,7 @@ function crearTPR4() {
       cand1.push({ ...s, s2: s2 >>> 0, cs, h: s.movs.length + T2[indice2(s2 >>> 0)] });
     }
     cand1.sort((x, y) => x.h - y.h);
-    const cand = cand1.slice(0, opciones.cand1 ?? 200);
+    const cand = cand1.slice(0, opciones.cand1 ?? 30);
 
     // ---- fase 2 (con el filtro de mitades) ----
     const sols2 = [];
@@ -319,7 +319,7 @@ function crearTPR4() {
         const ult = c1.movs.length ? c1.movs[c1.movs.length - 1] : -1;
         if (buscar(c1.s2, 0, L2, ult)) { pararTodo = true; break; }
       }
-      if (sols2.length >= (opciones.min2 ?? 8)) break;
+      if (sols2.length >= (opciones.min2 ?? 3)) break;
     }
     if (!sols2.length) return null;
 
@@ -364,9 +364,10 @@ function crearTPR4() {
     const sols3a = [];
     const MAX3A = opciones.sols3a ?? 40;
     const camino3 = new Int8Array(40);
-    for (let L = cand3[0].h; L <= cand3[0].h + 4 && sols3a.length < (opciones.min3a ?? 6); L++) {
+    for (let L = cand3[0].h; L <= cand3[0].h + 4 && sols3a.length < (opciones.min3a ?? 4); L++) {
       for (const c of cand3) {
         if (c.h > L) break;
+        if (L - c.h > 3) continue;
         const L3 = L - c.L12;
         const buscar = (s, ea, eb, prof, resto, ult) => {
           if (resto === 0) {
@@ -404,13 +405,16 @@ function crearTPR4() {
     sols3a.sort((x, y) => x.h - y.h);
     let mejor = null;
     const camino4 = new Int8Array(40);
-    for (let L = sols3a[0].h; L <= sols3a[0].h + 12 && !mejor; L++) {
-      for (const c of sols3a) {
-        if (c.h > L) break;
-        const L4 = L - c.L;
+    // cada candidato por separado (IDA* con límite de nodos), del más prometedor al menos;
+    // se para cuando ningún candidato restante puede mejorar lo encontrado
+    for (const c of sols3a.slice(0, opciones.cand3b ?? 12)) {
+      if (mejor && c.h >= mejor.total) break;
+      let nodosC = 0;
+      const limiteC = opciones.nodos3b ?? 1e6;
+      for (let L4 = c.h - c.L; (!mejor || c.L + L4 < mejor.total) && L4 <= c.h - c.L + 8; L4++) {
         const buscar = (s, iE, iU, prof, resto, ult) => {
           if (resto === 0) return T3b[indice3(s)] === 0 && iE === 0 && iU === 0;
-          if ((++nodos & 4095) === 0 && Date.now() > tLimite + 3000) throw new Error('TPR4: tiempo agotado');
+          if (++nodosC > limiteC) throw new Error('límite');
           for (const i of G3b) {
             if (!permitido(ult, i)) continue;
             const m = MOVS[i];
@@ -424,11 +428,12 @@ function crearTPR4() {
           return false;
         };
         const prev = c.movs3a.length ? c.movs3a : c.c.movs2;
-        if (buscar(c.s3, c.iE, c.iU, 0, L4, prev.length ? prev[prev.length - 1] : -1)) {
-          mejor = { c, movs3b: Array.from(camino4.subarray(0, L4)) };
-          break;
-        }
+        let ok = false;
+        try { ok = buscar(c.s3, c.iE, c.iU, 0, L4, prev.length ? prev[prev.length - 1] : -1); } catch (err) { if (err.message !== 'límite') throw err; break; }
+        if (ok) { mejor = { c, movs3b: Array.from(camino4.subarray(0, L4)), total: c.L + L4 }; break; }
       }
+      nodos += nodosC;
+      if (Date.now() > tLimite + 1500 && mejor) break;
     }
     if (!mejor) return null;
     const nombres = (l) => l.map((i) => MOVS[i].nombre);

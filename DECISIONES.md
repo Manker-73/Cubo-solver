@@ -142,3 +142,37 @@ Elegí un método basado en **conmutadores puros** en vez de tablas de búsqueda
 - **Rellenar cara**: lo hice como herramienta de la paleta (un toque en cualquier pegatina pinta toda su cara con el último color elegido, que se ve en el botón) en vez de con `accionesEditor`, porque una acción no sabe qué cara rellenar y la herramienta sí (la pegatina tocada). Para ello `usarHerramienta` y `aplicarAccion` reciben un tercer argumento opcional `{ color }`.
 - **Vista de una cara** (nuevo campo opcional `vistasEditor` + `renderizar(estado, { vista })`): en el móvil la red del 7x7 deja pegatinas de ~10 px; ampliando una cara son de ~45 px. Botones "Red · U · R · F · D · L · B".
 - **Fases en la reproducción**: `resolver` puede devolver `fases: [{nombre, inicio, fin}]`. Se muestra una barra de fases (cada botón lleva al final de su fase), los movimientos coloreados por fase, la fase actual en "Paso 37/412 · Centros" y un botón de velocidad ×1/×2/×4/×8 (las soluciones son largas). La lista de movimientos tiene scroll y sigue al movimiento actual.
+
+# Noche 4: soluciones NxN más cortas
+
+## Métrica y cotas de referencia
+- Todas las longitudes están en **OBTM** (outer block turn metric, la de la WCA): cada giro de una cara o de un bloque de capas que incluye una cara cuenta 1; una capa interior suelta cuenta 2 (`3Rw Rw'`). Es la métrica en la que la simplificación de `nxn.js` deja las soluciones.
+- Las cotas inferiores de la tabla (35, 52, 75, 99) **las he recalculado** con el argumento de conteo: número de posiciones (centros de un color indistinguibles, orientación fijada) frente al número de secuencias canónicas de n movimientos (por eje, los movimientos conmutan; un grupo de un eje con j "fronteras" distintas da C(N−1, j)·3^j elementos; grupos consecutivos de ejes distintos). Salen exactamente 35, 52, 75 y 99 (y 9 y 18 para el 2x2 y el 3x3, que son las cotas clásicas por conteo). Hay un test que lo comprueba (`tests/cubo-grande.test.mjs`).
+- Fuentes y estado de cada cifra: ver la tabla de ESTADO.md. Resumen: 2x2 = 11 y 3x3 = 20 (HTM/OBTM) demostrados; 4x4 entre 35 y 55 (en 2026 se ha publicado en speedsolving.com una prueba asistida por ordenador de 54, aún sin verificación independiente); 5x5 ≤ 130 (xyzzy, 2018); las "estimaciones" de 4x4 y 5x5 se apoyan en un artículo de 2024 (Hirata: 41 y 58 en una métrica de capas sueltas, no OBTM); las de 6x6 y 7x7 no las he podido confirmar con ninguna fuente.
+
+## 4x4: reducción por búsqueda en tres fases (`tpr4.js`)
+Idea del método de Tsai / TPR de Chen Shuang (el solver que usa TNoodle); implementación propia sobre el modelo de pegatinas, no copiada. Lo comprobé antes de escribir nada con Schreier–Sims/BFS sobre el modelo (p. ej. que los movimientos de la fase 3 parten las wings en dos órbitas de 12).
+- **Fase 1** (los 36 movimientos): un par de colores opuestos a las caras R/L (C(24,8) = 735.471 estados, tabla exacta). En el 4x4 los centros no fijan la orientación, así que se prueban los tres pares.
+- **Fase 2** (caras, `Uw2 Dw2 Fw2 Bw2`, `Rw`, `Lw`): centros de R/L resueltos, los otros dos pares separados y la permutación de las wings par (sin paridad OLL). Tabla exacta 12.870 × 70 × 2. Además se **filtran** los finales: las dos wings de cada arista deben quedar en "mitades" distintas (las dos órbitas de 12 de la fase 3) y la permutación relativa debe ser par; si no, la fase 3 no podría emparejarlas. Se enumeran muchas soluciones de la fase 2 hasta que alguna pasa el filtro (~1 de cada 1.300).
+- **Fase 3a** (U D F B, R2 L2 y capas anchas a 180°): las 4 aristas "del ecuador" (sin colores del par de U/D) a las posiciones del ecuador, y los centros a un estado alcanzable en la 3b; se exige que la permutación relativa del ecuador sea una de las 4 alcanzables (filtro, 1 de cada 6).
+- **Fase 3b** (grupo "dominó": U D, R2 L2 F2 B2, capas anchas a 180°): centros resueltos y todas las aristas emparejadas. Tablas exactas: aristas = permutación relativa en el ecuador (4!) × en U/D (8!) (alcanzables 4 × 20.160) y centros (20.160 estados con la paridad PLL). La **paridad PLL** se evita aquí: el bit "paridad de aristas ≠ paridad de esquinas" va en la tabla de centros.
+- En vez de la tabla de 12!/16 del TPR original (≈ 30 millones de estados con simetrías, varios segundos en generarse) partí la fase 3 en dos con tablas pequeñas. Cuesta unos movimientos (≈ 53 de media contra ≈ 44 del TPR), pero las tablas se generan en ~3 s.
+- Si la reducción no termina a tiempo se reintenta con más margen y, si aun así falla, se usa el método de conmutadores de la noche 3 (siempre correcto). En las pruebas no ha hecho falta.
+
+## 5x5–7x7: centros por búsqueda (`nxn-centros.js`)
+- Tres etapas, como en las fases de arriba: E1 (todos los movimientos) los centros de R/L a R/L; E2 (eje R cualquiera, el resto solo caras o medias vueltas) los de U/D a U/D; E3 (caras y medias vueltas) todo resuelto. Cada órbita es una máscara de 24 bits; tablas por tipo de órbita (X, cruz, oblicuos) y etapa.
+- **Dos órbitas a la vez**: con más, la búsqueda conjunta es inviable (la heurística es el máximo de las tablas de cada órbita). En la E3 además hay tablas conjuntas de las dos órbitas: por grupo de caras (70²) y por tríos de "trozos" (órbita, grupo de caras) (70³, 18 tablas); bajaron la E3 del 5x5 de ~17 a ~13 movimientos.
+- Grupos: 5x5 {X, cruz}; 6x6 {X exteriores, X interiores}; 7x7 {X ext., cruz ext.} con bloques y {X int., cruz int.} **intercalado** con movimientos que no estropean lo ya hecho en el primero (la capa 3 suelta, que no toca la capa 2): E1(A), E1(B), E2(A), E2(B), E3(A), E3(B). Los oblicuos del 6x6/7x7 no se pueden aislar así (están en las capas 2 y 3) y se hacen con 3-ciclos.
+- **Paridad de las wings** dentro de la búsqueda (como en la fase 2 del 4x4): la tabla de la E2 lleva los bits de paridad de cada órbita de wings, así que no hace falta el giro de capa de paridad.
+- Se elige la rotación del cubo con la E1 más corta (la búsqueda se hace en el cubo girado y los movimientos se traducen).
+- IDA* con un límite de nodos; si se pasa, se repite con la heurística inflada (×1,3 … ×8: soluciones algo más largas, mucho más rápido) y, si aun así no basta, ese grupo se termina con 3-ciclos (el respaldo está probado en los tests forzando límites ridículos).
+
+## Conmutadores dobles
+- Además de los 3-ciclos puros de una órbita, al inicializar se buscan conmutadores [X, A·B·A⁻¹] cuyos soportes se cortan en 2–4 piezas y que resultan ser 2–4 3-ciclos disjuntos (en una o varias órbitas del mismo tipo) sin mover nada más. Ejemplos: un 3-ciclo de oblicuos A y otro de oblicuos B en **8** movimientos (un 3-ciclo de centros suelto cuesta 12); wings exteriores + interiores (2, 3 o 4 ciclos) en 10.
+- El voraz elige en cada paso, entre 3-ciclos simples (con su setup óptimo) y múltiples (base × setup de 0 o 1 movimientos), el que más piezas coloca por movimiento real (contando lo que se simplifica con el final de la solución).
+
+## Lo que no funcionó
+- **Búsqueda en haz** para muchas órbitas a la vez: se atasca con todas las órbitas a 1 movimiento de su objetivo y ninguna salida (hace falta un conmutador para acabar).
+- **IDA* conjunto de 4–6 órbitas**: con la heurística del máximo, millones de nodos por nivel.
+- **Mirar un paso más** en el voraz de 3-ciclos: −2 % de movimientos y el doble de tiempo; queda desactivado (opción `anticipar`).
+- Una tabla de 3 aristas para la fase 3 del 4x4 sin partirla (12⁶): heurística demasiado débil (máx. 7 para fases de ~13).

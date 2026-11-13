@@ -179,7 +179,7 @@ export function crearCuboGrande(N) {
   const permSec = (movs) => movs.reduce((P, m) => componer(P, b.permDe(m)), identidad(6 * n2));
   const invSec = (movs) => movs.slice().reverse().map(invertirMovimientoNxN);
 
-  function inicializar() {
+  function inicializar(opciones0 = {}) {
     if (tablas) return { ms: tablas.ms, yaEstaba: true };
     const t0 = Date.now();
     const msK = cubo3.inicializar().ms || 0;
@@ -322,48 +322,41 @@ export function crearCuboGrande(N) {
         Yd.push(op([A.movs[0], ...B.movs, invertirMovimientoNxN(A.movs[0])]));
       }
       const vistosD = new Set();
+      const MAXC = opciones0.maxCiclos ?? 4;
       for (const x of Xd) for (const y of Yd) {
         let comun = 0;
         const pcs = [];
-        for (let w = 0; w < palabras && comun < 3; w++) {
+        for (let w = 0; w < palabras && comun <= MAXC; w++) {
           let v = x.s[w] & y.s[w];
-          while (v && comun < 3) { const t = v & -v; pcs.push(w * 32 + 31 - Math.clz32(t)); comun++; v ^= t; }
+          while (v && comun <= MAXC) { const t = v & -v; pcs.push(w * 32 + 31 - Math.clz32(t)); comun++; v ^= t; }
         }
-        if (comun !== 2) continue;
-        const o1 = orbitaDePieza[pcs[0]], o2 = orbitaDePieza[pcs[1]];
-        if (o1 < 0 || o2 < 0 || orbitas[o1].tipo !== orbitas[o2].tipo) continue;
-        if (orbitas[o1].tipo !== 'centros' && orbitas[o1].tipo !== 'wings') continue;
+        if (comun < 2 || comun > MAXC) continue;
+        const os = pcs.map((pc) => orbitaDePieza[pc]);
+        if (os.some((o) => o < 0)) continue;
+        const tipo = orbitas[os[0]].tipo;
+        if ((tipo !== 'centros' && tipo !== 'wings') || os.some((o) => orbitas[o].tipo !== tipo)) continue;
         const P = componer(componer(componer(x.P, y.P), invertir(x.P)), invertir(y.P));
         const movidas = [];
         for (let i = 0; i < nPeg; i++) if (P[i] !== i) movidas.push(i);
-        const m = orbitas[o1].piezas[0].length;
-        if (movidas.length !== 6 * m) continue;
-        const ciclos = [];
-        let ok = true;
+        const m = orbitas[os[0]].piezas[0].length;
+        if (movidas.length !== 3 * comun * m) continue;
+        if (!movidas.every((i) => os.includes(orbitaDePieza[piezaDe[i]]))) continue;
+        // descomponer en 3-ciclos de piezas (pegatinas primarias)
         const destino = (j) => P.indexOf(j);
-        if (o1 !== o2) {
-          for (const oi of [o1, o2]) {
-            const prim = movidas.filter((i) => primaria[oi].has(i));
-            if (prim.length !== 3) { ok = false; break; }
-            const p1 = prim[0], p2 = destino(p1), p3 = destino(p2);
-            if (destino(p3) !== p1 || !prim.includes(p2) || !prim.includes(p3)) { ok = false; break; }
+        const ciclos = [];
+        const usados = new Set();
+        let ok = true;
+        for (const oi of [...new Set(os)]) {
+          for (const p1 of movidas.filter((i) => primaria[oi].has(i))) {
+            if (usados.has(p1)) continue;
+            const p2 = destino(p1), p3 = destino(p2);
+            if (destino(p3) !== p1 || p2 === p1 || !primaria[oi].has(p2) || !primaria[oi].has(p3)) { ok = false; break; }
+            [p1, p2, p3].forEach((z) => usados.add(z));
             ciclos.push({ oi, c: [p1, p2, p3].map((f) => primaria[oi].get(f)) });
           }
-        } else {
-          // dos 3-ciclos disjuntos en la misma órbita
-          const prim = movidas.filter((i) => primaria[o1].has(i));
-          if (prim.length !== 6) ok = false;
-          const usados = new Set();
-          for (const p1 of prim) {
-            if (!ok || usados.has(p1)) continue;
-            const p2 = destino(p1), p3 = destino(p2);
-            if (destino(p3) !== p1 || !prim.includes(p2) || !prim.includes(p3) || p2 === p1) { ok = false; break; }
-            [p1, p2, p3].forEach((x) => usados.add(x));
-            ciclos.push({ oi: o1, c: [p1, p2, p3].map((f) => primaria[o1].get(f)) });
-          }
-          if (ciclos.length !== 2) ok = false;
+          if (!ok) break;
         }
-        if (!ok || !movidas.every((i) => orbitaDePieza[piezaDe[i]] === o1 || orbitaDePieza[piezaDe[i]] === o2)) continue;
+        if (!ok || ciclos.length !== comun) continue;
         const movs = simplificarNxN([...x.movs, ...y.movs, ...invSec(x.movs), ...invSec(y.movs)], N).movimientos;
         const clave = movs.join(' ');
         if (vistosD.has(clave)) continue;
@@ -374,7 +367,7 @@ export function crearCuboGrande(N) {
       // solo los más cortos de cada pareja de órbitas
       const minimo = new Map();
       for (const d of dobles) { const k = d.ciclos.map((c) => c.oi).sort().join(); minimo.set(k, Math.min(minimo.get(k) ?? 99, d.movs.length)); }
-      const cortos = dobles.filter((d) => d.movs.length <= minimo.get(d.ciclos.map((c) => c.oi).sort().join()));
+      const cortos = dobles.filter((d) => d.movs.length <= minimo.get(d.ciclos.map((c) => c.oi).sort().join()) + (opciones0.margenDobles ?? 0));
       dobles.length = 0; dobles.push(...cortos);
     }
     // setups para los dobles: ninguno, un movimiento (caras y capas anchas) o dos caras
@@ -452,7 +445,7 @@ export function crearCuboGrande(N) {
       for (let v = 1; v <= 3; v++) anadirLibre([nombreMovimiento(c, p, v), nombreMovimiento(c, p - 1, 4 - v)]);
     }
     const objCentros = pegCentros.map((f) => RES[f]);
-    tablas = { porOrbita, dobles, setupsD, invSetup, paridadWings, pll, libres, pegCentros, objCentros, ms: 0, tpr: N === 4 ? tpr4() : null, centros: N >= 5 ? crearCentrosNxN(N, b, orbitas, {
+    tablas = { porOrbita, dobles, setupsD, setups1: setups.length + 1, invSetup, paridadWings, pll, libres, pegCentros, objCentros, ms: 0, tpr: N === 4 ? tpr4() : null, centros: N >= 5 ? crearCentrosNxN(N, b, orbitas, {
       // bit w: la permutación de la órbita de wings w (respecto a su objetivo) es impar
       bits: (e) => oiWings.reduce((acc, oi, w) => {
         const obj = objetivosWings(e, w);
@@ -532,22 +525,24 @@ export function crearCuboGrande(N) {
    * óptimo, como resolverOrbita) o doble (base × setup de 0, 1 o 2 movimientos),
    * por piezas colocadas por movimiento.
    */
-  function resolverGrupo(ois, estadoRef, objs, aplicar, costeReal) {
+  function resolverGrupo(ois, estadoRef, objs, aplicar, costeReal, opcionesGrupo = {}) {
     const enG = new Set(ois);
     const dobl = tablas.dobles.filter((d) => d.ciclos.every((c) => enG.has(c.oi)));
-    const leer = (oi) => {
+    const leer = (e, oi) => {
       const orb = orbitas[oi];
       return orb.piezas.map((pz) => (orb.tipo === 'wings'
-        ? wingPorColores[oiWings.indexOf(oi)].get(estadoRef.e[pz[0]] + ',' + estadoRef.e[pz[1]])
-        : estadoRef.e[pz[0]]));
+        ? wingPorColores[oiWings.indexOf(oi)].get(e[pz[0]] + ',' + e[pz[1]])
+        : e[pz[0]]));
     };
     const ganancia = (cur, obj, a, b2, c) => (cur[a] === obj[b2]) + (cur[b2] === obj[c]) + (cur[c] === obj[a]) - (cur[a] === obj[a]) - (cur[b2] === obj[b2]) - (cur[c] === obj[c]);
-    for (let iter = 0; iter < 600; iter++) {
-      const cur = {}, obj = objs;
+    const obj = objs;
+    // candidatos (ganancia, coste estimado) desde el estado e
+    function candidatos(e) {
+      const cur = {};
       let quedan = 0;
-      for (const oi of ois) { cur[oi] = leer(oi); for (let j = 0; j < 24; j++) if (cur[oi][j] !== obj[oi][j]) quedan++; }
-      if (!quedan) return;
+      for (const oi of ois) { cur[oi] = leer(e, oi); for (let j = 0; j < 24; j++) if (cur[oi][j] !== obj[oi][j]) quedan++; }
       const cand = [];
+      if (!quedan) return { cand, quedan };
       for (const oi of ois) {
         const T = tablas.porOrbita[oi];
         const cu = cur[oi], ob = obj[oi];
@@ -565,27 +560,42 @@ export function crearCuboGrande(N) {
           }
         }
       }
+      const resuelta = new Set(ois.filter((oi) => cur[oi].every((x, j) => x === obj[oi][j])));
+      const nSetups = opcionesGrupo.setups2 ? tablas.setupsD.length : tablas.setups1;
       for (const d of dobl) {
-        const [c1, c2] = d.ciclos;
-        const cu1 = cur[c1.oi], ob1 = obj[c1.oi], cu2 = cur[c2.oi], ob2 = obj[c2.oi];
-        for (let si = 0; si < tablas.setupsD.length; si++) {
+        const cs = d.ciclos;
+        if (cs.some((c) => resuelta.has(c.oi))) continue;
+        for (let si = 0; si < nSetups; si++) {
           const inv = tablas.invSetup[si];
-          const i1 = inv[c1.oi], i2 = inv[c2.oi];
-          const g = ganancia(cu1, ob1, i1[c1.c[0]], i1[c1.c[1]], i1[c1.c[2]]) + ganancia(cu2, ob2, i2[c2.c[0]], i2[c2.c[1]], i2[c2.c[2]]);
+          let g = 0;
+          for (const c of cs) { const iv = inv[c.oi]; g += ganancia(cur[c.oi], obj[c.oi], iv[c.c[0]], iv[c.c[1]], iv[c.c[2]]); }
           if (g <= 0) continue;
           const S = tablas.setupsD[si];
           const coste = d.movs.length + 2 * S.length;
           cand.push({ valor: g / coste, g, coste, sec: () => [...S, ...d.movs, ...S.slice().reverse().map(invertirMovimientoNxN)] });
         }
       }
-      if (!cand.length) throw new Error(`No se pudo avanzar con ${ois.map((oi) => orbitas[oi].nombre).join(', ')}`);
       cand.sort((x, y) => y.valor - x.valor || x.coste - y.coste);
+      return { cand, quedan };
+    }
+    const anticipar = opcionesGrupo.anticipar ?? 0;
+    for (let iter = 0; iter < 600; iter++) {
+      const { cand, quedan } = candidatos(estadoRef.e);
+      if (!quedan) return;
+      if (!cand.length) throw new Error(`No se pudo avanzar con ${ois.map((oi) => orbitas[oi].nombre).join(', ')}`);
       let mejor = null;
-      for (const x of cand.slice(0, 24)) {
-        const sec = x.sec();
-        const real = costeReal(sec);
-        const valor = x.g / Math.max(1, real);
-        if (!mejor || valor > mejor.valor) mejor = { valor, sec };
+      const evaluados = cand.slice(0, 24).map((x) => { const sec = x.sec(); const real = Math.max(1, costeReal(sec)); return { ...x, sec, real, v1: x.g / real }; });
+      evaluados.sort((x, y) => y.v1 - x.v1);
+      for (const [k, x] of evaluados.entries()) {
+        let valor = x.v1;
+        if (k < anticipar && x.g < quedan) {
+          // mirar un paso más: lo mejor que se puede hacer después
+          let e2 = estadoRef.e;
+          for (const m of x.sec) e2 = b.aplicarMovimiento(e2, m);
+          const sig = candidatos(e2).cand[0];
+          if (sig) valor = (x.g + sig.g) / (x.real + sig.coste);
+        }
+        if (!mejor || valor > mejor.valor) mejor = { valor, sec: x.sec };
       }
       aplicar(mejor.sec);
     }
@@ -658,7 +668,10 @@ export function crearCuboGrande(N) {
     let reducido = false;
     if (N === 4 && opciones.metodo !== 'conmutadores') {
       let r = null;
-      try { r = tablas.tpr.reducir(a.norm, (x, y) => wingPorColores[0].get(x + ',' + y), { msMax: opciones.msReduccion ?? 1500 }); } catch (err) { r = null; }
+      const wp = (x, y) => wingPorColores[0].get(x + ',' + y);
+      try { r = tablas.tpr.reducir(a.norm, wp, { msMax: opciones.msReduccion ?? 1500, ...opciones.tpr }); } catch (err) { r = null; }
+      // segundo intento, con más margen, antes de pasar al método general
+      if (!r) try { r = tablas.tpr.reducir(a.norm, wp, { msMax: 4000, nodos3b: 6e6, cand3b: 40, ...opciones.tpr }); } catch (err) { r = null; }
       if (r) {
         fase = 'centros'; aplicar(r.fases[0]); aplicar(r.fases[1]);
         cambiarFase('aristas'); aplicar(r.fases[2]); aplicar(r.fases[3]);

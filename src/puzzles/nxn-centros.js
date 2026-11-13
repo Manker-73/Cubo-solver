@@ -225,12 +225,65 @@ export function crearCentrosNxN(N, b, orbitas, paridad = null) {
     }
     return paso.parejas;
   }
+  // E3: tablas de tres "trozos" (órbita, grupo de caras) de las dos órbitas: 70³
+  function triosDe(paso) {
+    if (paso.trios) return paso.trios;
+    const movs = paso.movs;
+    const [k1, k2] = paso.orbitas;
+    const todos18 = [];
+    for (let a = 0; a < 6; a++) for (let b2 = a + 1; b2 < 6; b2++) for (let c = b2 + 1; c < 6; c++) { const tz = [a, b2, c].map((x) => [x < 3 ? 0 : 1, x % 3]); if (new Set(tz.map((t) => t[0])).size === 2) todos18.push(tz); }
+    const elegidos = todos18;
+    // movimientos distintos (por su efecto en las dos órbitas)
+    const vistos = new Map();
+    for (const m of movs) { const kk = m.id[k1] + '|' + m.id[k2] + '|' + m.coste; if (!vistos.has(kk)) vistos.set(kk, m); }
+    const ms = [...vistos.values()];
+    // para cada movimiento, (órbita, grupo) -> tabla de 256 (submáscara de 8 bits -> submáscara)
+    const sub = new Map();
+    const subDe = (m, k, g) => {
+      const kk = ms.indexOf(m) + ':' + k + ':' + g;
+      if (!sub.has(kk)) { const L = new Uint8Array(256); for (let x = 0; x < 256; x++) L[x] = (mueve(m, k, x << (8 * g)) >>> (8 * g)) & 255; sub.set(kk, L); }
+      return sub.get(kk);
+    };
+    paso.trios = elegidos.map((trozos) => {
+      const ks = trozos.map(([o]) => (o === 0 ? k1 : k2));
+      const gs = trozos.map(([, g]) => g);
+      // movimientos distintos para este trío (los que actúan igual sobre los tres trozos, una vez)
+      const unicos = new Map();
+      for (const m of ms) {
+        const L = [0, 1, 2].map((i) => subDe(m, ks[i], gs[i]));
+        const kk = L.map((x) => x.join(',')).join('|') + '|' + m.coste;
+        if (!unicos.has(kk) && !L.every((x) => x.every((v, j) => v === j))) unicos.set(kk, { L, c: m.coste });
+      }
+      const Ls = [...unicos.values()].map((u) => u.L);
+      const cs = [...unicos.values()].map((u) => u.c);
+      const idx = (x) => (r70[x & 255] * 70 + r70[(x >>> 8) & 255]) * 70 + r70[x >>> 16];
+      const T = new Int8Array(343000).fill(-1);
+      const ini = [0, 1, 2].reduce((acc, i) => acc | (((meta(ks[i], 3) >>> (8 * gs[i])) & 255) << (8 * i)), 0);
+      const cubos = [[ini], [], []];
+      T[idx(ini)] = 0;
+      for (let d = 0; cubos[d % 3].length || cubos[(d + 1) % 3].length || cubos[(d + 2) % 3].length; d++) {
+        const actual = cubos[d % 3];
+        cubos[d % 3] = [];
+        for (const x of actual) {
+          if (T[idx(x)] !== d) continue;
+          for (let j = 0; j < Ls.length; j++) {
+            const L = Ls[j];
+            const y = L[0][x & 255] | (L[1][(x >>> 8) & 255] << 8) | (L[2][x >>> 16] << 16);
+            const q = idx(y), dd = d + cs[j];
+            if (T[q] < 0 || T[q] > dd) { T[q] = dd; cubos[dd % 3].push(y); }
+          }
+        }
+      }
+      return { o: trozos.map(([o]) => o), sh: gs.map((g) => 8 * g), T };
+    });
+    return paso.trios;
+  }
   let listo = false;
   function inicializar() {
     if (listo) return;
     for (const p of PASOS) {
       for (const k of p.orbitas) tablaDe(k, p.movs, p.etapa, p.etapa === 2 ? p.par : 0);
-      if (p.etapa === 3) parejasDe(p);
+      if (p.etapa === 3) { parejasDe(p); triosDe(p); }
     }
     listo = true;
   }
@@ -260,6 +313,7 @@ export function crearCentrosNxN(N, b, orbitas, paridad = null) {
     for (let i = 0; i < M; i++) for (let j = 0; j < M; j++) permit[(i + 1) * M + j] = permitido(movs[i], movs[j]) ? 1 : 0;
     const W = new Int16Array(64); for (let v = 0; v < 64; v++) W[v] = Math.floor(v * w);
     const P0 = P[0] ? P[0].T : null, P1 = P[1] ? P[1].T : null, P2 = P[2] ? P[2].T : null;
+    const TR = numEtapa === 3 ? triosDe(paso) : [];
     const e3 = numEtapa === 3, e2 = numEtapa === 2;
     const hDe = (a, c, pr) => {
       let hv, v2;
@@ -269,6 +323,12 @@ export function crearCentrosNxN(N, b, orbitas, paridad = null) {
         v2 = P0[r70[a & 255] * 70 + r70[c & 255]]; if (v2 > hv) hv = v2;
         v2 = P1[r70[(a >>> 8) & 255] * 70 + r70[(c >>> 8) & 255]]; if (v2 > hv) hv = v2;
         v2 = P2[r70[a >>> 16] * 70 + r70[c >>> 16]]; if (v2 > hv) hv = v2;
+        for (let t = 0; t < TR.length; t++) {
+          const tr = TR[t], sh = tr.sh, o = tr.o;
+          const x0 = o[0] ? c : a, x1 = o[1] ? c : a, x2 = o[2] ? c : a;
+          v2 = tr.T[(r70[(x0 >>> sh[0]) & 255] * 70 + r70[(x1 >>> sh[1]) & 255]) * 70 + r70[(x2 >>> sh[2]) & 255]];
+          if (v2 > hv) hv = v2;
+        }
       } else if (e2) {
         hv = T1[r16[(a & 255) | ((a >>> 16) << 8)] * conPar + (conPar > 1 ? pr : 0)];
         v2 = T2[r16[(c & 255) | ((c >>> 16) << 8)] * conPar + (conPar > 1 ? pr : 0)]; if (v2 > hv) hv = v2;
@@ -378,7 +438,7 @@ export function crearCentrosNxN(N, b, orbitas, paridad = null) {
       const mascara = (k) => { let x = 0; pos[k].forEach((s, j) => { if (cols.includes(est[s])) x |= 1 << j; }); return x >>> 0; };
       const ini = paso.orbitas.map(mascara);
       let movs = null;
-      for (const [w, limite] of paso.plan ?? (opciones.plan ?? PLAN)[paso.etapa - 1]) {
+      for (const [w, limite] of (opciones.plan ? opciones.plan[paso.etapa - 1] : paso.plan ?? PLAN[paso.etapa - 1])) {
         try { movs = etapa(paso, ini, ultimo, limite, w, paridad && paso.par ? paridad.bits(est) : 0); break; } catch (err) { if (err.message !== 'límite' && err.message !== 'sin solución') throw err; }
       }
       if (!movs) { paso.orbitas.forEach((k) => fallidas.add(k)); porEtapa.push(null); continue; }
