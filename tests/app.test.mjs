@@ -28,7 +28,12 @@ async function abrir(t, { beforeParse } = {}) {
   let JSDOM;
   try { ({ JSDOM } = await import('jsdom')); } catch { t.skip('jsdom no instalado'); return null; }
   const errores = [];
-  const dom = new JSDOM(construir(), { runScripts: 'dangerously', pretendToBeVisual: true, url: 'https://localhost/', beforeParse });
+  // jsdom no tiene WebGL: la app usa la vista 2D (y el aviso de getContext no es un error)
+  const { VirtualConsole } = await import('jsdom');
+  const vc = new VirtualConsole();
+  vc.sendTo(console, { omitJSDOMErrors: true });
+  vc.on('jsdomError', (e) => { if (!/HTMLCanvasElement/.test(e.message)) console.error(e); });
+  const dom = new JSDOM(construir(), { runScripts: 'dangerously', pretendToBeVisual: true, url: 'https://localhost/', beforeParse, virtualConsole: vc });
   const w = dom.window;
   w.addEventListener('error', (e) => errores.push(e.message));
   const doc = w.document;
@@ -90,6 +95,39 @@ test('app: sin Worker, construye, carga y resuelve un scramble en cada puzzle co
     doc.getElementById('resolver').click();
     try { await hasta(() => doc.querySelector('.mensaje.error'), 10000); } catch { assert.fail(`${nombre}: el validador no se queja tras pintar una pegatina (${doc.getElementById('mensajes').textContent})`); }
   }
+  assert.deepEqual(errores, []);
+  w.close();
+});
+
+test('app: sin WebGL (jsdom), todo en 2D; el reproductor del scramble recorre los movimientos', async (t) => {
+  const ctx = await abrir(t);
+  if (!ctx) return;
+  const { w, doc, errores } = ctx;
+  await elegirPuzzle(ctx, '3x3');
+  assert.equal(doc.getElementById('modo-previa').hidden, true, 'sin WebGL no se ofrece el 3D');
+  assert.equal(doc.getElementById('modo-editor').hidden, true);
+  assert.equal(doc.getElementById('sin-3d').hidden, false, 'aviso de que no hay 3D');
+  assert.equal(doc.getElementById('vista3d-scramble').hidden, true);
+  assert.equal(doc.getElementById('vista-scramble').hidden, false);
+  const n = doc.getElementById('scramble').textContent.trim().split(/\s+/).length;
+  const svgFinal = doc.querySelector('#vista-scramble svg').outerHTML;
+  assert.match(doc.getElementById('paso-scramble').textContent, /Scramble aplicado/);
+  doc.getElementById('s-inicio').click();
+  assert.match(doc.getElementById('paso-scramble').textContent, new RegExp(`Resuelto · 0/${n}`));
+  const svgResuelto = doc.querySelector('#vista-scramble svg').outerHTML;
+  assert.notEqual(svgResuelto, svgFinal);
+  for (let i = 0; i < n; i++) doc.getElementById('s-adelante').click();
+  assert.match(doc.getElementById('paso-scramble').textContent, /Scramble aplicado/);
+  assert.equal(doc.querySelector('#vista-scramble svg').outerHTML, svgFinal, 'tras recorrer el scramble, la vista previa es la del scramble');
+  doc.getElementById('s-atras').click();
+  assert.match(doc.getElementById('paso-scramble').textContent, new RegExp(`${n - 1}/${n}`));
+  // play en 2D: avanza solo
+  doc.getElementById('s-inicio').click();
+  doc.getElementById('s-play').click();
+  await espera(1300);
+  assert.ok(parseInt(doc.getElementById('paso-scramble').textContent, 10) >= 1, 'el play avanza: ' + doc.getElementById('paso-scramble').textContent);
+  doc.getElementById('s-play').click();
+  assert.equal(doc.getElementById('s-play').textContent, '▶');
   assert.deepEqual(errores, []);
   w.close();
 });

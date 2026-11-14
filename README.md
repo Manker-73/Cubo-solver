@@ -16,10 +16,16 @@ Aplicación web en un único HTML, sin servidor.
 3. **Resolver**: pinta el estado de tu puzzle eligiendo un color de la paleta y tocando las pegatinas (o pulsa *Cargar scramble actual*) y luego *Resolver*. Puedes sujetar el puzzle en cualquier orientación: la solución sale para como lo tengas. *Rellenar cara* (cubos grandes y Megaminx) pinta una cara entera de un toque y *Deshacer* (o Ctrl+Z) deshace el último cambio. Si el estado es imposible, la app dice qué pieza falla. Resolver un 4x4–7x7 tarda 1–7 s de media (hasta ~13 s en el peor caso medido); un Megaminx, unos 2,5–3 s (prueba muchas orientaciones y se queda con la solución más corta).
 4. Recorre la solución con los botones de reproducción (paso a paso, play y velocidad); *Copiar* copia los movimientos. En los puzzles con etapas (cubos grandes, Megaminx) la barra de fases muestra en qué etapa está cada tramo.
 
+### Vista 3D
+- La vista previa del scramble y la reproducción de la solución se ven en **3D**, con los giros animados: arrastra con el ratón o el dedo para girar el puzzle (*Vista inicial* lo devuelve a su sitio). Los botones **2D / 3D** cambian entre el modelo 3D y la red plana.
+- Bajo la vista previa hay un reproductor del scramble: ⇤ lo deja resuelto, ▶ lo aplica movimiento a movimiento (velocidad ×1…×8, pausa, paso atrás). En el Megaminx, al acabar, el puzzle gira entero hasta la orientación de referencia, como indica la nota.
+- El editor de colores sigue siendo la red 2D, pero con **3D** también se puede pintar tocando el modelo.
+- Si el navegador no tiene WebGL, todo sigue funcionando en 2D.
+
 ### Notación del Megaminx
 Los scrambles están en notación Pochmann (`R++`, `D--`, `U'`), como en la WCA: se empieza con el blanco arriba y el verde oscuro delante; `R++` = sujetar la cara de la izquierda y girar el resto 2/5 en sentido horario visto desde la derecha; `D++` = sujetar la de arriba y girar el resto visto desde abajo. Como estos movimientos giran casi todo el puzzle, al acabar los centros están en otro sitio: la vista previa se muestra con el blanco arriba y el verde delante, y debajo se indica cómo girar el puzzle para que coincida. Las soluciones usan notación de caras: **U** arriba; a su alrededor, en sentido horario, **F** (delante), **R**, **BR**, **BL**, **L**; **D** abajo y a su alrededor **DR** (debajo de F y R), **DBR**, **B** (detrás, opuesta a F), **DBL**, **DL**. `R` = 72° en sentido horario mirando la cara R, `R'` = 72° antihorario, `R2` = 144° horario, `R2'` = 144° antihorario; cada giro cuenta 1. La app tiene una leyenda con la red y la letra de cada cara, y durante la reproducción muestra las letras en los centros.
 
-Funciona sin conexión una vez cargada: todo se calcula en el navegador.
+Funciona sin conexión una vez cargada: todo se calcula en el navegador (también la vista 3D, que no usa ninguna librería externa).
 
 ## Uso local
 

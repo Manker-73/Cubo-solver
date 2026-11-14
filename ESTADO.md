@@ -1,4 +1,4 @@
-# Estado del proyecto (final de la noche 6 — 15/11/2026)
+# Estado del proyecto (final de la noche 7 — 15/11/2026)
 
 ## Qué funciona
 
@@ -13,6 +13,59 @@
 | **Megaminx** | Pochmann (7×11) | **sí** | **por etapas con búsqueda (IDA*) + última capa con macros (~90 giros de cara)** | **sí** (+ rellenar cara, vistas U/D, deshacer) |
 
 Ya no queda ningún puzzle sin validador ni solver.
+
+## Noche 7: vista 3D
+
+### Qué hay
+- **Vista 3D de los 10 puzzles** (2x2–7x7, Pyraminx, Skewb, Square-1, Megaminx) que se gira arrastrando con el ratón o el dedo (*Vista inicial* la devuelve a su sitio).
+- **Vista previa del scramble en 3D** (por defecto) con su propio reproductor: ⇤ resuelto, ‹ ›, ▶/❚❚, ⇥ y velocidad ×1…×8; empieza con el scramble aplicado. En el Megaminx, los movimientos Pochmann se animan tal cual y al final el puzzle gira entero hasta la orientación de referencia (la de la imagen y la nota).
+- **Solución en 3D con giros animados**: velocidad ×1…×8, pausa, paso atrás animado, saltos a cualquier movimiento o al final de una fase. En el Megaminx, las letras de las caras sobre sus centros (como en 2D).
+- **Botones 2D / 3D** en la vista previa y en el editor. El editor sigue en la red 2D para pintar; al resolver pasa a 3D. Con el editor en 3D **se puede pintar tocando el modelo** (también rellenar cara, mover piezas del Square-1 con la primera pieza resaltada y voltear la capa del medio).
+- **Resaltar piezas** (`resaltarPiezas`, modos brillo y transparencia) para el modo aprender.
+- Interfaz común: `vista3D(estado)` y `giro3D(estado, mov)` (+ `reorientar3D` en el Megaminx). La vista no sabe de ningún puzzle; ver ARQUITECTURA.md, "Vista 3D".
+- **Sin librerías**: WebGL 1 propio (~23 KB; la app pasa de 320 a 345 KB, sigue siendo un único HTML). Sin conexión funciona igual (comprobado con Chromium sin red). **Sin WebGL**, todo en 2D con un aviso (comprobado en Chromium con WebGL desactivado y en jsdom).
+
+### Tests (`npm run test:rapido`: 124 tests, 124 pasan, ~9 min)
+- `tests/vista3d.test.mjs` (26 tests, sin navegador):
+  - **Cada giro animado acaba exactamente en el estado del modelo**: para todos los movimientos de cada puzzle (NxN: todas las caras, capas anchas y sentidos; Pyraminx con puntas; Skewb; Megaminx: giros de cara y Pochmann) desde estados al azar, y en el Square-1 cientos de `(x,y)` y `/` desde formas de todo tipo. Se giran las pegatinas su ángulo completo y se compara color por posición (centro 3D) con `vista3D` del estado siguiente. Si se cambia a propósito el sentido de un giro o se quita una pegatina, falla.
+  - **Reproducción completa** con el reproductor real de la app y la escena real (la misma que dibuja WebGL): scramble y solución en los 10 puzzles, adelante hasta el final y 12 pasos atrás; al empezar y al acabar cada animación lo que se ve es el estado del modelo (incluida la reorientación final del Megaminx).
+  - Orientación de referencia (blanco arriba, verde delante; Square-1 azul delante y corte según 12c1; Pyraminx verde delante y amarillo abajo; Megaminx con los 12 colores verificados en sus caras), número de piezas para resaltar, y elegir pegatina por rayo (también con una capa a medio girar).
+- Prueba de humo: nueva prueba sin WebGL (todo en 2D, reproductor del scramble paso a paso y con play). Las anteriores siguen pasando.
+
+### Comprobado en Chromium real (`scripts/comprobar-3d.py`)
+Escritorio 1280 px y móvil 390 px (pantalla ×3, táctil), tema claro y oscuro, los 10 puzzles: scramble animado, cargar, resolver, solución animada hasta el final a ×8, paso atrás y adelante, pieza resaltada, pintar tocando el modelo. Sin errores en consola ni scroll horizontal. Capturas en `docs/capturas/` (una hoja por configuración: scramble a medio girar, solución a medio girar, pieza resaltada; y la página).
+
+FPS de las animaciones (aquí Chrome dibuja WebGL **por software**, SwiftShader con 2 núcleos y sin GPU: peor que un móvil real; 60 es el máximo del navegador):
+
+| Configuración | Puzzle | Movs. solución | Solución a ×8 | FPS medios scramble / solución | Fotograma más lento |
+|---|---|---|---|---|---|
+| escritorio claro | 2x2 | 8 | 0,6 s | 60,0 / 60,0 | 17 ms |
+| escritorio claro | 3x3 | 20 | 1,4 s | 60,0 / 60,0 | 17 ms |
+| escritorio claro | 4x4 | 53 | 3,7 s | 60,0 / 60,0 | 17 ms |
+| escritorio claro | 5x5 | 104 | 7,2 s | 60,0 / 60,0 | 17 ms |
+| escritorio claro | 6x6 | 236 | 18,7 s | 60,0 / 60,0 | 17 ms |
+| escritorio claro | 7x7 | 416 | 35,2 s | 60,0 / 60,0 | 17 ms |
+| escritorio claro | Pyraminx | 11 | 0,8 s | 60,0 / 60,0 | 17 ms |
+| escritorio claro | Skewb | 9 | 0,6 s | 60,0 / 60,0 | 17 ms |
+| escritorio claro | Square-1 | 23 | 1,6 s | 60,0 / 60,0 | 17 ms |
+| escritorio claro | Megaminx | 87 | 6,2 s | 60,0 / 60,0 | 17 ms |
+| movil oscuro | 2x2 | 9 | 0,6 s | 60,0 / 60,0 | 17 ms |
+| movil oscuro | 3x3 | 20 | 1,5 s | 60,0 / 60,0 | 17 ms |
+| movil oscuro | 4x4 | 50 | 4,0 s | 60,0 / 60,0 | 17 ms |
+| movil oscuro | 5x5 | 98 | 8,1 s | 60,0 / 60,0 | 17 ms |
+| movil oscuro | 6x6 | 219 | 19,2 s | 60,0 / 59,5 | 33 ms |
+| movil oscuro | 7x7 | 395 | 35,9 s | 59,7 / 59,5 | 33 ms |
+| movil oscuro | Pyraminx | 12 | 0,8 s | 60,0 / 60,0 | 17 ms |
+| movil oscuro | Skewb | 9 | 0,7 s | 60,0 / 60,0 | 17 ms |
+| movil oscuro | Square-1 | 27 | 2,1 s | 60,0 / 60,0 | 17 ms |
+| movil oscuro | Megaminx | 93 | 8,6 s | 59,2 / 58,6 | 83 ms |
+
+Los 7x7 y Megaminx van a 60 FPS de media también en el móvil; el fotograma más lento (33–83 ms) es puntual, al cambiar de paso (se rehacen los buffers: unos 3.500 vértices en el 7x7).
+
+### Pendiente / ideas
+- Modo aprender (noche 8) con `resaltarPiezas`.
+- En el móvil, la página no hace scroll si el dedo empieza sobre el lienzo 3D (para poder girarlo); hay margen alrededor para hacer scroll.
+- Las letras de las caras en 3D solo están en el Megaminx (en los cubos la notación es la de siempre).
 
 ## Noche 6: 5x5, 6x6 y 7x7 más cortos
 
@@ -267,7 +320,7 @@ Métricas del Square-1: **barras**; **WCA** = Regulación 12c4 (cada `(x,y)` y c
 - Los scrambles de 4x4–7x7 siguen siendo de movimientos aleatorios (TNoodle usa estado aleatorio en el 4x4).
 - Megaminx: los scrambles siguen siendo de movimientos aleatorios (Pochmann, como exige la WCA). Resolver tarda ~2,5–3 s porque prueba orientaciones hasta agotar el tiempo (`tiempoMax`); la primera vez se generan sus tablas (~1,3 s). En el móvil la red completa queda pequeña: para pintar, mejor las vistas "Arriba (U)" y "Abajo (D)".
 
-## Siguiente paso recomendado (noche 7)
+## Siguiente paso recomendado (noche 8: modo aprender; después)
 1. **Oblicuos del 6x6/7x7**: son lo que más pesa. Ideas no probadas: construir primero "barras" (oblicuo A + oblicuo B del mismo color, que con giros de hasta dos capas viajan juntos) y resolver luego el 6x6 como un 5x5 virtual (capas 1, 2, bloque 3–4, 5, 6) con la búsqueda de centros del 5x5.
 2. **Megaminx más corto**: etapas más grandes o búsqueda en haz entre etapas; macros de última capa con más caras.
 3. **4x4**: scramble de estado aleatorio (las tablas de `tpr4.js` sirven de base).

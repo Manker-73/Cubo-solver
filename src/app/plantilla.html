@@ -25,7 +25,24 @@
           <button type="button" class="boton-texto" id="copiar">Copiar</button>
         </div>
       </div>
+      <div class="barra-vista">
+        <div class="conmutador" id="modo-previa" role="group" aria-label="Vista previa en 2D o 3D">
+          <button type="button" data-modo="2d" aria-pressed="false">2D</button><button type="button" data-modo="3d" aria-pressed="false">3D</button>
+        </div>
+        <button type="button" class="boton-texto" id="centrar-previa" title="Volver a la vista inicial" hidden>Vista inicial</button>
+        <span class="aviso-3d" id="sin-3d" hidden>3D no disponible en este navegador (sin WebGL)</span>
+      </div>
       <div class="vista" id="vista-scramble"></div>
+      <div class="vista vista-3d" id="vista3d-scramble" hidden><span class="pista-3d">Arrastra para girarlo</span></div>
+      <div class="reproductor reproductor-scramble" id="rep-scramble">
+        <button type="button" class="boton icono" id="s-inicio" aria-label="Scramble: ir al inicio (resuelto)">⇤</button>
+        <button type="button" class="boton icono" id="s-atras" aria-label="Scramble: movimiento anterior">‹</button>
+        <button type="button" class="boton icono" id="s-play" aria-label="Reproducir el scramble">▶</button>
+        <button type="button" class="boton icono" id="s-adelante" aria-label="Scramble: movimiento siguiente">›</button>
+        <button type="button" class="boton icono" id="s-fin" aria-label="Scramble: ir al final">⇥</button>
+        <button type="button" class="boton icono velocidad" id="s-velocidad" aria-label="Velocidad de reproducción" title="Velocidad de reproducción">×1</button>
+        <span class="paso" id="paso-scramble"></span>
+      </div>
       <p class="aviso nota-scramble" id="nota-scramble" hidden></p>
       <div class="acciones">
         <button type="button" class="boton principal" id="nuevo">Nuevo scramble</button>
@@ -45,8 +62,15 @@
       </div>
       <div class="editor" id="editor">
         <div class="paleta" id="paleta" role="radiogroup" aria-label="Color para pintar"></div>
-        <div class="vistas-editor" id="vistas-editor" hidden></div>
+        <div class="barra-vista">
+          <div class="conmutador" id="modo-editor" role="group" aria-label="Editor en 2D o 3D">
+            <button type="button" data-modo="2d" aria-pressed="false">2D</button><button type="button" data-modo="3d" aria-pressed="false">3D</button>
+          </div>
+          <div class="vistas-editor" id="vistas-editor" hidden></div>
+          <button type="button" class="boton-texto" id="centrar-editor" title="Volver a la vista inicial" hidden>Vista inicial</button>
+        </div>
         <div class="vista editable" id="vista-editor"></div>
+        <div class="vista vista-3d editable" id="vista3d-editor" hidden><span class="pista-3d">Arrastra para girarlo · toca para pintar</span></div>
         <div class="acciones acciones-editor" id="acciones-editor" hidden></div>
         <div class="acciones">
           <button type="button" class="boton" id="deshacer" title="Deshacer el último cambio del editor (Ctrl+Z)" disabled>Deshacer</button>

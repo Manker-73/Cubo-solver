@@ -1,18 +1,18 @@
 {
-  "msTablas": 645,
-  "casos": 1000,
-  "fecha": "2026-11-14T20:58:06.193Z",
-  "scrambles": 1000,
-  "longitudMedia": 20.72,
-  "longitudMin": 17,
+  "msTablas": 875,
+  "casos": 100,
+  "fecha": "2026-11-14T22:00:21.240Z",
+  "scrambles": 100,
+  "longitudMedia": 20.74,
+  "longitudMin": 19,
   "longitudMax": 21,
-  "msPorScramble": 16.23,
-  "resueltos": "1000/1000 (100.0%)",
-  "longitudMediaSolucion": 19.8,
+  "msPorScramble": 22.23,
+  "resueltos": "100/100 (100.0%)",
+  "longitudMediaSolucion": 19.77,
   "longitudMaxSolucion": 21,
-  "msMedioSolucion": 50.15,
-  "msMaxSolucion": 1000.4,
-  "msInicializacion": 645,
+  "msMedioSolucion": 79.19,
+  "msMaxSolucion": 1000.8,
+  "msInicializacion": 875,
   "grupo": {
     "ordenH": "43252003274489856000",
     "estados": "43252003274489856000",
@@ -22,6 +22,6 @@
     "relacionesVisibles": [
       "esquinas + aristas centrales"
     ],
-    "ms": 43
+    "ms": 47
   }
 }

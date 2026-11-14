@@ -469,6 +469,86 @@ function dibujarCapa(capa, nCapa, cx, cy, a, espejo, editable, seleccion) {
   return s;
 }
 
+// ---------- Vista 3D ----------
+// Cubo [-1, 1]³: capa de arriba y ≥ 1/3, del medio |y| ≤ 1/3, de abajo y ≤ −1/3.
+// Casillas en el mismo sitio que en el dibujo 2D: el ángulo de casilla a (grados)
+// está en el acimut t = a − 15° (x = sen t, z = cos t; el frente, +z, en a = 15°),
+// igual en las dos capas. "/" gira 180° la mitad de las casillas 0..5 (x > 0)
+// alrededor del eje horizontal perpendicular al corte (acimut 75°).
+const YM = 1 / 3;
+const R_ARISTA = 1 / Math.cos(15 * RAD), R_PUNTA = Math.SQRT2;
+const punto3D = (a, r, y) => { const t = (a - 15) * RAD; return [Math.sin(t) * r, y, Math.cos(t) * r]; };
+const EJE_CORTE = [Math.sin(75 * RAD), 0, Math.cos(75 * RAD)];
+const rotarCorte = (v) => { const d = 2 * (v[0] * EJE_CORTE[0] + v[2] * EJE_CORTE[2]); return [d * EJE_CORTE[0] - v[0], -v[1], d * EJE_CORTE[2] - v[2]]; };
+const CAMARA_SQ1 = { desde: [0.55, 0.85, 1], arriba: [0, 1, 0] };
+// Capa del medio: tramos del perímetro del cuadrado (ángulos de casilla) y su lado
+const TRAMOS_MEDIO = [
+  { mitad: 1, a0: 0, a1: 60, lado: 0 }, { mitad: 1, a0: 60, a1: 150, lado: 1 }, { mitad: 1, a0: 150, a1: 180, lado: 2 },
+  { mitad: 0, a0: 180, a1: 240, lado: 2 }, { mitad: 0, a0: 240, a1: 330, lado: 3 }, { mitad: 0, a0: 330, a1: 360, lado: 0 },
+];
+const puntoCuadrado = (a, y) => { const t = (a - 15) * RAD; const r = 1 / Math.max(Math.abs(Math.sin(t)), Math.abs(Math.cos(t))); return punto3D(a, r, y); };
+const centro3 = (pts) => [0, 1, 2].map((i) => pts.reduce((s, p) => s + p[i], 0) / pts.length);
+
+function vista3D(e) {
+  const pegatinas = [], colores = [];
+  const add = (puntos, normal, color, indice, pieza, extra = {}) => {
+    pegatinas.push({ puntos, normal, indice, pieza, centro: centro3(puntos), ...extra });
+    colores.push(color == null ? -1 : color);
+  };
+  [e.arriba, e.abajo].forEach((capa, nCapa) => {
+    const yc = nCapa === 0 ? 1 : -1, y0 = nCapa === 0 ? YM : -1, y1 = nCapa === 0 ? 1 : -YM;
+    const nCara = [0, yc, 0];
+    let k = capa.ini;
+    capa.piezas.forEach((p, j) => {
+      const t0 = k * 30, pieza = `${NOMBRE_CAPA[nCapa]}-${j}`;
+      const casillas = [];
+      for (let h = 0; h < p.length - 1; h++) casillas.push(mod12(k + h));
+      const extra = { capa: nCapa, casillas };
+      const lado = (q1, q2, color, peg) => {
+        const pts = [[q1[0], y0, q1[2]], [q2[0], y0, q2[2]], [q2[0], y1, q2[2]], [q1[0], y1, q1[2]]];
+        const m = [(q1[0] + q2[0]) / 2, 0, (q1[2] + q2[2]) / 2], l = Math.hypot(m[0], m[2]);
+        add(pts, [m[0] / l, 0, m[2] / l], color, indicePegatina(nCapa, j, peg), pieza, extra);
+      };
+      if (p.length === 3) {
+        const p1 = punto3D(t0, R_ARISTA, yc), tip = punto3D(t0 + 30, R_PUNTA, yc), p3 = punto3D(t0 + 60, R_ARISTA, yc);
+        add([[0, yc, 0], p1, tip, p3], nCara, p[0], indicePegatina(nCapa, j, 0), pieza, extra);
+        lado(p1, tip, p[1], 1);
+        lado(tip, p3, p[2], 2);
+        k += 2;
+      } else {
+        const p1 = punto3D(t0, R_ARISTA, yc), p2 = punto3D(t0 + 30, R_ARISTA, yc);
+        add([[0, yc, 0], p1, p2], nCara, p[0], indicePegatina(nCapa, j, 0), pieza, extra);
+        lado(p1, p2, p[1], 1);
+        k += 1;
+      }
+    });
+  });
+  for (const t of TRAMOS_MEDIO) {
+    let pts = [puntoCuadrado(t.a0, -YM), puntoCuadrado(t.a1, -YM), puntoCuadrado(t.a1, YM), puntoCuadrado(t.a0, YM)];
+    let n = [[0, 0, 1], [1, 0, 0], [0, 0, -1], [-1, 0, 0]][t.lado]; // normal del lado del cuadrado
+    if (t.mitad === 1 && e.medio) { pts = pts.map(rotarCorte); n = rotarCorte(n); }
+    add(pts, n, LADOS[t.lado], t.mitad === 1 ? INDICE_MEDIO : null, `medio-${t.mitad}`, { capa: 2, mitad: t.mitad });
+  }
+  return { geometria: { pegatinas, radio: 1.75, camara: CAMARA_SQ1 }, colores };
+}
+
+function giro3D(e, mov) {
+  const m = leerMovimiento(mov);
+  if (!m) throw new Error(`Movimiento no válido: "${mov}"`);
+  const { geometria } = vista3D(e);
+  const peg = geometria.pegatinas;
+  const indices = (f) => peg.map((p, k) => (f(p) ? k : -1)).filter((k) => k >= 0);
+  if (m.corte) {
+    if (!sePuedeCortarColores(e)) throw new Error('"/" ilegal: una esquina atraviesa el corte');
+    return [{ eje: EJE_CORTE, angulo: Math.PI, pegatinas: indices((p) => (p.capa === 2 ? p.mitad === 1 : p.casillas[0] <= 5)) }];
+  }
+  const partes = [];
+  // (1,0): arriba 30° en sentido horario visto desde arriba; (0,1): abajo 30° en sentido horario visto desde abajo
+  if (normalizarGiro(m.x)) partes.push({ eje: [0, 1, 0], angulo: -normalizarGiro(m.x) * 30 * RAD, pegatinas: indices((p) => p.capa === 0) });
+  if (normalizarGiro(m.y)) partes.push({ eje: [0, 1, 0], angulo: normalizarGiro(m.y) * 30 * RAD, pegatinas: indices((p) => p.capa === 1) });
+  return partes;
+}
+
 function renderizar(e, opts = {}) {
   const editable = !!opts.editable;
   const seleccion = opts.seleccion != null && opts.seleccion !== INDICE_MEDIO ? decodificar(opts.seleccion) : null;
@@ -522,6 +602,8 @@ export default definirPuzzle({
   formatear,
   describirLongitud,
   renderizar,
+  vista3D,
+  giro3D,
   generarScramble,
   validar,
   resolver,

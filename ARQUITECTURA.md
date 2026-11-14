@@ -15,6 +15,7 @@ src/
     simetria.js     rotaciones del puzzle entero como permutaciones de colores
     scramble.js     utilidades de scrambles de movimientos aleatorios
     render.js       SVG a partir de polígonos 2D
+    modelo3d.js     vista 3D sin dibujar: modelo de pegatinas 3D, piezas, comprobación de giros
     grupo.js        orden de un grupo de permutaciones (Schreier–Sims), para demostrar invariantes
   puzzles/        un módulo por puzzle
     index.js        REGISTRO: la única lista de puzzles
@@ -45,6 +46,9 @@ src/
     motor.js        envía el trabajo pesado al Web Worker (o al hilo principal si no hay)
     servicio.js     tablas, scrambles, validación y búsquedas (lo usan el Worker y el hilo principal)
     worker.js       punto de entrada del Worker
+    escena3d.js     escena 3D sin WebGL: triángulos, colores, giro en curso, resaltado, selección por rayo
+    vista3d.js      dibujo con WebGL (sin librerías), girar con ratón/dedo, animaciones, tocar para pintar
+    reproductor.js  reproductor de una secuencia (scramble o solución): pasos animados, atrás, play/pausa
 tests/            node --test (npm test)
   paralelo.mjs    reparte los casos de los tests largos entre worker_threads
   trabajador.mjs  hilo de trabajo (importa el puzzle, genera sus tablas, resuelve)
@@ -52,6 +56,7 @@ scripts/
   build.mjs       genera dist/index.html y dist/artifact.html
   construir.mjs   empaquetado con esbuild (el Worker va incrustado como texto y se crea desde un blob)
   bench.mjs       benchmark de todos los solvers (npm run bench)
+  comprobar-3d.py comprobación en Chromium real de la vista 3D (Playwright; capturas y FPS en docs/capturas/)
 ```
 
 ## Interfaz común de un puzzle
@@ -96,6 +101,7 @@ Opcional (según `capacidades`):
 | `leyendaNotacion()` | `{svg, texto}`: leyenda de la notación de las soluciones (Megaminx); la interfaz la muestra en un desplegable |
 | `renderizar(estado, {etiquetas})` | la interfaz pide `etiquetas: true` mientras hay una solución (Megaminx: letra de cada cara en su centro) |
 | `resolver(...).fases[].grupo` | clase de color de la fase (`f-<grupo>`); si no hay, se usa el nombre |
+| `vista3D(estado)`, `giro3D(estado, mov)`, `reorientar3D(estado)` | geometría 3D y giros para la vista 3D (ver "Vista 3D" más abajo) |
 | `aplicarSecuencia`, `invertir` | se rellenan automáticamente |
 | `tipoScramble`, `descripcion`, `avisoInicializacion`, `describirLongitud(movs)` | textos para la interfaz |
 
@@ -134,6 +140,37 @@ puzzle no necesita saber nada del Worker, pero su estado debe poder copiarse con
 - `megaminx-solver.js`: 10 etapas que van retirando caras (Base 1–4, Anillo 1–3, F2L 1–3; ver DECISIONES.md), última capa con `megaminx-ultima.js` (dos macros de una biblioteca de ~10.800, encontradas al inicializar por colisiones de secuencias de U, F, R), todo en varias de las 60 orientaciones mientras quede tiempo; simplificación con conmutación de caras no vecinas.
 - Restricciones y cota inferior: `megaminx-grupo.js` (los tests las comprueban).
 
+## Vista 3D
+
+La vista 3D es genérica: no sabe de ningún puzzle. Cada puzzle describe su geometría y sus
+giros con dos métodos de la interfaz común (`src/core/modelo3d.js` explica el formato):
+
+| Método | Devuelve |
+|---|---|
+| `vista3D(estado)` | `{ geometria, colores }`. `geometria = { pegatinas, radio, camara }`; cada pegatina es `{ puntos, normal, centro, indice, pieza }`: polígono convexo 3D (la pegatina entera; la vista la encoge y pone el cuerpo negro detrás), normal hacia fuera, `indice` = el índice que entienden `pintar` / `usarHerramienta` (o `null` si no se edita) y `pieza` = clave de su pieza. `camara = { desde, arriba }`: desde dónde se mira en la orientación de referencia. `colores[k]` = color (índice de la paleta, −1 sin pintar) de la pegatina k. Si la forma no cambia, la geometría es siempre el mismo objeto (la vista solo cambia colores). |
+| `giro3D(estado, mov)` | `[{ eje, angulo, pegatinas }]`: partes que giran a la vez (radianes, regla de la mano derecha; `pegatinas` = índices en la geometría de `vista3D(estado)`). Una parte en casi todo; dos en el `(x,y)` del Square-1. |
+| `reorientar3D(estado)` (opcional) | `{ partes, estado }`: giro del puzzle entero que lleva a la orientación de referencia (Megaminx: al final del scramble, para llegar a la vista previa). |
+
+**La regla** (la comprueban los tests, `comprobarGiro3D`): si se giran las pegatinas de
+`giro3D(e, m)` su ángulo completo, cada posición queda con el color que da
+`vista3D(aplicarMovimiento(e, m))`. Por eso la animación nunca "salta": al acabar cada giro, la
+vista enseña el estado siguiente del modelo y es exactamente lo que ya se veía.
+
+Cómo lo da cada puzzle:
+- **Puzzles de pegatinas con geometría fija** (todos menos el Square-1): `modelo3DPegatinas({ poligonos, normales, giro, cortes, camara })`. Las piezas salen solas de los planos de corte (misma pieza = mismo lado de todos los cortes).
+  - NxN: `modelo3DNxN(N)` en `nxn.js` (cuadrados de lado 2/N; un giro rota las capas que mueve su permutación).
+  - Pyraminx, Skewb, Megaminx: `modelo3DGeo(geo, camara)` en `geopuzzle.js`, a partir de los mismos polígonos, giros (eje, ángulo, umbral) y cortes con los que el motor geométrico calcula las permutaciones. `geo.rotaciones3D()` da las rotaciones del puzzle entero con su eje y ángulo (Megaminx: `reorientar3D`).
+- **Square-1** (`square1.js`): la geometría depende del estado (forma de las capas y capa del medio volteada), así que `vista3D` la construye en cada estado: cuñas de 30° por casilla en el mismo sitio que en el dibujo 2D, la capa del medio con el corte según la Regulación 12c1. `giro3D` da dos partes en `(x,y)` (capa de arriba y de abajo alrededor del eje vertical) y una en `/` (la mitad de las casillas 0..5 y la mitad derecha del medio, 180° alrededor del eje perpendicular al corte).
+
+Piezas de la app:
+- `src/app/escena3d.js` (sin WebGL; la usan los tests): triángulos (cuerpo negro + pegatina encogida y algo elevada), colores, giro en curso (`giro(partes, fracción)`), resaltado, `foto()` (centros y colores de lo que se ve) y `elegir(origen, dir)` (pegatina que corta un rayo, también con una capa a medio girar).
+- `src/app/vista3d.js`: WebGL 1 con un solo shader; el giro en curso son dos matrices uniformes (cada vértice dice si es de la parte 1, de la 2 o fijo), así que animar no reescribe buffers. Se dibuja solo cuando algo cambia (animación, arrastre, nuevo estado). Arrastrar gira el puzzle (ratón o dedo); tocar sin arrastrar elige pegatina. Si no hay WebGL (o se pierde el contexto), la app usa la vista 2D.
+- `src/app/reproductor.js`: lo usan el scramble (vista previa) y la solución (editor). En 3D anima cada paso (velocidad ×1…×8, pausa, paso atrás animado, ir a cualquier paso); en 2D cambia al momento.
+
+**Resaltar piezas** (para el modo aprender): `vista.resaltar(indicesDeLaGeometria, 'brillo' | 'transparencia')`, `vista.resaltarPiezas(clavesDePieza, modo)` y `vista.resaltar(null)` para quitarlo; `pegatinasDePiezas(geometria, claves)` (en `modelo3d.js`) da las pegatinas de unas piezas. Desde la consola o desde otro módulo: `window.cuboSolver.vista3D('previa' | 'editor')` y `cuboSolver.resaltarPiezas('editor', claves, modo)`.
+
+Para un puzzle nuevo: si es de cortes planos, `...modelo3DGeo(geo, camara)` y ya está; si no, `vista3D` y `giro3D` a mano, y el test `tests/vista3d.test.mjs` dice si la animación coincide con el modelo.
+
 ## Interfaz: Deshacer
 `main.js` guarda el estado del editor antes de cada cambio (pintar, herramientas, acciones, *Resetear*, *Cargar scramble*; hasta 200) y *Deshacer* (o Ctrl+Z) lo recupera. No necesita nada de los puzzles salvo `clonar`.
 
@@ -141,4 +178,5 @@ puzzle no necesita saber nada del Worker, pero su estado debe poder copiarse con
 `tests/paralelo.mjs` (`resolverEnParalelo`) reparte los casos de un test de solver entre worker_threads con una cola dinámica. El hilo principal genera los estados (con la misma semilla que antes) y comprueba cada solución; cada hilo (`tests/trabajador.mjs`) importa el módulo del puzzle, genera sus tablas y llama a `resolver`. Los ficheros de tests se ejecutan de uno en uno (`--test-concurrency=1`) para no tener más hilos que núcleos: varios solvers tienen límites de tiempo.
 
 ## Plan para las próximas noches
+- Noche 8: modo aprender (usará `resaltarPiezas` de la vista 3D).
 - Todos los puzzles tienen ya validador y solver. Lo que más pesa ahora en el 6x6 y el 7x7 son los centros oblicuos (3-ciclos, ~120 y ~125 movimientos); ver ESTADO.md. Otras mejoras posibles: scramble de estado aleatorio en el 4x4 y, para el Megaminx, etapas más grandes o una búsqueda en haz entre etapas.

@@ -1,47 +1,47 @@
 {
-  "scrambles": 1000,
+  "scrambles": 100,
   "longitudMedia": 40,
   "longitudMin": 40,
   "longitudMax": 40,
-  "msPorScramble": 0.05,
-  "casos": 1000,
-  "fecha": "2026-11-14T21:14:39.264Z",
-  "msTablas": 3464,
+  "msPorScramble": 0.14,
+  "casos": 100,
+  "fecha": "2026-11-14T22:00:24.696Z",
+  "msTablas": 3982,
   "longitudConmutador": 10,
-  "resueltos": "500/500 (100.0%)",
-  "casosSolver": 500,
-  "longitudMediaSolucion": 54.81,
-  "longitudMaxSolucion": 216,
-  "msMedioSolucion": 1196.06,
-  "msMaxSolucion": 13285.3,
+  "resueltos": "20/20 (100.0%)",
+  "casosSolver": 20,
+  "longitudMediaSolucion": 60.4,
+  "longitudMaxSolucion": 199,
+  "msMedioSolucion": 1732.66,
+  "msMaxSolucion": 10162.7,
   "fases": {
     "paridad": {
-      "longitudMedia": 0.03,
-      "longitudMax": 11,
-      "msMedio": 0,
+      "longitudMedia": 0.1,
+      "longitudMax": 2,
+      "msMedio": 0.01,
       "msMax": 0.3,
-      "casosConFase": 2
+      "casosConFase": 1
     },
     "centros": {
-      "longitudMedia": 14.77,
-      "longitudMax": 88,
-      "msMedio": 1128.85,
-      "msMax": 13273.4,
-      "casosConFase": 500
+      "longitudMedia": 16.9,
+      "longitudMax": 68,
+      "msMedio": 1669.36,
+      "msMax": 10151.7,
+      "casosConFase": 20
     },
     "aristas": {
-      "longitudMedia": 20.58,
+      "longitudMedia": 24.2,
       "longitudMax": 110,
-      "msMedio": 0.17,
-      "msMax": 18.3,
-      "casosConFase": 500
+      "msMedio": 0.74,
+      "msMax": 14.4,
+      "casosConFase": 20
     },
     "3x3": {
-      "longitudMedia": 19.44,
-      "longitudMax": 21,
-      "msMedio": 66.73,
-      "msMax": 401.9,
-      "casosConFase": 500
+      "longitudMedia": 19.2,
+      "longitudMax": 20,
+      "msMedio": 61.68,
+      "msMax": 212.4,
+      "casosConFase": 20
     }
   },
   "grupo": {
@@ -51,10 +51,10 @@
       "esquinas + centros"
     ],
     "relacionesVisibles": [],
-    "ms": 496
+    "ms": 550
   },
   "cotaInferior": 35,
-  "cociente": 1.57,
+  "cociente": 1.73,
   "cotaSuperior": "55 (demostrada; 54 propuesta en 2026)",
   "hilos": 2
 }

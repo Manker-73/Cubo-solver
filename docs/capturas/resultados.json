@@ -1,0 +1,805 @@
+{
+ "filas": [
+  {
+   "config": "escritorio-claro",
+   "puzzle": "2x2",
+   "scramble_s": 0.6,
+   "fps_scramble": {
+    "fotogramas": 24,
+    "fps": 59.99999999999993,
+    "fpsP5": 59.880239520957105,
+    "msMax": 16.800000000000182
+   },
+   "movs": 8,
+   "solucion_s": 0.6,
+   "fps_solucion": {
+    "fotogramas": 24,
+    "fps": 59.955033724706645,
+    "fpsP5": 59.523809523812105,
+    "msMax": 16.799999999999272
+   },
+   "pintar3D": true
+  },
+  {
+   "config": "escritorio-claro",
+   "puzzle": "3x3",
+   "scramble_s": 1.4,
+   "fps_scramble": {
+    "fotogramas": 63,
+    "fps": 60.00571482998382,
+    "fpsP5": 59.52380952380888,
+    "msMax": 16.800000000000182
+   },
+   "movs": 20,
+   "solucion_s": 1.4,
+   "fps_solucion": {
+    "fotogramas": 61,
+    "fps": 60.02554529763812,
+    "fpsP5": 59.88023952095548,
+    "msMax": 16.80000000000109
+   },
+   "pintar3D": true
+  },
+  {
+   "config": "escritorio-claro",
+   "puzzle": "4x4",
+   "scramble_s": 2.7,
+   "fps_scramble": {
+    "fotogramas": 121,
+    "fps": 60.0128754896505,
+    "fpsP5": 59.523809523812105,
+    "msMax": 16.80000000000291
+   },
+   "movs": 53,
+   "solucion_s": 3.7,
+   "fps_solucion": {
+    "fotogramas": 166,
+    "fps": 59.994940185767746,
+    "fpsP5": 59.88023952095548,
+    "msMax": 16.80000000000291
+   },
+   "pintar3D": true
+  },
+  {
+   "config": "escritorio-claro",
+   "puzzle": "5x5",
+   "scramble_s": 4.1,
+   "fps_scramble": {
+    "fotogramas": 184,
+    "fps": 59.99543512993588,
+    "fpsP5": 59.88023952095548,
+    "msMax": 16.80000000000291
+   },
+   "movs": 104,
+   "solucion_s": 7.2,
+   "fps_solucion": {
+    "fotogramas": 325,
+    "fps": 59.995200383969134,
+    "fpsP5": 59.523809523824994,
+    "msMax": 16.80000000000291
+   },
+   "pintar3D": true
+  },
+  {
+   "config": "escritorio-claro",
+   "puzzle": "6x6",
+   "scramble_s": 5.4,
+   "fps_scramble": {
+    "fotogramas": 242,
+    "fps": 59.99603332011131,
+    "fpsP5": 59.88023952094243,
+    "msMax": 16.80000000000291
+   },
+   "movs": 236,
+   "solucion_s": 18.7,
+   "fps_solucion": {
+    "fotogramas": 600,
+    "fps": 59.99400059993966,
+    "fpsP5": 59.52380952385077,
+    "msMax": 16.80000000000291
+   },
+   "pintar3D": true
+  },
+  {
+   "config": "escritorio-claro",
+   "puzzle": "7x7",
+   "scramble_s": 7.1,
+   "fps_scramble": {
+    "fotogramas": 316,
+    "fps": 60.00265075001455,
+    "fpsP5": 59.88023952091634,
+    "msMax": 16.80000000000291
+   },
+   "movs": 416,
+   "solucion_s": 35.2,
+   "fps_solucion": {
+    "fotogramas": 600,
+    "fps": 59.99760009599576,
+    "fpsP5": 59.52380952385077,
+    "msMax": 16.800000000017462
+   },
+   "pintar3D": true
+  },
+  {
+   "config": "escritorio-claro",
+   "puzzle": "Pyraminx",
+   "scramble_s": 0.8,
+   "fps_scramble": {
+    "fotogramas": 33,
+    "fps": 59.98538537883279,
+    "fpsP5": 59.52380952374765,
+    "msMax": 16.800000000017462
+   },
+   "movs": 11,
+   "solucion_s": 0.8,
+   "fps_solucion": {
+    "fotogramas": 33,
+    "fps": 59.97448358335488,
+    "fpsP5": 59.88023952091634,
+    "msMax": 16.79999999998836
+   },
+   "pintar3D": true
+  },
+  {
+   "config": "escritorio-claro",
+   "puzzle": "Skewb",
+   "scramble_s": 0.6,
+   "fps_scramble": {
+    "fotogramas": 27,
+    "fps": 60.01333629695565,
+    "fpsP5": 59.88023952091634,
+    "msMax": 16.800000000017462
+   },
+   "movs": 9,
+   "solucion_s": 0.6,
+   "fps_solucion": {
+    "fotogramas": 27,
+    "fps": 59.99546700914966,
+    "fpsP5": 59.52380952385077,
+    "msMax": 16.79999999998836
+   },
+   "pintar3D": true
+  },
+  {
+   "config": "escritorio-claro",
+   "puzzle": "Square-1",
+   "scramble_s": 1.6,
+   "fps_scramble": {
+    "fotogramas": 70,
+    "fps": 59.957173447543454,
+    "fpsP5": 59.52380952385077,
+    "msMax": 16.79999999998836
+   },
+   "movs": 23,
+   "solucion_s": 1.6,
+   "fps_solucion": {
+    "fotogramas": 70,
+    "fps": 60.03430531732568,
+    "fpsP5": 59.88023952091634,
+    "msMax": 16.70000000001164
+   },
+   "pintar3D": true
+  },
+  {
+   "config": "escritorio-claro",
+   "puzzle": "Megaminx",
+   "scramble_s": 5.3,
+   "fps_scramble": {
+    "fotogramas": 241,
+    "fps": 60.00496970620467,
+    "fpsP5": 59.52380952385077,
+    "msMax": 16.800000000017462
+   },
+   "movs": 87,
+   "solucion_s": 6.2,
+   "fps_solucion": {
+    "fotogramas": 284,
+    "fps": 59.978880675818736,
+    "fpsP5": 59.52380952385077,
+    "msMax": 16.800000000017462
+   },
+   "pintar3D": false
+  },
+  {
+   "config": "movil-oscuro",
+   "puzzle": "2x2",
+   "scramble_s": 0.7,
+   "fps_scramble": {
+    "fotogramas": 29,
+    "fps": 59.96269906582245,
+    "fpsP5": 59.52380952381049,
+    "msMax": 16.800000000000182
+   },
+   "movs": 9,
+   "solucion_s": 0.6,
+   "fps_solucion": {
+    "fotogramas": 28,
+    "fps": 59.978493425928775,
+    "fpsP5": 59.880239520957105,
+    "msMax": 16.800000000000182
+   },
+   "pintar3D": true
+  },
+  {
+   "config": "movil-oscuro",
+   "puzzle": "3x3",
+   "scramble_s": 1.5,
+   "fps_scramble": {
+    "fotogramas": 67,
+    "fps": 59.9928366762177,
+    "fpsP5": 59.52380952380888,
+    "msMax": 16.800000000000182
+   },
+   "movs": 20,
+   "solucion_s": 1.5,
+   "fps_solucion": {
+    "fotogramas": 71,
+    "fps": 59.99661990873756,
+    "fpsP5": 59.523809523812105,
+    "msMax": 16.80000000000109
+   },
+   "pintar3D": true
+  },
+  {
+   "config": "movil-oscuro",
+   "puzzle": "4x4",
+   "scramble_s": 2.9,
+   "fps_scramble": {
+    "fotogramas": 133,
+    "fps": 60.007218913553274,
+    "fpsP5": 59.523809523812105,
+    "msMax": 16.80000000000291
+   },
+   "movs": 50,
+   "solucion_s": 4.0,
+   "fps_solucion": {
+    "fotogramas": 185,
+    "fps": 59.99220425626853,
+    "fpsP5": 59.523809523812105,
+    "msMax": 16.80000000000291
+   },
+   "pintar3D": true
+  },
+  {
+   "config": "movil-oscuro",
+   "puzzle": "5x5",
+   "scramble_s": 4.4,
+   "fps_scramble": {
+    "fotogramas": 201,
+    "fps": 59.9922278725682,
+    "fpsP5": 59.523809523824994,
+    "msMax": 16.80000000000291
+   },
+   "movs": 98,
+   "solucion_s": 8.1,
+   "fps_solucion": {
+    "fotogramas": 364,
+    "fps": 60.01055130572381,
+    "fpsP5": 59.88023952094243,
+    "msMax": 16.80000000000291
+   },
+   "pintar3D": true
+  },
+  {
+   "config": "movil-oscuro",
+   "puzzle": "6x6",
+   "scramble_s": 6.2,
+   "fps_scramble": {
+    "fotogramas": 273,
+    "fps": 60.00218909085433,
+    "fpsP5": 59.88023952094243,
+    "msMax": 16.80000000000291
+   },
+   "movs": 219,
+   "solucion_s": 19.2,
+   "fps_solucion": {
+    "fotogramas": 600,
+    "fps": 59.5072797238862,
+    "fpsP5": 59.52380952385077,
+    "msMax": 33.40000000000873
+   },
+   "pintar3D": true
+  },
+  {
+   "config": "movil-oscuro",
+   "puzzle": "7x7",
+   "scramble_s": 8.3,
+   "fps_scramble": {
+    "fotogramas": 376,
+    "fps": 59.68538184358071,
+    "fpsP5": 59.88023952091634,
+    "msMax": 33.39999999999418
+   },
+   "movs": 395,
+   "solucion_s": 35.9,
+   "fps_solucion": {
+    "fotogramas": 600,
+    "fps": 59.49547834364698,
+    "fpsP5": 59.52380952385077,
+    "msMax": 33.40000000002328
+   },
+   "pintar3D": true
+  },
+  {
+   "config": "movil-oscuro",
+   "puzzle": "Pyraminx",
+   "scramble_s": 0.9,
+   "fps_scramble": {
+    "fotogramas": 40,
+    "fps": 60.002940144065256,
+    "fpsP5": 59.88023952091634,
+    "msMax": 16.70000000001164
+   },
+   "movs": 12,
+   "solucion_s": 0.8,
+   "fps_solucion": {
+    "fotogramas": 37,
+    "fps": 59.99675693205659,
+    "fpsP5": 59.88023952091634,
+    "msMax": 16.70000000001164
+   },
+   "pintar3D": true
+  },
+  {
+   "config": "movil-oscuro",
+   "puzzle": "Skewb",
+   "scramble_s": 0.6,
+   "fps_scramble": {
+    "fotogramas": 28,
+    "fps": 59.97849342592463,
+    "fpsP5": 59.52380952374765,
+    "msMax": 16.800000000017462
+   },
+   "movs": 9,
+   "solucion_s": 0.7,
+   "fps_solucion": {
+    "fotogramas": 30,
+    "fps": 59.97193313528959,
+    "fpsP5": 59.52380952385077,
+    "msMax": 16.79999999998836
+   },
+   "pintar3D": true
+  },
+  {
+   "config": "movil-oscuro",
+   "puzzle": "Square-1",
+   "scramble_s": 2.0,
+   "fps_scramble": {
+    "fotogramas": 88,
+    "fps": 60.00681895669486,
+    "fpsP5": 59.88023952091634,
+    "msMax": 16.800000000017462
+   },
+   "movs": 27,
+   "solucion_s": 2.1,
+   "fps_solucion": {
+    "fotogramas": 92,
+    "fps": 60.01171533051511,
+    "fpsP5": 59.52380952385077,
+    "msMax": 16.800000000017462
+   },
+   "pintar3D": true
+  },
+  {
+   "config": "movil-oscuro",
+   "puzzle": "Megaminx",
+   "scramble_s": 6.9,
+   "fps_scramble": {
+    "fotogramas": 303,
+    "fps": 59.21861911561333,
+    "fpsP5": 59.52380952385077,
+    "msMax": 33.39999999999418
+   },
+   "movs": 93,
+   "solucion_s": 8.6,
+   "fps_solucion": {
+    "fotogramas": 365,
+    "fps": 58.560220764009294,
+    "fpsP5": 59.88023952091634,
+    "msMax": 83.39999999999418
+   },
+   "pintar3D": false
+  },
+  {
+   "config": "escritorio-oscuro",
+   "puzzle": "2x2",
+   "scramble_s": 0.5,
+   "fps_scramble": {
+    "fotogramas": 21,
+    "fps": 59.98286203941733,
+    "fpsP5": 59.52380952380888,
+    "msMax": 16.800000000000182
+   },
+   "movs": 7,
+   "solucion_s": 0.5,
+   "fps_solucion": {
+    "fotogramas": 21,
+    "fps": 59.99999999999992,
+    "fpsP5": 59.88023952095548,
+    "msMax": 16.700000000000728
+   },
+   "pintar3D": true
+  },
+  {
+   "config": "escritorio-oscuro",
+   "puzzle": "3x3",
+   "scramble_s": 1.4,
+   "fps_scramble": {
+    "fotogramas": 63,
+    "fps": 60.01143074871409,
+    "fpsP5": 59.88023952095548,
+    "msMax": 16.800000000000182
+   },
+   "movs": 19,
+   "solucion_s": 1.3,
+   "fps_solucion": {
+    "fotogramas": 60,
+    "fps": 60.009961653634406,
+    "fpsP5": 59.88023952095548,
+    "msMax": 16.800000000000182
+   },
+   "pintar3D": true
+  },
+  {
+   "config": "escritorio-oscuro",
+   "puzzle": "4x4",
+   "scramble_s": 2.7,
+   "fps_scramble": {
+    "fotogramas": 121,
+    "fps": 59.999008280855,
+    "fpsP5": 59.88023952095548,
+    "msMax": 16.80000000000109
+   },
+   "movs": 56,
+   "solucion_s": 3.8,
+   "fps_solucion": {
+    "fotogramas": 173,
+    "fps": 60.01318208623881,
+    "fpsP5": 59.88023952095548,
+    "msMax": 16.80000000000291
+   },
+   "pintar3D": true
+  },
+  {
+   "config": "escritorio-oscuro",
+   "puzzle": "5x5",
+   "scramble_s": 4.1,
+   "fps_scramble": {
+    "fotogramas": 182,
+    "fps": 60.01648804616667,
+    "fpsP5": 59.88023952095548,
+    "msMax": 16.80000000000291
+   },
+   "movs": 102,
+   "solucion_s": 7.2,
+   "fps_solucion": {
+    "fotogramas": 327,
+    "fps": 60.009909893377056,
+    "fpsP5": 59.88023952094243,
+    "msMax": 16.80000000000291
+   },
+   "pintar3D": true
+  },
+  {
+   "config": "escritorio-oscuro",
+   "puzzle": "6x6",
+   "scramble_s": 5.5,
+   "fps_scramble": {
+    "fotogramas": 246,
+    "fps": 60.000965869206766,
+    "fpsP5": 59.523809523824994,
+    "msMax": 16.80000000000291
+   },
+   "movs": 231,
+   "solucion_s": 18.6,
+   "fps_solucion": {
+    "fotogramas": 600,
+    "fps": 59.79967110180876,
+    "fpsP5": 59.523809523824994,
+    "msMax": 33.40000000000873
+   },
+   "pintar3D": true
+  },
+  {
+   "config": "escritorio-oscuro",
+   "puzzle": "7x7",
+   "scramble_s": 6.9,
+   "fps_scramble": {
+    "fotogramas": 310,
+    "fps": 59.99341233627175,
+    "fpsP5": 59.88023952091634,
+    "msMax": 16.80000000000291
+   },
+   "movs": 421,
+   "solucion_s": 36.2,
+   "fps_solucion": {
+    "fotogramas": 600,
+    "fps": 59.998800023999706,
+    "fpsP5": 59.52380952385077,
+    "msMax": 16.800000000017462
+   },
+   "pintar3D": true
+  },
+  {
+   "config": "escritorio-oscuro",
+   "puzzle": "Pyraminx",
+   "scramble_s": 0.8,
+   "fps_scramble": {
+    "fotogramas": 33,
+    "fps": 59.98538537883279,
+    "fpsP5": 59.52380952374765,
+    "msMax": 16.800000000017462
+   },
+   "movs": 11,
+   "solucion_s": 0.8,
+   "fps_solucion": {
+    "fotogramas": 33,
+    "fps": 59.989092892207125,
+    "fpsP5": 59.52380952385077,
+    "msMax": 16.79999999998836
+   },
+   "pintar3D": true
+  },
+  {
+   "config": "escritorio-oscuro",
+   "puzzle": "Skewb",
+   "scramble_s": 0.6,
+   "fps_scramble": {
+    "fotogramas": 27,
+    "fps": 59.968816215564466,
+    "fpsP5": 59.88023952091634,
+    "msMax": 16.79999999998836
+   },
+   "movs": 9,
+   "solucion_s": 0.6,
+   "fps_solucion": {
+    "fotogramas": 27,
+    "fps": 60.01333629695565,
+    "fpsP5": 59.88023952091634,
+    "msMax": 16.70000000001164
+   },
+   "pintar3D": true
+  },
+  {
+   "config": "escritorio-oscuro",
+   "puzzle": "Square-1",
+   "scramble_s": 1.4,
+   "fps_scramble": {
+    "fotogramas": 63,
+    "fps": 60.017147756501195,
+    "fpsP5": 59.52380952385077,
+    "msMax": 16.800000000017462
+   },
+   "movs": 21,
+   "solucion_s": 1.4,
+   "fps_solucion": {
+    "fotogramas": 64,
+    "fps": 59.98125585754452,
+    "fpsP5": 59.52380952374765,
+    "msMax": 16.800000000017462
+   },
+   "pintar3D": true
+  },
+  {
+   "config": "escritorio-oscuro",
+   "puzzle": "Megaminx",
+   "scramble_s": 5.3,
+   "fps_scramble": {
+    "fotogramas": 237,
+    "fps": 60.01063479604087,
+    "fpsP5": 59.52380952385077,
+    "msMax": 16.800000000017462
+   },
+   "movs": 88,
+   "solucion_s": 6.6,
+   "fps_solucion": {
+    "fotogramas": 304,
+    "fps": 60.011449552876456,
+    "fpsP5": 59.88023952091634,
+    "msMax": 16.800000000017462
+   },
+   "pintar3D": false
+  },
+  {
+   "config": "movil-claro",
+   "puzzle": "2x2",
+   "scramble_s": 0.7,
+   "fps_scramble": {
+    "fotogramas": 31,
+    "fps": 59.99218166406696,
+    "fpsP5": 59.880239520957105,
+    "msMax": 16.733999999999924
+   },
+   "movs": 9,
+   "solucion_s": 0.7,
+   "fps_solucion": {
+    "fotogramas": 32,
+    "fps": 60.015003750938014,
+    "fpsP5": 59.52380952380888,
+    "msMax": 16.800000000000182
+   },
+   "pintar3D": true
+  },
+  {
+   "config": "movil-claro",
+   "puzzle": "3x3",
+   "scramble_s": 1.5,
+   "fps_scramble": {
+    "fotogramas": 66,
+    "fps": 59.970886860378606,
+    "fpsP5": 59.88023952095548,
+    "msMax": 16.800000000000182
+   },
+   "movs": 20,
+   "solucion_s": 1.6,
+   "fps_solucion": {
+    "fotogramas": 74,
+    "fps": 60.00162166545045,
+    "fpsP5": 59.523809523812105,
+    "msMax": 16.80000000000109
+   },
+   "pintar3D": true
+  },
+  {
+   "config": "movil-claro",
+   "puzzle": "4x4",
+   "scramble_s": 3.1,
+   "fps_scramble": {
+    "fotogramas": 138,
+    "fps": 59.99911305658946,
+    "fpsP5": 59.88023952095548,
+    "msMax": 16.799999999999272
+   },
+   "movs": 54,
+   "solucion_s": 4.6,
+   "fps_solucion": {
+    "fotogramas": 202,
+    "fps": 59.703257078678156,
+    "fpsP5": 59.523809523812105,
+    "msMax": 33.400000000001455
+   },
+   "pintar3D": true
+  },
+  {
+   "config": "movil-claro",
+   "puzzle": "5x5",
+   "scramble_s": 4.7,
+   "fps_scramble": {
+    "fotogramas": 214,
+    "fps": 60.014582982781,
+    "fpsP5": 59.88023952094243,
+    "msMax": 16.80000000000291
+   },
+   "movs": 110,
+   "solucion_s": 9.4,
+   "fps_solucion": {
+    "fotogramas": 424,
+    "fps": 59.71326366785913,
+    "fpsP5": 59.523809523824994,
+    "msMax": 33.39999999999418
+   },
+   "pintar3D": true
+  },
+  {
+   "config": "movil-claro",
+   "puzzle": "6x6",
+   "scramble_s": 6.2,
+   "fps_scramble": {
+    "fotogramas": 284,
+    "fps": 59.99238688160849,
+    "fpsP5": 59.523809523824994,
+    "msMax": 16.80000000000291
+   },
+   "movs": 272,
+   "solucion_s": 24.6,
+   "fps_solucion": {
+    "fotogramas": 600,
+    "fps": 59.411822952766485,
+    "fpsP5": 59.52380952385077,
+    "msMax": 33.40000000000873
+   },
+   "pintar3D": true
+  },
+  {
+   "config": "movil-claro",
+   "puzzle": "7x7",
+   "scramble_s": 9.0,
+   "fps_scramble": {
+    "fotogramas": 380,
+    "fps": 57.29160855840043,
+    "fpsP5": 59.523809523799216,
+    "msMax": 49.90000000000873
+   },
+   "movs": 314,
+   "solucion_s": 29.9,
+   "fps_solucion": {
+    "fotogramas": 600,
+    "fps": 57.97493550288546,
+    "fpsP5": 59.52380952385077,
+    "msMax": 33.39999999999418
+   },
+   "pintar3D": true
+  },
+  {
+   "config": "movil-claro",
+   "puzzle": "Pyraminx",
+   "scramble_s": 0.8,
+   "fps_scramble": {
+    "fotogramas": 36,
+    "fps": 60.020006668890794,
+    "fpsP5": 59.52380952385077,
+    "msMax": 16.79999999998836
+   },
+   "movs": 12,
+   "solucion_s": 0.8,
+   "fps_solucion": {
+    "fotogramas": 37,
+    "fps": 59.99675693205659,
+    "fpsP5": 59.52380952385077,
+    "msMax": 16.79999999998836
+   },
+   "pintar3D": true
+  },
+  {
+   "config": "movil-claro",
+   "puzzle": "Skewb",
+   "scramble_s": 0.6,
+   "fps_scramble": {
+    "fotogramas": 26,
+    "fps": 60.01375699966982,
+    "fpsP5": 59.88023952091634,
+    "msMax": 16.79999999998836
+   },
+   "movs": 8,
+   "solucion_s": 0.6,
+   "fps_solucion": {
+    "fotogramas": 25,
+    "fps": 60.009601536244965,
+    "fpsP5": 59.52380952385077,
+    "msMax": 16.79999999998836
+   },
+   "pintar3D": true
+  },
+  {
+   "config": "movil-claro",
+   "puzzle": "Square-1",
+   "scramble_s": 1.6,
+   "fps_scramble": {
+    "fotogramas": 71,
+    "fps": 59.986481919568604,
+    "fpsP5": 59.52380952385077,
+    "msMax": 16.800000000017462
+   },
+   "movs": 21,
+   "solucion_s": 1.6,
+   "fps_solucion": {
+    "fotogramas": 69,
+    "fps": 59.14451318922395,
+    "fpsP5": 59.52380952374765,
+    "msMax": 33.30000000001746
+   },
+   "pintar3D": true
+  },
+  {
+   "config": "movil-claro",
+   "puzzle": "Megaminx",
+   "scramble_s": 6.1,
+   "fps_scramble": {
+    "fotogramas": 278,
+    "fps": 60.0077621551316,
+    "fpsP5": 59.88023952091634,
+    "msMax": 16.800000000017462
+   },
+   "movs": 92,
+   "solucion_s": 7.8,
+   "fps_solucion": {
+    "fotogramas": 362,
+    "fps": 60.00297694327554,
+    "fpsP5": 59.88023952091634,
+    "msMax": 16.800000000017462
+   },
+   "pintar3D": false
+  }
+ ],
+ "errores": []
+}

@@ -6,6 +6,7 @@ import {
 } from './geometria.js';
 import { componer, identidad, aplicarPerm } from './perm.js';
 import { cierreGrupo } from './simetria.js';
+import { matrizRotacion, mulMat, ejeAngulo, modelo3DPegatinas } from './modelo3d.js';
 
 /**
  * def: {
@@ -21,9 +22,12 @@ export function crearGeoPuzzle(def) {
   const pegatinas = construirPegatinas(def.caras, def.cortes);
   const n = pegatinas.length;
   const perms = {};
+  const giros3D = {}; // para la vista 3D: eje, ángulo y pegatinas que gira cada movimiento
   for (const [nombre, g] of Object.entries(def.giros)) {
     const e = unit(g.eje);
-    perms[nombre] = permDeGiro(pegatinas, e, g.ang, (c) => dot(c, e) > g.umbral + 1e-9);
+    const dentro = (c) => dot(c, e) > g.umbral + 1e-9;
+    perms[nombre] = permDeGiro(pegatinas, e, g.ang, dentro);
+    giros3D[nombre] = { eje: e, angulo: g.ang, pegatinas: pegatinas.map((p, i) => (dentro(p.centro) ? i : -1)).filter((i) => i >= 0) };
   }
   const rotaciones = def.rotaciones
     ? cierreGrupo(def.rotaciones.map((r) => permDeGiro(pegatinas, unit(r.eje), r.ang, () => true)))
@@ -75,8 +79,32 @@ export function crearGeoPuzzle(def) {
     return lista.slice().sort((a, b) => ang(b) - ang(a));
   }
 
+  // Rotaciones del puzzle entero con su eje y ángulo (para animarlas en 3D), al pedirlas
+  let rot3D = null;
+  function rotaciones3D() {
+    if (rot3D) return rot3D;
+    const gens = (def.rotaciones || []).map((r) => matrizRotacion(unit(r.eje), r.ang));
+    const clave = (M) => M.flat().map((x) => Math.round(x * 1e6)).join(',');
+    const I = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
+    const vistas = new Map([[clave(I), I]]);
+    const cola = [I];
+    while (cola.length) {
+      const M = cola.shift();
+      for (const G of gens) {
+        const X = mulMat(G, M);
+        const k = clave(X);
+        if (!vistas.has(k)) { vistas.set(k, X); cola.push(X); }
+      }
+    }
+    rot3D = [...vistas.values()].map((M) => {
+      const { eje, angulo } = ejeAngulo(M);
+      return { eje, angulo, perm: permDeGiro(pegatinas, eje, angulo, () => true) };
+    });
+    return rot3D;
+  }
+
   return {
-    pegatinas, n, perms, rotaciones, resuelto, porCara, pegatinas2D, piezasPor,
+    pegatinas, n, perms, rotaciones, giros3D, rotaciones3D, cortes: def.cortes, resuelto, porCara, pegatinas2D, piezasPor,
     aplicar: (estado, nombre) => aplicarPerm(estado, perms[nombre]),
     componer: (a, b) => componer(perms[a], perms[b]),
     norma,
@@ -88,4 +116,15 @@ function encoger2D(poly, k) {
   for (const [x, y] of poly) { cx += x; cy += y; }
   cx /= poly.length; cy /= poly.length;
   return poly.map(([x, y]) => [cx + (x - cx) * k, cy + (y - cy) * k]);
+}
+
+/** Modelo 3D (vista3D / giro3D) de un puzzle hecho con crearGeoPuzzle. */
+export function modelo3DGeo(geo, camara, etiquetas = null) {
+  return modelo3DPegatinas({
+    etiquetas,
+    poligonos: geo.pegatinas.map((p) => p.poligono),
+    giro: (mov) => (geo.giros3D[mov] ? [geo.giros3D[mov]] : null),
+    cortes: geo.cortes,
+    camara,
+  });
 }

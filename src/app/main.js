@@ -5,6 +5,8 @@
 
 import { PUZZLES } from '../puzzles/index.js';
 import { crearMotor } from './motor.js';
+import { crearVista3D, hayWebGL } from './vista3d.js';
+import { crearReproductor } from './reproductor.js';
 
 /* global __CODIGO_WORKER__ */
 const CODIGO_WORKER = typeof __CODIGO_WORKER__ !== 'undefined' ? __CODIGO_WORKER__ : null;
@@ -27,7 +29,125 @@ const st = {
   ocupado: false,
   listos: new Set(), // puzzles con las tablas ya generadas (donde se calcula)
   historial: [],     // estados anteriores del editor (Deshacer)
+  // Vista 3D
+  webgl: false,      // hay WebGL (si no, todo en 2D)
+  modo: { previa: '3d', edicion: '2d', solucion: '3d' }, // 2D o 3D en cada sitio (se recuerda)
+  v3d: { previa: null, editor: null },
+  pasoScramble: 0,   // paso del reproductor del scramble (n = scramble aplicado)
+  prefijos: [],      // estados del scramble tras 0..n movimientos (orientación real)
 };
+const ms3D = () => 420 / st.velocidad;
+
+// ---------- Vista 3D ----------
+function usar3D(cual) {
+  if (!st.webgl || !st.p || !st.p.vista3D) return false;
+  if (cual === 'previa') return st.modo.previa === '3d';
+  return (st.sol ? st.modo.solucion : st.modo.edicion) === '3d';
+}
+function vista3D(cual) {
+  if (!usar3D(cual)) return null;
+  if (!st.v3d[cual]) {
+    const cont = $(cual === 'previa' ? 'vista3d-scramble' : 'vista3d-editor');
+    const v = crearVista3D(cont, {
+      paleta: st.p.paleta,
+      // tocar en 3D pinta; si había una solución, se sigue editando en 3D
+      alTocar: cual === 'editor' ? (peg) => { if (peg.indice == null) return; if (st.sol) st.modo.edicion = '3d'; tocarPegatina(peg.indice); } : null,
+    });
+    if (!v) { st.webgl = false; pintarModos(); return null; }
+    v.alPerder = () => { st.webgl = false; st.v3d = { previa: null, editor: null }; pintarModos(); pintarPrevia(); pintarEditor(); };
+    v._paleta = st.p.paleta;
+    st.v3d[cual] = v;
+  }
+  const v = st.v3d[cual];
+  if (v._paleta !== st.p.paleta) { v.fijarPaleta(st.p.paleta); v._paleta = st.p.paleta; }
+  return v;
+}
+function guardarModos() { try { localStorage.setItem('cubo-solver:modo3d', JSON.stringify(st.modo)); } catch { /* */ } }
+function pintarModos() {
+  const tiene = st.webgl && st.p && !!st.p.vista3D;
+  for (const [id, cual] of [['modo-previa', 'previa'], ['modo-editor', 'editor']]) {
+    const g = $(id);
+    g.hidden = !tiene;
+    const activo = usar3D(cual) ? '3d' : '2d';
+    for (const b of g.querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.modo === activo));
+  }
+  $('sin-3d').hidden = st.webgl;
+  $('centrar-previa').hidden = !usar3D('previa');
+  $('centrar-editor').hidden = !usar3D('editor');
+}
+function cambiarModo(cual, modo) {
+  if (cual === 'previa') { repScr.cancelar(); st.modo.previa = modo; } else {
+    repSol.cancelar();
+    if (st.sol) st.modo.solucion = modo; else st.modo.edicion = modo;
+  }
+  guardarModos();
+  pintarModos();
+  if (cual === 'previa') pintarPrevia(); else { pintarVistas(); pintarEditor(); }
+}
+
+// ---------- Reproductores (scramble y solución) ----------
+function estadoScrambleEn(k) {
+  return k >= st.scramble.length ? st.estadoScramble : st.prefijos[k];
+}
+const repScr = crearReproductor({
+  total: () => st.scramble.length,
+  leer: () => st.pasoScramble,
+  fijar: (k) => { st.pasoScramble = k; },
+  estadoEn: estadoScrambleEn,
+  transicion(k) {
+    const p = st.p, antes = st.prefijos[k];
+    const pasos = [{ antes, partes: p.giro3D(antes, st.scramble[k]) }];
+    // Megaminx: al acabar, el puzzle entero gira hasta la orientación de referencia
+    if (k + 1 === st.scramble.length && p.reorientar3D) {
+      const r = p.reorientar3D(st.prefijos[k + 1]);
+      if (r) pasos.push({ antes: st.prefijos[k + 1], partes: r.partes });
+    }
+    return pasos;
+  },
+  vista: () => vista3D('previa'),
+  puzzle: () => st.p,
+  alCambiar: () => pintarPrevia(),
+  ms: ms3D,
+  pausa: () => 550 / st.velocidad,
+  pausa3D: () => 70 / st.velocidad,
+});
+function estadoSolucionEn(k) {
+  const s = st.sol;
+  if (!s.estados) s.estados = [s.base];
+  while (s.estados.length <= k) s.estados.push(st.p.aplicarMovimiento(s.estados[s.estados.length - 1], s.movimientos[s.estados.length - 1]));
+  return s.estados[k];
+}
+const repSol = crearReproductor({
+  total: () => (st.sol ? st.sol.movimientos.length : 0),
+  leer: () => st.paso,
+  fijar: (k) => { st.paso = k; },
+  estadoEn: estadoSolucionEn,
+  transicion: (k) => { const antes = estadoSolucionEn(k); return [{ antes, partes: st.p.giro3D(antes, st.sol.movimientos[k]) }]; },
+  vista: () => (st.sol ? vista3D('editor') : null),
+  puzzle: () => st.p,
+  alCambiar: () => pintarEditor(),
+  ms: ms3D,
+  pausa: () => 550 / st.velocidad,
+  pausa3D: () => 70 / st.velocidad,
+});
+
+function pintarPrevia() {
+  const p = st.p;
+  if (!p) return;
+  const n = st.scramble.length, k = Math.min(st.pasoScramble, n);
+  const estado = estadoScrambleEn(k);
+  const v = estado ? vista3D('previa') : null;
+  $('vista-scramble').hidden = !!v;
+  $('vista3d-scramble').hidden = !v;
+  if (!estado) $('vista-scramble').innerHTML = '';
+  else if (v) { if (!v.animando) v.mostrar(p.vista3D(estado)); } else $('vista-scramble').innerHTML = p.renderizar(estado, {});
+  $('paso-scramble').textContent = !n ? '' : k >= n ? `Scramble aplicado (${n} mov.)` : k === 0 ? `Resuelto · 0/${n}` : `${k}/${n} · ${st.scramble[k - 1]}`;
+  $('s-play').textContent = repScr.reproduciendo ? '❚❚' : '▶';
+  $('s-play').setAttribute('aria-label', repScr.reproduciendo ? 'Pausar el scramble' : 'Reproducir el scramble');
+  $('s-velocidad').textContent = `×${st.velocidad}`;
+  $('rep-scramble').hidden = !n;
+  pintarModos();
+}
 
 const MAX_HISTORIAL = 200;
 /** Guarda el estado del editor antes de cambiarlo (para Deshacer). */
@@ -72,7 +192,12 @@ async function seleccionar(id) {
   const p = PUZZLES.find((x) => x.id === id);
   if (!p || st.ocupado) return;
   pararReproduccion();
+  repScr.cancelar();
   st.p = p;
+  st.scramble = [];
+  st.estadoScramble = null;
+  st.pasoScramble = 0;
+  for (const v of Object.values(st.v3d)) if (v) { v.vistaInicial(); v.resaltar(null); }
   st.color = 0;
   st.ultimoColor = 0;
   st.vista = p.vistasEditor ? p.vistasEditor[0].id : null;
@@ -137,8 +262,12 @@ async function nuevoScramble() {
     else $('aviso-tablas').hidden = true;
     const r = await motor.pedir('scramble', p.id);
     if (st.p !== p) return;
+    repScr.cancelar();
     st.scramble = r.movimientos;
-    st.estadoScramble = p.aplicarSecuencia(p.estadoResuelto(), st.scramble);
+    st.prefijos = [p.estadoResuelto()];
+    for (const m of st.scramble) st.prefijos.push(p.aplicarMovimiento(st.prefijos[st.prefijos.length - 1], m));
+    st.pasoScramble = st.scramble.length;
+    st.estadoScramble = st.prefijos[st.scramble.length];
     // puzzles cuyos scrambles giran el puzzle entero (Megaminx): se muestra (y se
     // carga en el editor) en la orientación de referencia
     if (p.estadoVistaScramble) st.estadoScramble = p.estadoVistaScramble(st.estadoScramble);
@@ -154,7 +283,7 @@ async function nuevoScramble() {
   el.textContent = texto;
   el.classList.toggle('largo', texto.length > 140);
   $('longitud').textContent = p.describirLongitud ? p.describirLongitud(st.scramble) : `${st.scramble.length} movimientos`;
-  $('vista-scramble').innerHTML = p.renderizar(st.estadoScramble, {});
+  pintarPrevia();
   const nota = $('nota-scramble');
   nota.textContent = p.notaScramble ? p.notaScramble(st.scramble) : '';
   nota.hidden = !p.notaScramble;
@@ -240,7 +369,7 @@ function pintarVistas() {
   const cont = $('vistas-editor');
   cont.innerHTML = '';
   const vistas = st.p.vistasEditor || [];
-  cont.hidden = vistas.length === 0 || !puedeResolver(st.p);
+  cont.hidden = vistas.length === 0 || !puedeResolver(st.p) || usar3D('editor');
   if (cont.hidden) return;
   const et = document.createElement('span');
   et.className = 'etiqueta';
@@ -269,15 +398,40 @@ function pintarEditor() {
   const editable = puedeResolver(p);
   const mostrado = estadoMostrado();
   const editables = editable ? new Set(p.pegatinasEditables(mostrado)) : null;
-  $('vista-editor').innerHTML = p.renderizar(mostrado, { editable, editables, seleccion: st.seleccion, vista: st.vista, etiquetas: !!st.sol });
+  const v = vista3D('editor');
+  $('vista-editor').hidden = !!v;
+  $('vista3d-editor').hidden = !v;
+  if (v) {
+    if (!v.animando) {
+      const vista = p.vista3D(mostrado);
+      v.mostrar(vista);
+      v.etiquetas(!!st.sol);
+      // primer toque de una herramienta de dos toques: resaltar esa pieza
+      if (st.seleccion != null) {
+        const sel = vista.geometria.pegatinas.find((q) => q.indice === st.seleccion);
+        v.resaltar(sel ? vista.geometria.pegatinas.map((q, k) => (q.pieza === sel.pieza ? k : -1)).filter((k) => k >= 0) : null);
+      } else if (v.escena.resaltado && v._resalteEditor) v.resaltar(null);
+      v._resalteEditor = st.seleccion != null;
+    }
+  } else {
+    $('vista-editor').innerHTML = p.renderizar(mostrado, { editable, editables, seleccion: st.seleccion, vista: st.vista, etiquetas: !!st.sol });
+  }
+  pintarModos();
   $('deshacer').disabled = !editable || st.historial.length === 0;
   pintarSolucion();
 }
 
 function alPulsarPegatina(ev) {
   const t = ev.target.closest('.pegatina');
-  if (!t || !puedeResolver(st.p)) return;
-  const i = parseInt(t.getAttribute('data-i'), 10);
+  if (!t) return;
+  tocarPegatina(parseInt(t.getAttribute('data-i'), 10));
+}
+
+function tocarPegatina(i) {
+  if (!puedeResolver(st.p) || st.ocupado) return;
+  const mostradoAntes = estadoMostrado();
+  if (!new Set(st.p.pegatinasEditables(mostradoAntes)).has(i)) return;
+  if (st.sol) repSol.cancelar();
   const antes = st.p.clonar(estadoMostrado());
   if (st.sol) { st.editor = estadoMostrado(); quitarSolucion(); }
   limpiarMensajes();
@@ -358,6 +512,7 @@ async function resolver() {
     }
     st.sol = { movimientos: r.movimientos, base: p.clonar(st.editor), ms: r.ms, fases: r.fases || null };
     st.paso = 0;
+    pintarVistas();
     mensaje('ok', 'Estado válido. Sigue la solución paso a paso con los controles.');
   } catch (err) {
     limpiarMensajes();
@@ -370,9 +525,11 @@ async function resolver() {
 }
 
 function quitarSolucion() {
-  pararReproduccion();
+  repSol.cancelar();
+  const habia = !!st.sol;
   st.sol = null;
   st.paso = 0;
+  if (habia) pintarVistas();
 }
 
 const NOMBRE_FASE = { paridad: 'Paridad', centros: 'Centros', aristas: 'Aristas', '3x3': '3x3' };
@@ -410,7 +567,7 @@ function pintarSolucion() {
     if (hecha) b.classList.add('hecha');
     b.innerHTML = `<span>${nombreFase(f.nombre)}</span><small>${f.fin - f.inicio}</small>`;
     b.title = `Ir al final de la fase "${nombreFase(f.nombre)}" (movimientos ${f.inicio + 1}–${f.fin})`;
-    b.addEventListener('click', () => { pararReproduccion(); irA(f.fin); });
+    b.addEventListener('click', () => repSol.irA(f.fin));
     barra.appendChild(b);
   });
   const ol = $('movs');
@@ -428,7 +585,7 @@ function pintarSolucion() {
     if (i < st.paso - 1) cls.push('hecho');
     if (i === st.paso - 1) cls.push('actual');
     if (cls.length) li.className = cls.join(' ');
-    li.addEventListener('click', () => { pararReproduccion(); st.paso = i + 1; pintarEditor(); });
+    li.addEventListener('click', () => repSol.irA(i + 1));
     ol.appendChild(li);
   });
   // que el movimiento actual se vea dentro de la lista (si tiene scroll)
@@ -439,29 +596,13 @@ function pintarSolucion() {
   }
   const txtFase = actual && st.paso > 0 && st.paso < n ? ` · ${nombreFase(actual.nombre)}` : '';
   $('paso').textContent = st.paso === 0 ? `Inicio · ${n} pasos` : st.paso === n ? `Resuelto (${n}/${n})` : `Paso ${st.paso}/${n}${txtFase}`;
-  $('r-play').textContent = st.timer ? '❚❚' : '▶';
-  $('r-play').setAttribute('aria-label', st.timer ? 'Pausar' : 'Reproducir');
+  $('r-play').textContent = repSol.reproduciendo ? '❚❚' : '▶';
+  $('r-play').setAttribute('aria-label', repSol.reproduciendo ? 'Pausar' : 'Reproducir');
   $('r-velocidad').textContent = `×${st.velocidad}`;
 }
 
-function irA(k) {
-  if (!st.sol) return;
-  st.paso = Math.max(0, Math.min(st.sol.movimientos.length, k));
-  pintarEditor();
-}
 function pararReproduccion() {
-  if (st.timer) { clearInterval(st.timer); st.timer = null; }
-}
-function alternarReproduccion() {
-  if (!st.sol) return;
-  if (st.timer) { pararReproduccion(); pintarSolucion(); return; }
-  if (st.paso >= st.sol.movimientos.length) st.paso = 0;
-  st.timer = setInterval(() => {
-    if (!st.sol || st.paso >= st.sol.movimientos.length) { pararReproduccion(); pintarSolucion(); return; }
-    st.paso++;
-    pintarEditor();
-  }, 550 / st.velocidad);
-  pintarSolucion();
+  repSol.cancelar();
 }
 
 async function copiar(texto, boton) {
@@ -510,15 +651,37 @@ function iniciar() {
     pintarEditor();
   });
   $('resolver').addEventListener('click', resolver);
-  $('r-inicio').addEventListener('click', () => { pararReproduccion(); irA(0); });
-  $('r-atras').addEventListener('click', () => { pararReproduccion(); irA(st.paso - 1); });
-  $('r-adelante').addEventListener('click', () => { pararReproduccion(); irA(st.paso + 1); });
-  $('r-fin').addEventListener('click', () => { pararReproduccion(); irA(Infinity); });
-  $('r-play').addEventListener('click', alternarReproduccion);
-  $('r-velocidad').addEventListener('click', () => {
+  $('r-inicio').addEventListener('click', () => repSol.irA(0));
+  $('r-atras').addEventListener('click', () => { repSol.parar(); repSol.atras(); });
+  $('r-adelante').addEventListener('click', () => { repSol.parar(); repSol.adelante(); });
+  $('r-fin').addEventListener('click', () => repSol.irA(Infinity));
+  $('r-play').addEventListener('click', () => { if (st.sol) repSol.alternar(); });
+  const cambiarVelocidad = () => {
     st.velocidad = st.velocidad >= 8 ? 1 : st.velocidad * 2;
-    if (st.timer) { pararReproduccion(); alternarReproduccion(); } else pintarSolucion();
-  });
+    pintarSolucion();
+    pintarPrevia();
+  };
+  $('r-velocidad').addEventListener('click', cambiarVelocidad);
+  $('s-velocidad').addEventListener('click', cambiarVelocidad);
+  $('s-inicio').addEventListener('click', () => repScr.irA(0));
+  $('s-atras').addEventListener('click', () => { repScr.parar(); repScr.atras(); });
+  $('s-adelante').addEventListener('click', () => { repScr.parar(); repScr.adelante(); });
+  $('s-fin').addEventListener('click', () => repScr.irA(Infinity));
+  $('s-play').addEventListener('click', () => repScr.alternar());
+  for (const [id, cual] of [['modo-previa', 'previa'], ['modo-editor', 'editor']]) {
+    $(id).addEventListener('click', (ev) => { const b = ev.target.closest('button[data-modo]'); if (b) cambiarModo(cual, b.dataset.modo); });
+  }
+  $('centrar-previa').addEventListener('click', () => st.v3d.previa && st.v3d.previa.vistaInicial());
+  $('centrar-editor').addEventListener('click', () => st.v3d.editor && st.v3d.editor.vistaInicial());
+  st.webgl = hayWebGL(document);
+  try { Object.assign(st.modo, JSON.parse(localStorage.getItem('cubo-solver:modo3d') || '{}')); } catch { /* */ }
+  // Para el modo aprender (y para depurar): vistas 3D y resaltado de piezas
+  window.cuboSolver = {
+    vista3D: (cual) => st.v3d[cual] || null,
+    resaltarPiezas: (cual, piezas, modo) => { const v = st.v3d[cual]; if (v) v.resaltarPiezas(piezas, modo); },
+    estado: () => ({ puzzle: st.p && st.p.id, paso: st.paso, pasoScramble: st.pasoScramble, modo: { ...st.modo }, webgl: st.webgl }),
+    editor: () => st.p.clonar(estadoMostrado()),
+  };
   $('copiar').addEventListener('click', (e) => copiar(st.p.formatear(st.scramble), e.currentTarget));
   $('copiar-sol').addEventListener('click', (e) => st.sol && copiar(st.p.formatear(st.sol.movimientos), e.currentTarget));
   let inicial = '3x3';

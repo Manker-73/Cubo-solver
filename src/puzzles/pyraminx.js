@@ -6,7 +6,7 @@
 // (mirando el vértice); u l r b giran solo la punta.
 
 import { definirPuzzle } from '../core/puzzle.js';
-import { crearGeoPuzzle } from '../core/geopuzzle.js';
+import { crearGeoPuzzle, modelo3DGeo } from '../core/geopuzzle.js';
 import { carasDesdeVertices, unit, dot, esc } from '../core/geometria.js';
 import { crearModeloPiezas, crearBuscador } from '../core/piezas.js';
 import { permutacionesDeColor, reetiquetar } from '../core/simetria.js';
@@ -246,5 +246,6 @@ export default definirPuzzle({
   resolver,
   generarScramble,
   geo,
+  ...modelo3DGeo(geo, { desde: [0.75, 0.32, 1], arriba: [0, 1, 0] }),
   modelo,
 });

@@ -9,7 +9,7 @@
 // nunca se mueve con estos cuatro giros.
 
 import { definirPuzzle } from '../core/puzzle.js';
-import { crearGeoPuzzle } from '../core/geopuzzle.js';
+import { crearGeoPuzzle, modelo3DGeo } from '../core/geopuzzle.js';
 import { carasDesdeVertices } from '../core/geometria.js';
 import { crearModeloPiezas, crearBuscador } from '../core/piezas.js';
 import { permutacionesDeColor, reetiquetar } from '../core/simetria.js';
@@ -17,6 +17,7 @@ import { svgDePegatinas } from '../core/render.js';
 import { entero, rngSeguro } from '../core/rng.js';
 import { paridad, permDeIndice } from '../core/perm.js';
 import { PALETA_CUBO } from './nxn.js';
+import { CAMARA_CUBO } from '../core/modelo3d.js';
 
 const VERTICES = [];
 for (const x of [-1, 1]) for (const y of [-1, 1]) for (const z of [-1, 1]) VERTICES.push([x, y, z]);
@@ -232,6 +233,7 @@ export default definirPuzzle({
   resolver,
   generarScramble,
   geo,
+  ...modelo3DGeo(geo, CAMARA_CUBO),
   modelo,
   coordsDe,
   coordsAleatorias,

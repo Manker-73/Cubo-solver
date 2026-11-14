@@ -1,47 +1,47 @@
 {
-  "scrambles": 1000,
+  "scrambles": 100,
   "longitudMedia": 60,
   "longitudMin": 60,
   "longitudMax": 60,
-  "msPorScramble": 0.05,
-  "casos": 1000,
-  "fecha": "2026-11-14T20:59:16.204Z",
-  "msTablas": 3602,
+  "msPorScramble": 0.08,
+  "casos": 100,
+  "fecha": "2026-11-14T22:00:24.706Z",
+  "msTablas": 4245,
   "longitudConmutador": 10,
-  "resueltos": "500/500 (100.0%)",
-  "casosSolver": 500,
-  "longitudMediaSolucion": 109.13,
-  "longitudMaxSolucion": 208,
-  "msMedioSolucion": 2215.05,
-  "msMaxSolucion": 6719.5,
+  "resueltos": "20/20 (100.0%)",
+  "casosSolver": 20,
+  "longitudMediaSolucion": 103.5,
+  "longitudMaxSolucion": 114,
+  "msMedioSolucion": 2376.48,
+  "msMaxSolucion": 4352.6,
   "fases": {
     "paridad": {
-      "longitudMedia": 0.02,
-      "longitudMax": 2,
-      "msMedio": 0.06,
-      "msMax": 2.6,
-      "casosConFase": 5
+      "longitudMedia": 0,
+      "longitudMax": 0,
+      "msMedio": 0.04,
+      "msMax": 0.1,
+      "casosConFase": 0
     },
     "centros": {
-      "longitudMedia": 36.36,
-      "longitudMax": 133,
-      "msMedio": 981.17,
-      "msMax": 5474.8,
-      "casosConFase": 500
+      "longitudMedia": 33.3,
+      "longitudMax": 39,
+      "msMedio": 1252.47,
+      "msMax": 3842.1,
+      "casosConFase": 20
     },
     "aristas": {
-      "longitudMedia": 54.29,
-      "longitudMax": 73,
-      "msMedio": 293.94,
-      "msMax": 456.7,
-      "casosConFase": 500
+      "longitudMedia": 52.1,
+      "longitudMax": 60,
+      "msMedio": 350.54,
+      "msMax": 539.7,
+      "casosConFase": 20
     },
     "3x3": {
-      "longitudMedia": 18.46,
-      "longitudMax": 21,
-      "msMedio": 939.3,
-      "msMax": 1205.5,
-      "casosConFase": 500
+      "longitudMedia": 18.1,
+      "longitudMax": 20,
+      "msMedio": 772.67,
+      "msMax": 1203.4,
+      "casosConFase": 20
     }
   },
   "grupo": {
@@ -55,10 +55,10 @@
     "relacionesVisibles": [
       "esquinas + aristas centrales"
     ],
-    "ms": 2630
+    "ms": 2815
   },
   "cotaInferior": 52,
-  "cociente": 2.1,
+  "cociente": 1.99,
   "cotaSuperior": "130 (demostrada)",
   "hilos": 2,
   "macrosAristas": 2880

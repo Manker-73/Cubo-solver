@@ -1,15 +1,15 @@
 {
-  "scrambles": 1000,
-  "longitudMedia": 10.53,
+  "scrambles": 100,
+  "longitudMedia": 10.61,
   "longitudMin": 7,
   "longitudMax": 13,
-  "msPorScramble": 0.05,
-  "casos": 1000,
-  "fecha": "2026-11-14T20:59:16.765Z",
-  "resueltos": "1000/1000 (100.0%)",
-  "longitudMediaSolucion": 10.56,
-  "longitudMaxSolucion": 13,
-  "msMedioSolucion": 0.03,
+  "msPorScramble": 0.07,
+  "casos": 100,
+  "fecha": "2026-11-14T22:00:25.069Z",
+  "resueltos": "100/100 (100.0%)",
+  "longitudMediaSolucion": 10.42,
+  "longitudMaxSolucion": 12,
+  "msMedioSolucion": 0.05,
   "msMaxSolucion": 0.7,
-  "msInicializacion": 221
+  "msInicializacion": 247
 }

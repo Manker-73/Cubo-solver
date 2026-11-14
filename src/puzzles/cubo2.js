@@ -118,6 +118,8 @@ export default definirPuzzle({
   infoMovimiento: b.infoMovimiento,
   buscarRedundancia: b.buscarRedundancia,
   renderizar: b.renderizar,
+  vista3D: b.vista3D,
+  giro3D: b.giro3D,
   pegatinasEditables: () => b.estadoResuelto().map((_, i) => i),
   inicializar,
   estaInicializado: () => !!buscador,

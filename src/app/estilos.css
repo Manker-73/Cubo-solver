@@ -166,3 +166,27 @@ body { font-family: var(--f-texto); font-size: 15px; line-height: 1.5; }
 @keyframes girar { to { transform: rotate(360deg); } }
 .pie { color: var(--tenue); font-size: 0.8rem; display: flex; flex-wrap: wrap; gap: 4px 16px; justify-content: space-between; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+/* ---------- Vista 3D ---------- */
+.barra-vista { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
+.barra-vista .vistas-editor { margin-top: 0; }
+.conmutador { display: inline-flex; border: 1px solid var(--linea); border-radius: 8px; overflow: hidden; }
+.conmutador[hidden] { display: none; }
+.conmutador button {
+  font: 600 0.8rem var(--f-texto); padding: 4px 11px; border: 0; background: var(--superficie); color: var(--tenue); cursor: pointer;
+}
+.conmutador button + button { border-left: 1px solid var(--linea); }
+.conmutador button[aria-pressed="true"] { background: var(--tinta); color: var(--fondo); }
+.conmutador button:focus-visible { outline: 2px solid var(--acento); outline-offset: -2px; }
+.aviso-3d { font-size: 0.8rem; color: var(--tenue); }
+.vista-3d { position: relative; padding: 0; height: clamp(250px, 72vw, 380px); overflow: hidden; }
+.vista-3d .lienzo-3d { width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
+.vista-3d .lienzo-3d:active { cursor: grabbing; }
+.pista-3d { position: absolute; left: 10px; bottom: 8px; font-size: 0.74rem; color: var(--tenue); pointer-events: none; }
+.reproductor-scramble { margin-top: -4px; }
+.vista[hidden], .reproductor[hidden], .barra-vista [hidden] { display: none !important; }
+.etiquetas-3d { position: absolute; inset: 0; pointer-events: none; }
+.etiquetas-3d span {
+  position: absolute; transform: translate(-50%, -50%); font: 700 0.78rem var(--f-mono, monospace);
+  color: #111; background: rgba(255, 255, 255, 0.82); border-radius: 5px; padding: 0 4px; line-height: 1.35;
+}

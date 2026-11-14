@@ -8,6 +8,7 @@
 // Soluciones: notación de caras (U, F, R, BR, BL, L, D, DR, DBR, B, DBL, DL; ver
 // megaminx-geo.js), con X, X', X2, X2' (72° y 144° en los dos sentidos).
 
+import { modelo3DGeo } from '../core/geopuzzle.js';
 import { definirPuzzle } from '../core/puzzle.js';
 import { svgDePegatinas, cajaDe } from '../core/render.js';
 import { rngSeguro } from '../core/rng.js';
@@ -204,6 +205,20 @@ function estadoVistaScramble(estado) {
   }
   return estado; // centros pintados a mano que no son una orientación: tal cual
 }
+/**
+ * Vista 3D: giro del puzzle entero (eje y ángulo) que lleva el estado a la
+ * orientación de referencia de la vista previa; null si ya está en ella.
+ */
+const TODAS = Array.from({ length: geo.n }, (_, i) => i);
+function reorientar3D(estado) {
+  for (const r of geo.rotaciones3D()) {
+    const x = aplicarPerm(estado, r.perm);
+    if (CENTROS.every((i, f) => x[i] === CENTROS_REF[f])) {
+      return r.angulo === 0 ? null : { partes: [{ eje: r.eje, angulo: r.angulo, pegatinas: TODAS }], estado: x };
+    }
+  }
+  return null;
+}
 /** Dónde quedan los centros blanco y verde tras el scramble y cómo sujetarlo para que coincida. */
 function notaScramble(movs) {
   let x = geo.resuelto.slice();
@@ -281,8 +296,11 @@ export default definirPuzzle({
   },
   generarScramble,
   estadoVistaScramble,
+  reorientar3D,
   notaScramble,
   geo,
+  // en 3D, durante la solución, la letra de cada cara sobre su centro (como en 2D)
+  ...modelo3DGeo(geo, { desde: [0.35, 0.75, 1], arriba: [0, 1, 0] }, CARAS.map((c, f) => ({ texto: c, pos: normales[f].map((x) => x * 1.01), normal: normales[f] }))),
   etapas: ETAPAS,
   movsCara: MOVS_CARA,
 });

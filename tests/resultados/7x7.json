@@ -1,47 +1,47 @@
 {
-  "scrambles": 1000,
+  "scrambles": 100,
   "longitudMedia": 100,
   "longitudMin": 100,
   "longitudMax": 100,
-  "msPorScramble": 0.1,
-  "casos": 1000,
-  "fecha": "2026-11-14T20:59:16.380Z",
-  "msTablas": 8248,
+  "msPorScramble": 0.11,
+  "casos": 100,
+  "fecha": "2026-11-14T22:00:24.733Z",
+  "msTablas": 8597,
   "longitudConmutador": 10,
-  "resueltos": "100/100 (100.0%)",
-  "casosSolver": 100,
-  "longitudMediaSolucion": 355.7,
-  "longitudMaxSolucion": 495,
-  "msMedioSolucion": 6563.87,
-  "msMaxSolucion": 12174.4,
+  "resueltos": "20/20 (100.0%)",
+  "casosSolver": 20,
+  "longitudMediaSolucion": 342.25,
+  "longitudMaxSolucion": 415,
+  "msMedioSolucion": 6500.7,
+  "msMaxSolucion": 9160.7,
   "fases": {
     "paridad": {
-      "longitudMedia": 0.13,
-      "longitudMax": 3,
-      "msMedio": 0.05,
+      "longitudMedia": 0,
+      "longitudMax": 0,
+      "msMedio": 0.06,
       "msMax": 0.2,
-      "casosConFase": 7
+      "casosConFase": 0
     },
     "centros": {
-      "longitudMedia": 219.76,
-      "longitudMax": 350,
-      "msMedio": 4133.7,
-      "msMax": 11471.4,
-      "casosConFase": 100
+      "longitudMedia": 207.7,
+      "longitudMax": 276,
+      "msMedio": 3750.95,
+      "msMax": 7724.7,
+      "casosConFase": 20
     },
     "aristas": {
-      "longitudMedia": 117.15,
-      "longitudMax": 142,
-      "msMedio": 1502.55,
-      "msMax": 2817.5,
-      "casosConFase": 100
+      "longitudMedia": 116.35,
+      "longitudMax": 127,
+      "msMedio": 1825.42,
+      "msMax": 2524.7,
+      "casosConFase": 20
     },
     "3x3": {
-      "longitudMedia": 18.66,
+      "longitudMedia": 18.2,
       "longitudMax": 20,
-      "msMedio": 925.21,
-      "msMax": 1204.7,
-      "casosConFase": 100
+      "msMedio": 922.32,
+      "msMax": 1203.9,
+      "casosConFase": 20
     }
   },
   "grupo": {
@@ -62,7 +62,7 @@
     "ms": 50969
   },
   "cotaInferior": 99,
-  "cociente": 3.59,
+  "cociente": 3.46,
   "cotaSuperior": "~120–160 (sin confirmar)",
   "hilos": 2,
   "macrosAristas": 8496

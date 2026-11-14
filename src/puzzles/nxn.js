@@ -8,6 +8,7 @@
 import { definirPuzzle } from '../core/puzzle.js';
 import { aplicarPerm, componer, identidad } from '../core/perm.js';
 import { svgDePegatinas } from '../core/render.js';
+import { modelo3DPegatinas, CAMARA_CUBO } from '../core/modelo3d.js';
 
 export const CARAS = ['U', 'R', 'F', 'D', 'L', 'B'];
 export const PALETA_CUBO = [
@@ -112,6 +113,46 @@ export function invertirMovimientoNxN(mov) {
   return mov + "'";
 }
 
+/**
+ * Modelo 3D del cubo N (vista 3D): cada pegatina es un cuadrado de lado 2/N en
+ * la superficie del cubo [-1, 1]³; un giro rota las capas que mueve su permutación.
+ */
+const cache3D = new Map();
+export function modelo3DNxN(N) {
+  if (cache3D.has(N)) return cache3D.get(N);
+  const geo = geometriaNxN(N);
+  const poligonos = [], normales = [];
+  geo.pos.forEach((p) => {
+    const k = p.findIndex((x) => Math.abs(x) === N); // eje normal
+    const n = [0, 0, 0]; n[k] = Math.sign(p[k]);
+    const u = [0, 0, 0], v = [0, 0, 0];
+    u[(k + 1) % 3] = 1; v[(k + 2) % 3] = 1;
+    const esq = [[1, 1], [-1, 1], [-1, -1], [1, -1]].map(([a, b]) => [0, 1, 2].map((i) => (p[i] + a * u[i] + b * v[i]) / N));
+    poligonos.push(esq); normales.push(n);
+  });
+  // cortes entre capas (para agrupar pegatinas en piezas)
+  const cortes = [];
+  for (let k = 1; k < N; k++) for (let e = 0; e < 3; e++) { const n = [0, 0, 0]; n[e] = 1; cortes.push({ n, h: (-N + 2 * k) / N }); }
+  const m = modelo3DPegatinas({
+    poligonos,
+    normales,
+    cortes,
+    camara: CAMARA_CUBO,
+    giro(mov) {
+      let a;
+      try { a = analizarMovimiento(mov, N); } catch { return null; }
+      const eje = NORMAL[a.cara];
+      const pegatinas = [];
+      geo.pos.forEach((p, j) => { if (a.prof >= N || dot(p, eje) > N - 2 * a.prof) pegatinas.push(j); });
+      // cuarto de vuelta horario visto desde la cara = −90° (regla de la mano derecha)
+      const angulo = a.veces === 1 ? -Math.PI / 2 : a.veces === 2 ? -Math.PI : Math.PI / 2;
+      return [{ eje, angulo, pegatinas }];
+    },
+  });
+  cache3D.set(N, m);
+  return m;
+}
+
 /** Disposición de la red: [columna, fila] de cada cara en unidades de cara. */
 const RED = { U: [1, 0], L: [0, 1], F: [1, 1], R: [2, 1], B: [3, 1], D: [1, 2] };
 
@@ -204,6 +245,7 @@ export function baseNxN(N) {
       return res;
     },
     pegatinas,
+    ...modelo3DNxN(N),
     renderizar(estado, opciones = {}) {
       const k = opciones.vista ? CARAS.indexOf(opciones.vista) : -1;
       if (k < 0) return svgDePegatinas(pegatinas, estado, PALETA_CUBO, opciones);
@@ -242,6 +284,8 @@ export function crearNxN(N, extra = {}) {
     buscarRedundancia: b.buscarRedundancia,
     generarScramble: (rng) => b.scrambleAleatorio(rng),
     renderizar: b.renderizar,
+    vista3D: b.vista3D,
+    giro3D: b.giro3D,
     tipoScramble: 'movimientos aleatorios',
     longitudScramble: LONGITUD_WCA[N],
   }, extra));
