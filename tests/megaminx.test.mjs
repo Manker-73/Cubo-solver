@@ -8,7 +8,7 @@ import { geo, CARAS, IDX, MOVS_CARA, VECINAS } from '../src/puzzles/megaminx-geo
 import { ESQUINAS, ARISTAS, CENTROS, modelo, sigmaDeCentros, reetiquetar } from '../src/puzzles/megaminx-piezas.js';
 import { analizarGrupo, cotaInferiorConteo, ORDEN_ESQUINAS, ORDEN_ARISTAS, ORDEN_TOTAL } from '../src/puzzles/megaminx-grupo.js';
 import { inicializarUltima, resolverUltima, ESQ_LL, ARI_LL, _interno as LL } from '../src/puzzles/megaminx-ultima.js';
-import { simplificarTramos, ETAPAS, resolverMegaminx } from '../src/puzzles/megaminx-solver.js';
+import { simplificarTramos, ETAPAS, resolverMegaminx, estadisticas } from '../src/puzzles/megaminx-solver.js';
 import { slotMov, NS } from '../src/puzzles/megaminx-busqueda.js';
 import { aplicarPerm } from '../src/core/perm.js';
 import { rngConSemilla, entero } from '../src/core/rng.js';
@@ -306,6 +306,7 @@ test('Megaminx: última capa — dos macros (o una corta más dos) resuelven los
 test(`Megaminx: el solver resuelve el 100 % (${CASOS_SOLVER} casos, puzzle reorientado al azar)`, () => {
   const ini = p.inicializar();
   const rng = rngConSemilla(500);
+  const est0 = { ...estadisticas };
   const L = [], T = [], O = [], porEtapa = {};
   for (let i = 0; i < CASOS_SOLVER; i++) {
     const s = p.generarScramble(rng);
@@ -347,6 +348,8 @@ test(`Megaminx: el solver resuelve el 100 % (${CASOS_SOLVER} casos, puzzle reori
     msMax: Math.round(Math.max(...T)),
     orientacionesMedia: +media(O).toFixed(1),
     porEtapa: etapas,
+    etapasResueltas: estadisticas.etapas - est0.etapas,
+    etapasConRespaldo: estadisticas.respaldos - est0.respaldos,
     msTablas: ini.ms,
     tablas: { etapas: ini.tablas, macros: ini.macros, bytes: ini.bytes, msEtapas: ini.msEtapas, msUltima: ini.msUltima },
   };

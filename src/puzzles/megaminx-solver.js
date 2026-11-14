@@ -79,6 +79,8 @@ export function gruposDe(n) {
 }
 
 let EST = null;
+/** Contadores (para los tests): etapas resueltas y cuántas necesitaron el respaldo. */
+export const estadisticas = { etapas: 0, respaldos: 0 };
 
 function prepararEtapa(def, previas) {
   const caras = def.caras.map((c) => IDX[c]);
@@ -143,7 +145,9 @@ const huecoDe = (est, o, id) => {
 function resolverEtapaSegura(et, est, opciones, previasEtapa) {
   const huecos = et.piezas.map(([o, id]) => huecoDe(est, o, id));
   const r = resolverEtapa(et, huecos, { maxNodos: opciones.maxNodos ?? 4e7, varias: opciones.varias ?? 1 });
+  estadisticas.etapas++;
   if (r) return r.varias;
+  estadisticas.respaldos++;
   // respaldo: piezas nuevas de una en una
   const movs = [];
   let e = est;

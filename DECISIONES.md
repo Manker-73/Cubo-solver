@@ -44,7 +44,7 @@ Decisiones que he tomado yo cuando había dudas, para que puedas revisarlas.
 ## Megaminx
 - Notación Pochmann: 7 líneas de 10 movimientos R/D alternos (empezando por R), cada uno `++` o `--` al azar, y la línea termina en `U` si el último fue `D++` o en `U'` si fue `D--` (como TNoodle).
 - `R++` gira todo menos la capa de la cara opuesta a R, 144° en sentido horario visto desde R; `D++` igual con el eje de D (todo menos la capa de U). La vista previa se calcula con el motor geométrico (132 pegatinas, dos "flores").
-- Los 12 colores son orientativos (no hay un esquema único oficial).
+- Los 12 colores eran orientativos en la noche 1 (no hay un esquema único oficial). **Noche 5: confirmados** con un Megaminx físico, igual que la red (ver abajo).
 
 # Noche 2
 
@@ -177,3 +177,78 @@ Idea del método de Tsai / TPR de Chen Shuang (el solver que usa TNoodle); imple
 - **IDA* conjunto de 4–6 órbitas**: con la heurística del máximo, millones de nodos por nivel.
 - **Mirar un paso más** en el voraz de 3-ciclos: −2 % de movimientos y el doble de tiempo; queda desactivado (opción `anticipar`).
 - Una tabla de 3 aristas para la fase 3 del 4x4 sin partirla (12⁶): heurística demasiado débil (máx. 7 para fases de ~13).
+
+# Noche 5: Megaminx (validador, solver y editor)
+
+## Colores y red: confirmados
+- El esquema de colores y la red (dos "flores": U con sus 5 vecinas vistas desde arriba y D con las suyas vistas desde abajo) están **comprobados con un Megaminx físico**. No se han tocado: color *i* = cara *i* (U blanco, F verde oscuro, R rojo, BR morado, BL amarillo, L azul, D gris, DR verde claro, DBR rosa, B crema, DBL naranja, DL celeste).
+- Lo único que ha cambiado en `megaminx-geo.js` (la geometría salió de `megaminx.js` sin cambios) son los **nombres internos** de las caras del anillo inferior, que estaban desplazados una posición (la cara 7, que está delante a la derecha, se llamaba "DBR"). Solo eran nombres internos (no salían en ningún sitio); ahora se calculan comprobados con un test (vecinas de cada cara).
+
+## Notación de las soluciones
+- Los **scrambles siguen en Pochmann** (`R++`, `D--`, `U'`…), sin cambios.
+- Las **soluciones** usan notación de caras: **U, F, R, BR, BL, L** (arriba y su anillo, en sentido horario visto desde arriba, F delante) y **D, DR, DBR, B, DBL, DL** (abajo y su anillo: DR debajo de F y R, B detrás y opuesta a F). Giros: `R` = 72° horario mirando la cara R de frente, `R'` = 72° antihorario, `R2` = 144° horario, `R2'` = 144° antihorario.
+- Elegí esta convención porque es la más extendida en algoritmos y simuladores (es la que leen, por ejemplo, el simulador de ruwix y el solver de cubzor, y la que se usa en los hilos de algoritmos de speedsolving.com). Alternativas que existen: DFR/DFL/DB en vez de DR/DL/B (preferida por algún usuario de speedsolving para que todas las de abajo empiecen por D) y la de Randelshofer, con UR/UL y el puzzle sujeto de otra forma.
+- La interfaz tiene una **leyenda** ("Notación: qué cara es cada letra": la red con la letra de cada cara en su centro y la explicación de los sentidos) y, durante la reproducción, el editor muestra esas letras en los centros.
+- **Métrica**: cualquier giro de una cara (72° o 144°, en cualquier sentido) cuenta 1. Todas las longitudes de esta noche están en esta métrica.
+
+## Modelo de piezas (`megaminx-piezas.js`)
+- No está escrito a mano: una pegatina pertenece a la pieza formada por las caras en cuya capa está su centro (1 cara = centro, 2 = arista, 3 = esquina). Salen 12 centros, 20 esquinas y 30 aristas; las pegatinas de cada pieza, en sentido horario visto desde fuera. Sobre eso, `crearModeloPiezas` (el mismo de los demás puzzles) da posiciones y orientaciones (3 en esquinas, 2 en aristas).
+- Los 48 giros de cara se calculan con el motor geométrico (`crearGeoPuzzle`, mismos cortes que los de Pochmann). Un test comprueba que pegatinas y piezas coinciden tras 300 giros al azar, que `X X = X2`, que las caras no vecinas conmutan y las vecinas no, etc.
+- **Orientación libre**: el motor geométrico da también las 60 rotaciones del puzzle entero. Si los centros pintados son una de ellas, se reetiquetan los colores para que cada centro tenga "el de su cara" y la solución sale en el sistema de referencia de quien sujeta el puzzle (como en los cubos). Los scrambles Pochmann mueven los centros (`R++` es una rotación más un giro), así que esto se usa siempre.
+
+## Restricciones: demostradas (`megaminx-grupo.js`, test "restricciones demostradas")
+- Con Schreier–Sims (`src/core/grupo.js`) sobre los 12 giros de cara (que no mueven los centros), 2,4 s:
+  - grupo de las esquinas (sus 60 pegatinas): **20!/2 · 3¹⁹** exactamente;
+  - grupo de las aristas (60 pegatinas): **30!/2 · 2²⁹** exactamente;
+  - grupo entero: **el producto** = 100.669.616.553.523.347.122.516.032.313.645.505.168.688.116.411.019.768.627.200.000.000.000 ≈ 1,0067·10⁶⁸.
+- Cada giro es un 5-ciclo de esquinas y otro de aristas (permutaciones pares) y no cambia la suma de giros de las esquinas (mód. 3) ni la de volteos de las aristas (mód. 2); el test lo comprueba en los 48 giros. Como el conjunto de estados que cumplen esas cuatro condiciones tiene exactamente ese tamaño, **no hay ninguna otra restricción**. En particular, **las paridades de esquinas y aristas son independientes**: a diferencia del 3x3, dos esquinas y dos aristas intercambiadas a la vez **también** es imposible.
+- Consecuencias en el validador: esquina girada, arista volteada, dos esquinas intercambiadas y dos aristas intercambiadas son imposibles; dos esquinas giradas en sentidos opuestos, dos aristas volteadas, un 3-ciclo y dos parejas intercambiadas son posibles (los tests los resuelven).
+- Comprobación empírica: todos los scrambles pasan el validador (1000 en `npm test`) y los estados alterados fallan con su mensaje.
+
+## Validador
+En orden: 11 pegatinas de cada color (y ninguna sin pintar); centros de colores distintos; centros que sean una orientación del esquema (si no, se dice qué pareja de opuestos está mal o, si los opuestos están bien, que el orden es especular); cada esquina y arista debe existir (combinación de colores real, no especular) y aparecer una sola vez (si no: "aparece 2 veces (en … y en …) y falta la …"); y las cuatro restricciones demostradas. Los nombres de posición (p. ej. "la esquina de BL-L-DBL") son los del sistema de referencia de quien pinta.
+
+## Cota inferior del número de Dios (`cotaInferiorConteo`)
+- **48 giros de cara**, calculada aquí por conteo. Las caras no vecinas conmutan (sus capas no comparten piezas), así que cuento secuencias en **forma normal de Foata**: pasos = conjuntos de caras no vecinas entre sí (cada una con 4 giros); cada cara de un paso tiene que ser vecina de alguna del paso anterior (si no, se podría adelantar) y distinta de todas ellas (si no, se unirían). Todo estado a distancia n tiene una secuencia así de n giros, así que el menor n con N(0)+…+N(n) ≥ |G| es una cota inferior. N(1) = 48, N(2) = 1.536 (60 parejas de vecinas ordenadas + 36 de no vecinas, ·16), N(3) = 43.520; sale **48**.
+- Coincide con la cifra que se suele citar para el Megaminx en esta métrica (no he encontrado la fuente original, así que la doy como calculada aquí).
+
+## Solver (`megaminx-solver.js`, `megaminx-busqueda.js`, `megaminx-ultima.js`)
+
+### Etapas con búsqueda
+Cada etapa resuelve unas pocas piezas con IDA* usando un conjunto de caras que se va reduciendo. La idea: cuando se deja de usar una cara, las piezas que solo están en caras ya retiradas no se vuelven a mover, así que **ninguna etapa deshace las anteriores sin necesidad de protegerlas**. En las etapas finales, en las que las caras permitidas tocan piezas ya resueltas, esas piezas entran en el objetivo de la búsqueda (se protegen).
+
+| Etapa | Caras permitidas | Piezas nuevas |
+|---|---|---|
+| Base 1 | todas menos D (11) | D-B, D-DBL, DBL-B, D-DBL-B |
+| Base 2 | sin D, B, DBL (9) | D-DL, DBL-DL, D-DBL-DL |
+| Base 3 | sin D, B, DBL, DL (8) | D-DR, DR-DL, D-DR-DL |
+| Base 4 | U, anillo superior y DBR (7) | las 5 piezas que quedan de D y del anillo inferior |
+| Anillo 1–3 | U + anillo superior, quitando BL, L y BR | las piezas de BL, L y BR que tocan el anillo inferior (3, 5 y 5) |
+| F2L 1 | U, F, R | las 5 piezas de F que no son de U ni de R |
+| F2L 2 | U, F, R | F-R, F-R-DR, R-DR (protegiendo las 5 anteriores) |
+| F2L 3 | U, F, R | las 4 de R que quedan (protegiendo las 8 anteriores) |
+| Última capa | — | las 10 piezas de U, con macros |
+
+- **Tablas de poda**: para grupos de ≤ 3 piezas, distancia exacta (BFS con los giros de la etapa). Los grupos **cubren todos los pares de piezas** de la etapa (tríos solapados: 4 tablas para 5 piezas, 26 para 12): la heurística (el máximo) es mucho más fuerte que con una partición — en la etapa Base 4 bajó de ~3 millones de nodos (120 ms) a ~40.000 (4 ms). Los huecos se numeran solo dentro de la región de la etapa, así que las tablas son pequeñas: 59 tablas, **2,9 MB** en total.
+- **Elegir la más corta**: (1) IDA* da la solución más corta de cada etapa con sus giros; (2) de cada etapa se sacan hasta 6 soluciones de esa longitud mínima y se queda la que deja la siguiente etapa más fácil (cota de sus tablas) o, en la última de F2L, la que deja la última capa más corta; (3) todo se hace con el puzzle visto en sus 60 orientaciones: las 3 primeras etapas en las 60 (son baratas) y, por orden de lo que han costado, se terminan tantas como quepan en el tiempo; se queda la solución más corta. Las soluciones se simplifican (giros de la misma cara separados solo por caras que conmutan con ella se unen).
+- **Tiempo**: límite de 2,5 s por defecto (`tiempoMax`); siempre se termina al menos una orientación, así que siempre hay solución. Cada orientación tarda ~60–120 ms.
+- **Respaldo**: si una etapa pasa de su límite de nodos (4·10⁷), se parte en sub-etapas de una pieza nueva cada una (con las demás protegidas), que siempre son mucho más fáciles. No ha hecho falta en ninguno de los casos medidos (más de 6.000 con una sola orientación), pero el test lo fuerza con un límite de 50 nodos y comprueba que la solución sigue siendo correcta.
+- Comprobación interna: la solución se aplica al estado del usuario y, si no lo resolviera, se devolvería un error en vez de una solución incorrecta.
+
+### Última capa: macros encontradas por búsqueda
+- **Generación** (~0,7 s): se recorren todas las secuencias canónicas de hasta 6 giros de U, F, R (449.389) y se guarda, para cada "huella" (dónde quedan las 12 piezas de F y R que no son de U), la primera secuencia p que la produce; cada secuencia c con la misma huella da la **macro p · c⁻¹**, que deja todo en su sitio salvo la última capa. (La primera versión usaba c⁻¹ · p: salían "macros" de 3 giros que no lo eran; ahora cada macro se comprueba sobre las 40 piezas que no son de U.) Se añaden sus inversas, sus imágenes especulares (R↔L, BR↔BL, con los sentidos cambiados) y todas giradas alrededor de U, y de cada efecto en la última capa se guarda la más corta: **10.765 efectos**, con macros de 1 a 12 giros.
+- **Resolver**: para cada macro a de la biblioteca se busca en una tabla hash si el estado que deja es el efecto de otra macro b; la solución es a·b⁻¹, la más corta (también probando antes U, U2, U2', U'). Tarda ~6 ms.
+- **Demostración (test exhaustivo en `npm test`)**: se recorren los **4.665.600** estados posibles de la última capa (5!/2 · 3⁴ · 5!/2 · 2⁴): **4.661.530** se resuelven con dos macros (calculado como conjunto de todos los a⁻¹·b) y los **4.070** restantes con una macro corta delante y dos más; el test resuelve esos 4.070 y comprueba cada solución. `test:rapido` comprueba una muestra de 1.000.
+- Longitud media de la última capa: ~18 giros en un estado al azar; en el solver, ~15 (porque se elige la última etapa de F2L que la deja más corta).
+
+### Lo que no funcionó
+- **7 piezas solo con U y R** (la etapa "R" como subgrupo de dos caras, como en un F2L 2-gen): más de 3·10⁷ nodos sin terminar. Se hace con U, F, R protegiendo lo anterior.
+- **Fusionar Base 2 y Base 3** (6 piezas a la vez): ahorra ~2,5 giros pero tarda ~0,7 s y a veces no termina. Sí fusioné las dos primeras (ahorra ~1,6 giros y tarda ~3 ms).
+- **Macros de hasta 7 giros** (3,1 millones de secuencias): la última capa baja solo de 18,5 a 18,3 y la generación tarda varios segundos.
+- **Más soluciones por etapa** (12 en vez de 6): igual longitud (más tiempo por orientación, menos orientaciones probadas).
+
+## Interfaz
+- Editor y "Resolver" activos en el Megaminx (era el último "próximamente"). Vistas **Red / Arriba (U) / Abajo (D)**: en el móvil (390 px) la red completa deja pegatinas de ~11 px; cada flor ampliada, de ~30 px.
+- **Rellenar cara** (como en el NxN) y **Deshacer** (nuevo, para todos los puzzles: botón y Ctrl+Z; deshace pintar, herramientas, acciones, *Resetear* y *Cargar scramble*, hasta 200 pasos).
+- Reproducción: las etapas en la barra de fases (Base 1–4, Anillo 1–3, F2L 1–3, Última capa; coloreadas por grupo), "Paso 36/90 · Anillo 3" y las letras de las caras en los centros del editor.
+- Campos nuevos (opcionales) de la interfaz común: `leyendaNotacion()` (`{svg, texto}`, se muestra en un desplegable bajo las fases; abierto por defecto en pantallas anchas), `renderizar(estado, {etiquetas})` y `fases[].grupo` (clase de color de la fase).
