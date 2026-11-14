@@ -38,7 +38,7 @@ npm run build
 
 ```
 npm test            # 1000 casos por puzzle (500 en 4x4, 5x5 y Megaminx, 100 en 6x6 y 7x7); ~64 min
-npm run test:rapido # 100 casos por puzzle (20 en 4x4–7x7 y Megaminx); @RAPIDO@
+npm run test:rapido # 100 casos por puzzle (20 en 4x4–7x7 y Megaminx); ~7 min
 npm run bench       # benchmark de los solvers (N=200 npm run bench para más casos)
 ```
 
