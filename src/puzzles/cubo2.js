@@ -110,6 +110,7 @@ export default definirPuzzle({
   capacidades: { scramble: true, validar: true, resolver: true, editar: true },
   descripcion: 'Solución óptima en movimientos U, R, F (la esquina DBL queda fija).',
   tipoScramble: 'estado aleatorio',
+  costeScramble: 300, // ms aprox. del primer scramble (tablas); orden de las precargas
   paleta: b.paleta,
   estadoResuelto: b.estadoResuelto,
   aplicarMovimiento: b.aplicarMovimiento,

@@ -26,7 +26,12 @@ const st = {
   sol: null,       // { movimientos, base, ms }
   paso: 0,
   timer: null,
-  ocupado: false,
+  ocupado: false,    // id del puzzle que se está resolviendo (o false)
+  gen: 0,            // generación de la vista del scramble (cambia al elegir puzzle o pedir otro)
+  precargados: new Map(), // puzzle -> scramble listo para mostrar
+  enCamino: new Map(),    // puzzle -> petición de scramble en marcha
+  visitados: new Set(),   // puzzles que el usuario ha elegido
+  sel: 0,            // cambia en cada selección de puzzle
   listos: new Set(), // puzzles con las tablas ya generadas (donde se calcula)
   historial: [],     // estados anteriores del editor (Deshacer)
   // Vista 3D
@@ -37,6 +42,7 @@ const st = {
   prefijos: [],      // estados del scramble tras 0..n movimientos (orientación real)
 };
 const ms3D = () => 420 / st.velocidad;
+const ocupado = () => !!st.ocupado && !!st.p && st.ocupado === st.p.id;
 
 // ---------- Vista 3D ----------
 function usar3D(cual) {
@@ -145,7 +151,7 @@ function pintarPrevia() {
   $('s-play').textContent = repScr.reproduciendo ? '❚❚' : '▶';
   $('s-play').setAttribute('aria-label', repScr.reproduciendo ? 'Pausar el scramble' : 'Reproducir el scramble');
   $('s-velocidad').textContent = `×${st.velocidad}`;
-  $('rep-scramble').hidden = !n;
+  for (const b of ['s-inicio', 's-atras', 's-play', 's-adelante', 's-fin']) $(b).disabled = !n;
   pintarModos();
 }
 
@@ -156,7 +162,7 @@ function recordar() {
   if (st.historial.length > MAX_HISTORIAL) st.historial.shift();
 }
 function deshacer() {
-  if (!st.historial.length || st.ocupado) return;
+  if (!st.historial.length || ocupado()) return;
   quitarSolucion();
   st.seleccion = null;
   st.editor = st.historial.pop();
@@ -190,9 +196,12 @@ function pintarSelector() {
 
 async function seleccionar(id) {
   const p = PUZZLES.find((x) => x.id === id);
-  if (!p || st.ocupado) return;
+  if (!p) return;
+  // Los dos paneles cambian a la vez y al momento; lo que esté en marcha para el
+  // puzzle anterior sigue en el Worker, pero su respuesta ya no se mostrará.
   pararReproduccion();
   repScr.cancelar();
+  st.sel++;
   st.p = p;
   st.scramble = [];
   st.estadoScramble = null;
@@ -223,12 +232,16 @@ async function seleccionar(id) {
   pintarVistas();
   limpiarMensajes();
   pintarEditor();
-  await nuevoScramble();
+  $('aviso-tablas').hidden = true;
+  const r = nuevoScramble();
+  asegurarTablas().catch((err) => { if (st.p === p) mensaje('error', `No se pudieron generar las tablas: ${err.message}`); });
+  await r;
 }
 
 // ---------- Tablas (en el Worker o en el hilo principal) ----------
 function textoSegundos(ms) { return (ms / 1000).toFixed(1).replace('.', ',') + ' s'; }
 
+const tablasEnCamino = new Map(); // puzzle -> promesa de 'inicializar' (una sola petición por puzzle)
 async function asegurarTablas() {
   const p = st.p;
   if (!p.capacidades.resolver || st.listos.has(p.id)) return;
@@ -239,54 +252,132 @@ async function asegurarTablas() {
   const dondeTxt = () => (motor.modo() === 'worker' ? ' (en segundo plano)' : '');
   const t0 = performance.now();
   aviso.textContent = base + dondeTxt();
-  const reloj = setInterval(() => { aviso.textContent = `${base}${dondeTxt()} ${textoSegundos(performance.now() - t0)}`; }, 100);
+  // el aviso es de este puzzle: si se cambia de puzzle, deja de actualizarse
+  const reloj = setInterval(() => { if (st.p === p) aviso.textContent = `${base}${dondeTxt()} ${textoSegundos(performance.now() - t0)}`; }, 100);
   try {
-    const r = await motor.pedir('inicializar', p.id);
+    if (!tablasEnCamino.has(p.id)) tablasEnCamino.set(p.id, motor.pedir('inicializar', p.id).finally(() => tablasEnCamino.delete(p.id)));
+    const r = await tablasEnCamino.get(p.id);
     const ms = r.yaEstaba ? Math.round(performance.now() - t0) : r.ms;
     st.listos.add(p.id);
     if (st.p === p) aviso.textContent = `Tablas de ${p.nombre} generadas en ${ms} ms ${motor.modo() === 'worker' ? 'en un Web Worker (la página no se bloquea)' : 'en el hilo principal'}.`;
   } finally {
     clearInterval(reloj);
-    aviso.classList.remove('cargando');
+    if (st.p === p) aviso.classList.remove('cargando');
   }
 }
 
 // ---------- Scramble ----------
-async function nuevoScramble() {
-  if (st.ocupado) return;
-  st.ocupado = true;
-  const p = st.p;
-  $('nuevo').disabled = true;
-  try {
-    if (p.capacidades.resolver) await asegurarTablas();
-    else $('aviso-tablas').hidden = true;
-    const r = await motor.pedir('scramble', p.id);
-    if (st.p !== p) return;
-    repScr.cancelar();
-    st.scramble = r.movimientos;
-    st.prefijos = [p.estadoResuelto()];
-    for (const m of st.scramble) st.prefijos.push(p.aplicarMovimiento(st.prefijos[st.prefijos.length - 1], m));
-    st.pasoScramble = st.scramble.length;
-    st.estadoScramble = st.prefijos[st.scramble.length];
-    // puzzles cuyos scrambles giran el puzzle entero (Megaminx): se muestra (y se
-    // carga en el editor) en la orientación de referencia
-    if (p.estadoVistaScramble) st.estadoScramble = p.estadoVistaScramble(st.estadoScramble);
-  } catch (err) {
-    mensaje('error', `No se pudo generar el scramble: ${err.message}`);
-    return;
-  } finally {
-    st.ocupado = false;
-    $('nuevo').disabled = false;
+// Scrambles precargados: uno listo por puzzle (st.precargados). Al mostrar uno se pide
+// el siguiente de ese puzzle (prioridad media) y, con el Worker de fondo libre, se
+// precargan los demás (prioridad baja), empezando por los más rápidos de generar.
+// Cada petición lleva un id; st.gen cambia con cada selección o "Nuevo scramble", y
+// una respuesta de otra generación no se muestra (se guarda como precargada).
+const esMovil = () => !!(typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(max-width: 700px), (pointer: coarse)').matches);
+const COSTE_PESADO = 500; // ms: en el móvil, no se precargan los que tardan más hasta que se elige el puzzle
+
+function pedirScramble(p, prioridad) {
+  let prom = st.enCamino.get(p.id);
+  if (prom) {
+    if (prioridad !== 'baja') motor.subirPrioridad(prom.idPeticion, prioridad);
+    return prom;
   }
+  const peticion = motor.pedir('scramble', p.id, {}, { prioridad });
+  prom = peticion.then((r) => {
+    st.enCamino.delete(p.id);
+    // nadie la espera (precarga) o la esperaba una generación ya pasada: se guarda
+    if (!prom.reclamada && !st.precargados.has(p.id)) st.precargados.set(p.id, r.movimientos);
+    return r.movimientos;
+  }, (err) => { st.enCamino.delete(p.id); throw err; });
+  prom.idPeticion = peticion.id;
+  prom.reclamada = false;
+  st.enCamino.set(p.id, prom);
+  return prom;
+}
+
+/** Después de mostrar un scramble de p: el siguiente de p y, en segundo plano, los demás. */
+function rellenarPrecargas(p) {
+  if (!st.precargados.has(p.id)) pedirScramble(p, 'media').catch(() => {});
+  st.visitados.add(p.id);
+  const local = motor.modo() !== 'worker';
+  const candidatos = PUZZLES
+    .filter((q) => q !== p && !st.precargados.has(q.id) && !st.enCamino.has(q.id))
+    // sin Worker, solo los que no necesitan tablas (no bloquear la página);
+    // en el móvil, los pesados solo cuando el usuario ya ha elegido ese puzzle
+    .filter((q) => (local ? (q.costeScramble || 0) <= 20 : !(esMovil() && (q.costeScramble || 0) > COSTE_PESADO && !st.visitados.has(q.id))))
+    .sort((a, b) => (a.costeScramble || 0) - (b.costeScramble || 0));
+  for (const q of candidatos) pedirScramble(q, 'baja').catch(() => {});
+}
+
+function mostrarGenerando(p) {
+  repScr.cancelar();
+  st.scramble = [];
+  st.prefijos = [p.estadoResuelto()];
+  st.pasoScramble = 0;
+  st.estadoScramble = st.prefijos[0];
+  $('panel-scramble').dataset.puzzle = p.id; // de qué puzzle es lo que se ve (lo comprueban los tests)
+  const el = $('scramble');
+  el.textContent = 'Generando scramble…';
+  el.classList.add('generando');
+  el.classList.remove('largo');
+  $('longitud').textContent = '';
+  $('copiar').disabled = true;
+  $('cargar').disabled = true;
+  $('nota-scramble').hidden = true;
+  pintarPrevia();
+}
+
+function mostrarScramble(p, movimientos) {
+  repScr.cancelar();
+  st.scramble = movimientos;
+  st.prefijos = [p.estadoResuelto()];
+  for (const m of st.scramble) st.prefijos.push(p.aplicarMovimiento(st.prefijos[st.prefijos.length - 1], m));
+  st.pasoScramble = st.scramble.length;
+  st.estadoScramble = st.prefijos[st.scramble.length];
+  // puzzles cuyos scrambles giran el puzzle entero (Megaminx): se muestra (y se
+  // carga en el editor) en la orientación de referencia
+  if (p.estadoVistaScramble) st.estadoScramble = p.estadoVistaScramble(st.estadoScramble);
+  $('panel-scramble').dataset.puzzle = p.id;
   const texto = p.formatear(st.scramble);
   const el = $('scramble');
   el.textContent = texto;
+  el.classList.remove('generando');
   el.classList.toggle('largo', texto.length > 140);
   $('longitud').textContent = p.describirLongitud ? p.describirLongitud(st.scramble) : `${st.scramble.length} movimientos`;
+  $('copiar').disabled = false;
+  $('cargar').disabled = !puedeResolver(p);
   pintarPrevia();
   const nota = $('nota-scramble');
   nota.textContent = p.notaScramble ? p.notaScramble(st.scramble) : '';
   nota.hidden = !p.notaScramble;
+}
+
+async function nuevoScramble() {
+  const p = st.p;
+  const gen = ++st.gen;
+  const listo = st.precargados.get(p.id);
+  if (listo) {
+    st.precargados.delete(p.id);
+    mostrarScramble(p, listo);
+    rellenarPrecargas(p);
+    return;
+  }
+  mostrarGenerando(p);
+  let movs;
+  const prom = pedirScramble(p, 'alta');
+  prom.reclamada = true;
+  try {
+    movs = await prom;
+  } catch (err) {
+    if (gen === st.gen) mensaje('error', `No se pudo generar el scramble: ${err.message}`);
+    return;
+  }
+  if (gen !== st.gen || st.p !== p) {
+    // respuesta obsoleta (se cambió de puzzle o se pidió otro): no se muestra
+    if (!st.precargados.has(p.id)) st.precargados.set(p.id, movs);
+    return;
+  }
+  mostrarScramble(p, movs);
+  rellenarPrecargas(p);
 }
 
 // ---------- Editor ----------
@@ -397,6 +488,7 @@ function pintarEditor() {
   const p = st.p;
   const editable = puedeResolver(p);
   const mostrado = estadoMostrado();
+  $('panel-resolver').dataset.puzzle = p.id;
   const editables = editable ? new Set(p.pegatinasEditables(mostrado)) : null;
   const v = vista3D('editor');
   $('vista-editor').hidden = !!v;
@@ -428,7 +520,7 @@ function alPulsarPegatina(ev) {
 }
 
 function tocarPegatina(i) {
-  if (!puedeResolver(st.p) || st.ocupado) return;
+  if (!puedeResolver(st.p) || ocupado()) return;
   const mostradoAntes = estadoMostrado();
   if (!new Set(st.p.pegatinasEditables(mostradoAntes)).has(i)) return;
   if (st.sol) repSol.cancelar();
@@ -482,16 +574,18 @@ function mensaje(tipo, texto) {
 // ---------- Resolver ----------
 async function resolver() {
   const p = st.p;
-  if (!puedeResolver(p) || st.ocupado) return;
+  const sel = st.sel; // si se cambia de puzzle (aunque se vuelva a este), la respuesta no se muestra
+  const vigente = () => st.p === p && st.sel === sel;
+  if (!puedeResolver(p) || ocupado()) return;
   if (st.sol) { st.editor = st.sol.base; quitarSolucion(); }
   st.seleccion = null;
   limpiarMensajes();
-  st.ocupado = true;
+  st.ocupado = p.id;
   $('resolver').disabled = true;
   try {
     await asegurarTablas();
     const v = await motor.pedir('validar', p.id, { estado: st.editor });
-    if (st.p !== p) return;
+    if (!vigente()) return;
     if (!v.valido) {
       mensaje('error', 'Este estado no es posible:');
       v.errores.forEach((e) => mensaje('error', e));
@@ -500,7 +594,7 @@ async function resolver() {
     mensaje('info', 'Buscando solución…');
     await esperarPintado();
     const r = await motor.pedir('resolver', p.id, { estado: st.editor });
-    if (st.p !== p) return;
+    if (!vigente()) return;
     limpiarMensajes();
     if (!r.ok) {
       (r.errores.length ? r.errores : ['No se pudo resolver.']).forEach((e) => mensaje('error', e));
@@ -515,12 +609,15 @@ async function resolver() {
     pintarVistas();
     mensaje('ok', 'Estado válido. Sigue la solución paso a paso con los controles.');
   } catch (err) {
+    if (!vigente()) return;
     limpiarMensajes();
     mensaje('error', `Error al resolver: ${err.message}`);
   } finally {
-    st.ocupado = false;
-    $('resolver').disabled = !puedeResolver(st.p);
-    pintarEditor();
+    if (st.ocupado === p.id) st.ocupado = false;
+    if (vigente()) {
+      $('resolver').disabled = !puedeResolver(st.p);
+      pintarEditor();
+    }
   }
 }
 

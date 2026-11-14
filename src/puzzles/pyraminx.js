@@ -216,6 +216,7 @@ export default definirPuzzle({
   capacidades: { scramble: true, validar: true, resolver: true, editar: true },
   descripcion: 'Solución óptima en movimientos U, L, R, B, más las puntas al final.',
   tipoScramble: 'estado aleatorio',
+  costeScramble: 250, // ms aprox. del primer scramble (tablas); orden de las precargas
   paleta: PALETA_PYRA,
   estadoResuelto: () => geo.resuelto.slice(),
   aplicarMovimiento(e, m) {

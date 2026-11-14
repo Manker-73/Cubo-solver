@@ -333,3 +333,19 @@ En la vista previa del scramble del Megaminx, los centros cambiaban de color de 
 ## Comprobación en Chromium
 - `scripts/comprobar-3d.py` (Python + Playwright; no es parte de `npm test` porque necesita Chrome): cuatro configuraciones (escritorio 1280 px y móvil 390 px con pantalla ×3 y táctil; tema claro y oscuro) × diez puzzles: scramble animado, cargar, resolver, solución animada hasta el final a ×8, paso atrás y adelante, resaltar una pieza, pintar tocando el modelo. Mide los FPS de las animaciones y guarda capturas en `docs/capturas/`.
 - Aquí Chrome dibuja WebGL por software (SwiftShader, 2 núcleos, sin GPU), así que es un caso más lento que un móvil real.
+
+# Corrección (noche 7): cambio de puzzle y scrambles precargados
+
+## El problema
+`seleccionar` cambiaba el panel de resolver al momento, pero el scramble se pedía después de `asegurarTablas()`: con un puzzle de tablas grandes (7x7: ~8 s), el panel del scramble seguía enseñando el puzzle anterior (y la etiqueta ya decía la del nuevo). Además, mientras había algo en marcha (`st.ocupado`), los clics en otro puzzle se ignoraban.
+
+## Decisiones
+- **El scramble no espera a las tablas del solver.** Los scrambles de 4x4–7x7 y Megaminx no necesitan tablas; los de estado aleatorio generan las suyas dentro de `generarScramble` (0,1–1,2 s la primera vez). Las del solver se piden después, en el Worker principal.
+- **Dos Workers** (principal y de fondo) en vez de uno con prioridades: un Worker no se puede interrumpir, así que con uno solo una precarga en marcha (hasta ~1 s) retrasaría lo que pide el usuario, y las tablas del 7x7 (~8 s) retrasarían cualquier scramble. Las tablas de los scrambles de estado aleatorio pueden acabar en los dos Workers (unos pocos MB más); las del solver solo en el principal.
+- **Cola en el hilo principal, una tarea por Worker**: así una petición del usuario solo puede esperar a la tarea que ya está en marcha, nunca a una cola de precargas.
+- **Orden de las precargas**: por `costeScramble` (medido aquí: 0 en 4x4–7x7 y Megaminx, Skewb ~100 ms, Pyraminx ~230, 2x2 ~280, 3x3 ~800, Square-1 ~1.200).
+- **Móvil**: lo que pedía la tarea ("no precargar las tablas grandes del 6x6/7x7") se cumple siempre, también en el ordenador: las precargas son solo scrambles, y los del 6x6/7x7 no necesitan tablas. Además, en el móvil no se precargan los scrambles de más de 500 ms (Square-1, 3x3) hasta que el usuario elige ese puzzle.
+- **Sin Worker** (hilo principal) solo se precargan los que no necesitan tablas, para no bloquear la página sin que el usuario lo pida.
+- **Respuesta obsoleta de un scramble**: no se muestra, pero se guarda como precargada (si ese puzzle no tenía ya una). Las de "Resolver" obsoletas se descartan (`st.sel`), aunque se haya vuelto al mismo puzzle: el editor ya no es el mismo.
+- **"Nuevo scramble" mientras se genera otro del mismo puzzle**: no se pide otro; se espera al que está en camino.
+- **Textos**: descripciones del panel "Resolver" con los métodos actuales (4x4 en tres fases sin paridades, 5x5–7x7 con centros por búsqueda y aristas con macros, Square-1 en dos fases, Megaminx con longitudes y tiempos) y avisos de tablas ("Generando las tablas de la reducción del 4x4…", "…de centros y las macros de aristas del 5x5…" en vez de "Preparando los conmutadores").

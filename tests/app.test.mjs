@@ -41,7 +41,7 @@ async function abrir(t, { beforeParse } = {}) {
     const t0 = Date.now();
     while (!cond()) { if (Date.now() - t0 > ms) throw new Error('tiempo agotado'); await espera(40); }
   };
-  await hasta(() => doc.getElementById('scramble').textContent.length > 0);
+  await hasta(() => doc.getElementById('scramble').textContent.length > 0 && !doc.getElementById('scramble').classList.contains('generando'));
   return { w, doc, hasta, errores };
 }
 
@@ -49,7 +49,7 @@ async function elegirPuzzle(ctx, nombre) {
   const { doc, hasta } = ctx;
   const chip = () => [...doc.querySelectorAll('#selector .chip')].find((c) => c.textContent === nombre);
   chip().click();
-  await hasta(() => chip().getAttribute('aria-pressed') === 'true' && doc.querySelector('#vista-scramble svg') && !doc.getElementById('nuevo').disabled);
+  await hasta(() => chip().getAttribute('aria-pressed') === 'true' && doc.querySelector('#vista-scramble svg') && !doc.getElementById('nuevo').disabled && !doc.getElementById('scramble').classList.contains('generando'));
   await espera(60);
 }
 
@@ -273,7 +273,7 @@ test('app: Megaminx — vistas, rellenar cara, deshacer, leyenda, etapas y repro
     assert.equal(doc.getElementById('nota-scramble').hidden, false);
     assert.match(doc.getElementById('nota-scramble').textContent, /el centro blanco queda en \w+ y el verde oscuro en \w+/);
     doc.getElementById('nuevo').click();
-    await hasta(() => !doc.getElementById('nuevo').disabled);
+    await hasta(() => !doc.getElementById('scramble').classList.contains('generando'));
     await espera(60);
   }
   // "Cargar scramble actual" carga ese mismo estado ya reorientado
@@ -383,12 +383,13 @@ test('app: con Web Worker (código empaquetado real en worker_threads)', async (
     assert.match(doc.getElementById('modo-calculo').textContent, /Web Worker/);
     for (const nombre of ['Square-1', '3x3', 'Skewb', '4x4', '5x5', 'Megaminx']) {
       await elegirPuzzle(ctx, nombre);
-      assert.match(doc.getElementById('aviso-tablas').textContent, /Web Worker/, nombre);
+      // las tablas del solver se generan después de mostrar el scramble
+      await ctx.hasta(() => /Web Worker/.test(doc.getElementById('aviso-tablas').textContent), 60000);
       doc.getElementById('cargar').click();
       await resolverYReproducir(ctx, nombre);
     }
     for (const op of ['ping', 'inicializar', 'scramble', 'validar', 'resolver']) assert.ok(reg.peticiones.includes(op), op);
-    assert.equal(reg.workers.length, 1);
+    assert.equal(reg.workers.length, 2, 'un Worker principal y otro de fondo (scrambles)');
     assert.ok(reg.respuestas >= reg.peticiones.length - 1);
     assert.deepEqual(errores, []);
   } finally {
@@ -428,6 +429,172 @@ test('app: si el Worker no se puede crear o falla, todo sigue en el hilo princip
   await elegirPuzzle(ctx, 'Pyraminx');
   ctx.doc.getElementById('cargar').click();
   await resolverYReproducir(ctx, 'Pyraminx tras fallar el Worker');
+  assert.deepEqual(ctx.errores, []);
+  ctx.w.close();
+});
+
+// ---------- Cambio de puzzle: los dos paneles a la vez; scrambles precargados ----------
+const { PUZZLES: LISTA } = await import('../src/puzzles/index.js');
+const porNombre = (n) => LISTA.find((p) => p.nombre === n);
+const ESTADO_ALEATORIO = ['2x2', '3x3', 'pyraminx', 'skewb', 'square1'];
+
+/**
+ * Vigila la página: tras cada cambio del DOM (y cada 5 ms), el panel del scramble y el de
+ * resolver deben ser del mismo puzzle (el del chip pulsado), con la etiqueta de su tipo.
+ */
+function vigilar(w, doc) {
+  const fallos = [];
+  let comprobaciones = 0;
+  const comprobar = () => {
+    comprobaciones++;
+    const chip = doc.querySelector('#selector .chip[aria-pressed="true"]');
+    if (!chip) return;
+    const p = porNombre(chip.textContent);
+    const a = doc.getElementById('panel-scramble').dataset.puzzle, b = doc.getElementById('panel-resolver').dataset.puzzle;
+    if (a !== p.id || b !== p.id) fallos.push(`chip ${p.id}, scramble ${a}, resolver ${b}`);
+    if (doc.getElementById('tipo-scramble').textContent !== p.tipoScramble) fallos.push(`etiqueta de ${p.id}: ${doc.getElementById('tipo-scramble').textContent}`);
+  };
+  const obs = new w.MutationObserver(comprobar);
+  obs.observe(doc.body, { subtree: true, childList: true, attributes: true, characterData: true });
+  const t = setInterval(comprobar, 5);
+  return { fallos, n: () => comprobaciones, parar: () => { obs.disconnect(); clearInterval(t); } };
+}
+const chipDe = (doc, nombre) => [...doc.querySelectorAll('#selector .chip')].find((c) => c.textContent === nombre);
+const generando = (doc) => doc.getElementById('scramble').classList.contains('generando');
+/** SVG normalizado por el DOM (para comparar con lo que dibuja el puzzle). */
+const normal = (doc, svg) => { const d = doc.createElement('div'); d.innerHTML = svg; return d.firstElementChild.outerHTML; };
+
+async function cambiosRapidos(ctx, secuencia, { conWorker = true } = {}) {
+  const { w, doc, hasta } = ctx;
+  const v = vigilar(w, doc);
+  const t0 = Date.now();
+  for (const n of secuencia) { chipDe(doc, n).click(); await espera(conWorker ? 120 : 20); }
+  // sin Worker, las tablas de los scrambles bloquean el hilo (por eso los cambios van casi sin pausa)
+  if (conWorker) assert.ok(Date.now() - t0 < 1000, `los cambios se hacen en menos de un segundo (${Date.now() - t0} ms)`);
+  const final = porNombre(secuencia[secuencia.length - 1]);
+  await hasta(() => !generando(doc), 60000);
+  await espera(200);
+  v.parar();
+  assert.deepEqual(v.fallos.slice(0, 5), [], 'los dos paneles muestran siempre el mismo puzzle');
+  assert.ok(v.n() > 20);
+  assert.equal(doc.getElementById('panel-scramble').dataset.puzzle, final.id);
+  // el scramble mostrado es de ese puzzle: se aplica con su notación y es su vista previa
+  const movs = final.parsear(doc.getElementById('scramble').textContent);
+  assert.ok(movs.length > 0);
+  const estado = final.aplicarSecuencia(final.estadoResuelto(), movs);
+  const vista = final.estadoVistaScramble ? final.estadoVistaScramble(estado) : estado;
+  assert.equal(doc.querySelector('#vista-scramble svg').outerHTML, normal(doc, final.renderizar(vista, {})), 'vista previa = scramble del puzzle elegido');
+}
+
+test('app: cambiar rápidamente de puzzle (sin Worker): los dos paneles siempre del mismo puzzle', async (t) => {
+  const ctx = await abrir(t);
+  if (!ctx) return;
+  await cambiosRapidos(ctx, ['Pyraminx', '7x7', 'Skewb', 'Megaminx'], { conWorker: false });
+  await cambiosRapidos(ctx, ['Square-1', '3x3', '6x6', 'Pyraminx', '2x2'], { conWorker: false });
+  // precargados: sin Worker solo los que no necesitan tablas (4x4–7x7, Megaminx); el cambio es inmediato
+  await espera(300);
+  for (const n of ['7x7', 'Megaminx', '5x5']) {
+    chipDe(ctx.doc, n).click();
+    assert.equal(generando(ctx.doc), false, `${n}: el scramble precargado se muestra al momento`);
+    assert.equal(ctx.doc.getElementById('panel-scramble').dataset.puzzle, porNombre(n).id);
+    await espera(100);
+  }
+  assert.deepEqual(ctx.errores, []);
+  ctx.w.close();
+});
+
+test('app: cambiar rápidamente de puzzle con los Workers reales', async (t) => {
+  const reg = { workers: [], peticiones: [], respuestas: 0 };
+  const ctx = await abrir(t, { beforeParse: (win) => instalarWorker(win, reg) });
+  if (!ctx) return;
+  try {
+    await cambiosRapidos(ctx, ['Pyraminx', '7x7', 'Skewb', 'Megaminx']);
+    await cambiosRapidos(ctx, ['3x3', 'Square-1', '6x6', '2x2']);
+    assert.deepEqual(ctx.errores, []);
+  } finally {
+    reg.workers.forEach((x) => x.terminate());
+    ctx.w.close();
+  }
+});
+
+test('app: etiqueta del tipo de scramble correcta en todos los puzzles (al cambiar, al momento)', async (t) => {
+  const ctx = await abrir(t);
+  if (!ctx) return;
+  const { doc } = ctx;
+  const chips = [...doc.querySelectorAll('#selector .chip')];
+  assert.equal(chips.length, LISTA.length);
+  for (const c of chips) {
+    const p = porNombre(c.textContent);
+    c.click();
+    const etiqueta = doc.getElementById('tipo-scramble').textContent;
+    if (ESTADO_ALEATORIO.includes(p.id)) assert.equal(etiqueta, 'estado aleatorio', p.id);
+    else assert.match(etiqueta, /^movimientos aleatorios/, p.id);
+    assert.equal(doc.getElementById('panel-scramble').dataset.puzzle, p.id);
+    assert.equal(doc.getElementById('panel-resolver').dataset.puzzle, p.id);
+    // mientras se genera: el puzzle nuevo resuelto, "Generando scramble…" y los botones desactivados
+    if (generando(doc)) {
+      assert.equal(doc.getElementById('scramble').textContent, 'Generando scramble…');
+      for (const id of ['copiar', 'cargar', 's-play', 's-inicio', 's-atras', 's-adelante', 's-fin']) assert.equal(doc.getElementById(id).disabled, true, id);
+      assert.equal(doc.querySelector('#vista-scramble svg').outerHTML, normal(doc, p.renderizar(p.estadoResuelto(), {})), 'vista previa: el puzzle nuevo resuelto');
+    }
+    await ctx.hasta(() => !generando(doc), 60000);
+    assert.equal(doc.getElementById('copiar').disabled, false);
+  }
+  ctx.w.close();
+});
+
+/** Worker simulado: responde a cada petición con un retraso que decide el test. */
+function workerControlado(window, ctl) {
+  const FALSO = { pyraminx: ['U', "L'", 'r'], skewb: ['R', "U'"], megaminx: ['R++', 'D--', 'U'], square1: ['(1,0)', '/'] };
+  window.Blob = class { constructor(p) { this.t = p.join(''); } };
+  window.URL.createObjectURL = () => 'blob:x';
+  window.Worker = class {
+    constructor() { ctl.workers++; }
+    postMessage(m) {
+      ctl.mensajes.push(m);
+      const r = m.op === 'ping' ? 'ok'
+        : m.op === 'inicializar' ? { ms: 1, yaEstaba: false }
+        : m.op === 'scramble' ? { movimientos: (FALSO[m.puzzle] || ['R', 'U']).slice(), ms: 1 }
+        : m.op === 'validar' ? { valido: true, errores: [] } : { ok: true, movimientos: [], errores: [], ms: 1 };
+      const d = m.op === 'scramble' ? (ctl.retraso[m.puzzle] || 0) : 0;
+      setTimeout(() => { if (m.op === 'scramble' && m.puzzle === 'pyraminx') ctl.pyraminxRespondido = Date.now(); this.onmessage && this.onmessage({ data: { id: m.id, ok: true, resultado: r } }); }, d);
+    }
+    terminate() {}
+  };
+}
+
+test('app: una respuesta tardía de un puzzle anterior no cambia la vista (y queda precargada)', async (t) => {
+  const ctl = { workers: 0, mensajes: [], retraso: { pyraminx: 1200 } };
+  const ctx = await abrir(t, { beforeParse: (win) => workerControlado(win, ctl) });
+  if (!ctx) return;
+  const { doc, hasta } = ctx;
+  assert.equal(ctl.workers, 2);
+  chipDe(doc, 'Pyraminx').click();
+  assert.equal(generando(doc), true, 'el Pyraminx aún no tiene scramble (su respuesta tarda)');
+  assert.equal(doc.getElementById('panel-scramble').dataset.puzzle, 'pyraminx');
+  await espera(150);
+  chipDe(doc, 'Skewb').click();
+  await hasta(() => !generando(doc));
+  const textoSkewb = doc.getElementById('scramble').textContent;
+  const svgSkewb = doc.getElementById('vista-scramble').innerHTML;
+  assert.equal(textoSkewb, "R U'");
+  // llega la respuesta del Pyraminx: no se muestra
+  await hasta(() => ctl.pyraminxRespondido, 5000);
+  await espera(100);
+  assert.equal(doc.getElementById('scramble').textContent, textoSkewb);
+  assert.equal(doc.getElementById('vista-scramble').innerHTML, svgSkewb);
+  assert.equal(doc.getElementById('panel-scramble').dataset.puzzle, 'skewb');
+  // pero queda guardada: al volver al Pyraminx se muestra al momento
+  chipDe(doc, 'Pyraminx').click();
+  assert.equal(generando(doc), false, 'scramble precargado: al momento');
+  assert.equal(doc.getElementById('scramble').textContent, "U L' r");
+  // todas las peticiones llevan un identificador distinto
+  const ids = ctl.mensajes.map((m) => m.id);
+  assert.ok(ids.every((x) => Number.isInteger(x)));
+  assert.equal(new Set(ids).size, ids.length);
+  // las precargas van con prioridad baja después de lo pedido; ninguna petición de tablas
+  // del 6x6/7x7 se hace sin que el usuario elija ese puzzle
+  assert.ok(!ctl.mensajes.some((m) => m.op === 'inicializar' && ['6x6', '7x7'].includes(m.puzzle)));
   assert.deepEqual(ctx.errores, []);
   ctx.w.close();
 });

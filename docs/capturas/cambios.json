@@ -1,0 +1,97 @@
+{
+ "resumen": {
+  "escritorio": {
+   "fallos": [],
+   "n_fallos": 0,
+   "vuelta3_scramble_al_pulsar": [
+    [
+     "Pyraminx",
+     "al momento"
+    ],
+    [
+     "7x7",
+     "al momento"
+    ],
+    [
+     "Skewb",
+     "al momento"
+    ],
+    [
+     "Megaminx",
+     "al momento"
+    ],
+    [
+     "Square-1",
+     "al momento"
+    ],
+    [
+     "3x3",
+     "al momento"
+    ],
+    [
+     "6x6",
+     "al momento"
+    ],
+    [
+     "2x2",
+     "al momento"
+    ],
+    [
+     "4x4",
+     "al momento"
+    ],
+    [
+     "5x5",
+     "al momento"
+    ]
+   ]
+  },
+  "movil": {
+   "fallos": [],
+   "n_fallos": 0,
+   "vuelta3_scramble_al_pulsar": [
+    [
+     "Pyraminx",
+     "al momento"
+    ],
+    [
+     "7x7",
+     "al momento"
+    ],
+    [
+     "Skewb",
+     "al momento"
+    ],
+    [
+     "Megaminx",
+     "al momento"
+    ],
+    [
+     "Square-1",
+     "al momento"
+    ],
+    [
+     "3x3",
+     "al momento"
+    ],
+    [
+     "6x6",
+     "al momento"
+    ],
+    [
+     "2x2",
+     "al momento"
+    ],
+    [
+     "4x4",
+     "al momento"
+    ],
+    [
+     "5x5",
+     "al momento"
+    ]
+   ]
+  }
+ },
+ "errores": []
+}

@@ -20,6 +20,7 @@ export function definirPuzzle(def) {
   const p = Object.assign(
     {
       descripcion: '',
+      costeScramble: 0, // ms aprox. del primer scramble (tablas que necesita): ordena las precargas
       separador: ' ',
       aplicarSecuencia(estado, movs) {
         let e = estado;

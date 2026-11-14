@@ -43,7 +43,7 @@ src/
   app/            interfaz
     plantilla.html, estilos.css
     main.js         interfaz (solo usa la interfaz común)
-    motor.js        envía el trabajo pesado al Web Worker (o al hilo principal si no hay)
+    motor.js        dos Web Workers (principal: tablas del solver, validar, resolver; fondo: scrambles) con cola por prioridades (o el hilo principal si no hay)
     servicio.js     tablas, scrambles, validación y búsquedas (lo usan el Worker y el hilo principal)
     worker.js       punto de entrada del Worker
     escena3d.js     escena 3D sin WebGL: triángulos, colores, giro en curso, resaltado, selección por rayo
@@ -104,6 +104,7 @@ Opcional (según `capacidades`):
 | `vista3D(estado)`, `giro3D(estado, mov)`, `reorientar3D(estado)` | geometría 3D y giros para la vista 3D (ver "Vista 3D" más abajo) |
 | `aplicarSecuencia`, `invertir` | se rellenan automáticamente |
 | `tipoScramble`, `descripcion`, `avisoInicializacion`, `describirLongitud(movs)` | textos para la interfaz |
+| `costeScramble` | ms aproximados del primer scramble (las tablas que necesita generarScramble; 0 en los de movimientos aleatorios): ordena las precargas |
 
 ## Cómo añadir un puzzle
 
@@ -170,6 +171,12 @@ Piezas de la app:
 **Resaltar piezas** (para el modo aprender): `vista.resaltar(indicesDeLaGeometria, 'brillo' | 'transparencia')`, `vista.resaltarPiezas(clavesDePieza, modo)` y `vista.resaltar(null)` para quitarlo; `pegatinasDePiezas(geometria, claves)` (en `modelo3d.js`) da las pegatinas de unas piezas. Desde la consola o desde otro módulo: `window.cuboSolver.vista3D('previa' | 'editor')` y `cuboSolver.resaltarPiezas('editor', claves, modo)`.
 
 Para un puzzle nuevo: si es de cortes planos, `...modelo3DGeo(geo, camara)` y ya está; si no, `vista3D` y `giro3D` a mano, y el test `tests/vista3d.test.mjs` dice si la animación coincide con el modelo.
+
+## Interfaz: cambio de puzzle, scrambles precargados y Workers
+- **Al elegir un puzzle, los dos paneles cambian a la vez, en el mismo instante** (`seleccionar` es síncrona hasta ahí): el de resolver, y el del scramble con su etiqueta y, si no hay uno precargado, el puzzle nuevo resuelto y "Generando scramble…" (copiar, cargar y el reproductor del scramble desactivados). Las tablas del solver se piden después y no retrasan el scramble.
+- **Precargas** (`st.precargados`: un scramble listo por puzzle). Al mostrar uno se pide el siguiente de ese puzzle (prioridad media) y los de los demás puzzles (prioridad baja), de menor a mayor `costeScramble`. Sin Worker, solo los que no necesitan tablas. En el móvil (`(max-width: 700px), (pointer: coarse)`), los de más de 500 ms (Square-1 y 3x3) no se precargan hasta que el usuario elige ese puzzle una vez. Las tablas del solver (las grandes del 6x6/7x7, por ejemplo) nunca se precargan: se generan al elegir el puzzle.
+- **Respuestas obsoletas**: cada petición lleva un `id` (`motor.pedir(...).id`); `st.gen` cambia en cada selección o "Nuevo scramble" y `st.sel` en cada selección. Una respuesta de otra generación no se muestra; si es un scramble, se guarda como precargado de su puzzle. Lo mismo con "Resolver" y con las tablas (el aviso solo se actualiza si sigue siendo el mismo puzzle).
+- **Motor** (`motor.js`): dos Workers con el mismo código. Cada uno hace una tarea cada vez y la cola está en el hilo principal, ordenada por prioridad (alta = lo que pide el usuario, media = el siguiente del puzzle actual, baja = precargas). El **principal** hace lo que necesita las tablas del solver (inicializar, validar, resolver) y nunca recibe precargas. El **de fondo** hace los scrambles; una precarga solo se le envía si está libre y no espera nada más urgente, y si está ocupado con una precarga cuando el usuario pide un scramble, ese scramble va al principal si está libre. `subirPrioridad(id)` sube una precarga en cola cuando el usuario la necesita. Si un Worker falla, lo pendiente se rehace en el otro; si fallan los dos, en el hilo principal.
 
 ## Interfaz: Deshacer
 `main.js` guarda el estado del editor antes de cada cambio (pintar, herramientas, acciones, *Resetear*, *Cargar scramble*; hasta 200) y *Deshacer* (o Ctrl+Z) lo recupera. No necesita nada de los puzzles salvo `clonar`.

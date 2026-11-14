@@ -983,14 +983,16 @@ export function crearCuboGrande(N) {
 
   return crearNxN(N, {
     capacidades: { scramble: true, validar: true, resolver: true, editar: true },
-    descripcion: `Reducción: centros → emparejar aristas → 3x3 (Kociemba), con las paridades${impar ? ' de las aristas' : ' OLL y PLL'}. Solución larga pero siempre correcta.`,
+    descripcion: N === 4
+      ? 'Reducción en tres fases de búsqueda (centros y aristas emparejadas, sin paridades OLL ni PLL) y después 3x3 con Kociemba: ~55 movimientos, en 1–2 s.'
+      : `Reducción: centros por búsqueda${N > 5 ? ' (los oblicuos, con conmutadores)' : ''}, aristas emparejadas con macros que no mueven los centros${N % 2 === 0 ? ', paridad PLL si hace falta' : ''} y 3x3 con Kociemba: ~${{ 5: 109, 6: 256, 7: 356 }[N]} movimientos, en ${{ 5: '2', 6: '3–4', 7: '6–7' }[N]} s de media.`,
     pegatinasEditables: () => RES.map((_, i) => i),
     vistasEditor: b.vistasEditor,
     herramientas: b.herramientas,
     usarHerramienta: b.usarHerramienta,
     inicializar,
     estaInicializado: () => !!tablas,
-    avisoInicializacion: `Preparando los conmutadores del ${N}x${N}…`,
+    avisoInicializacion: N === 4 ? 'Generando las tablas de la reducción del 4x4…' : `Generando las tablas de centros y las macros de aristas del ${N}x${N}…`,
     validar: (e) => { const r = analizar(e); return { valido: r.valido, errores: r.errores }; },
     resolver,
     buscarRedundanciaSolucion: (movs) => redundanciaSolucionNxN(movs, N),

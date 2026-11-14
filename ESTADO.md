@@ -14,6 +14,23 @@
 
 Ya no queda ningún puzzle sin validador ni solver.
 
+## Corrección (noche 7): cambio de puzzle y scrambles precargados
+
+- **Fallo corregido**: al cambiar de puzzle, el panel del scramble seguía mostrando el anterior hasta que el Worker acababa (el scramble esperaba a las tablas del solver: hasta ~8 s en el 7x7), y los clics en otro puzzle se ignoraban mientras había algo en marcha. Ahora **los dos paneles cambian a la vez y al momento**. Si no hay scramble listo, se ve el puzzle nuevo resuelto (en 2D o 3D) con "Generando scramble…", y copiar, cargar y el reproductor desactivados.
+- **Scrambles precargados**: uno listo por puzzle. Al mostrar uno se pide el siguiente; los demás se precargan con prioridad baja, de más rápido a más lento, y solo con el Worker de fondo libre. **Dos Workers**: el principal (tablas del solver, validar, resolver) nunca recibe precargas, y lo que pide el usuario va siempre primero. En el móvil no se precargan los scrambles pesados (Square-1, 3x3) hasta elegir ese puzzle. Las tablas del solver (las grandes del 6x6/7x7) nunca se precargan.
+- **Respuestas obsoletas**: cada petición lleva un id; una respuesta de un puzzle que ya no está elegido no se muestra (un scramble se guarda como precargado de su puzzle). Igual con "Resolver" y con el aviso de tablas.
+- **Textos**: descripciones del panel "Resolver" al día (4x4 en tres fases sin paridades, 5x5–7x7 con centros por búsqueda y aristas con macros, Square-1 en dos fases, Megaminx ~90 giros) y avisos de tablas nuevos (ya no "Preparando los conmutadores").
+- **Tests** (`npm run test:rapido`: 128 tests, 128 pasan, ~9,5 min). Nuevos, en la prueba de humo:
+  - Cambios rápidos (Pyraminx → 7x7 → Skewb → Megaminx y otra secuencia de 5) sin Worker y con los Workers reales. Tras cada cambio del DOM y cada 5 ms, los dos paneles son del puzzle elegido y llevan su etiqueta, y el scramble final es de ese puzzle.
+  - Una respuesta tardía del Pyraminx (Worker simulado que tarda 1,2 s) no cambia la vista del Skewb; al volver al Pyraminx, sale al momento.
+  - Etiqueta del tipo de scramble en los 10 puzzles.
+  - Scramble precargado: el cambio lo muestra al momento.
+- **Chromium real** (`scripts/comprobar-cambios.py`, escritorio 1280 px y móvil 390 px):
+  - 3 vueltas a 10 puzzles cambiando cada ~120 ms, con 4 comprobaciones tras cada clic: 0 fallos y sin errores en consola.
+  - En la 3.ª vuelta, el scramble de los 10 puzzles estaba precargado y salió al momento.
+  - Capturas en `docs/capturas/cambios-escritorio.jpg` y `cambios-movil.jpg`.
+- Nota: la tarea habla de 11 puzzles; la app tiene 10 (2x2–7x7, Pyraminx, Skewb, Square-1, Megaminx), y los tests recorren todos los que hay en el registro.
+
 ## Noche 7: vista 3D
 
 ### Qué hay

@@ -573,7 +573,8 @@ export default definirPuzzle({
   nombre: 'Square-1',
   capacidades: { scramble: true, validar: true, resolver: true, editar: true },
   tipoScramble: 'estado aleatorio',
-  descripcion: 'Con «Mover piezas», toca dos piezas para intercambiarlas; si una es esquina y la otra arista, se intercambian también las de al lado hasta ocupar lo mismo (así cambia la forma). Con un color, toca una pegatina para pintarla. Toca la barra del medio para voltearla.',
+  costeScramble: 1200, // ms aprox. del primer scramble (tablas); orden de las precargas
+  descripcion: 'Dos fases (forma de cubo y después permutación), solo con giros posibles: ~11 barras. Para pintar: con «Mover piezas», toca dos piezas para intercambiarlas; si una es esquina y la otra arista, se intercambian también las de al lado hasta ocupar lo mismo (así cambia la forma). Con un color, toca una pegatina para pintarla. Toca la barra del medio para voltearla.',
   avisoInicializacion: 'Generando las tablas del Square-1…',
   separador: ' ',
   paleta: PALETA,

@@ -164,6 +164,7 @@ export default definirPuzzle({
   capacidades: { scramble: true, validar: true, resolver: true, editar: true },
   descripcion: 'Algoritmo de dos fases de Kociemba (soluciones de ~20 movimientos).',
   tipoScramble: 'estado aleatorio',
+  costeScramble: 800, // ms aprox. del primer scramble (tablas); orden de las precargas
   paleta: b.paleta,
   estadoResuelto: b.estadoResuelto,
   aplicarMovimiento: b.aplicarMovimiento,

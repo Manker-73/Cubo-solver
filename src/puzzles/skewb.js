@@ -202,6 +202,7 @@ export default definirPuzzle({
   capacidades: { scramble: true, validar: true, resolver: true, editar: true },
   descripcion: 'Solución óptima en notación WCA (R, U, L, B); la esquina URF queda fija.',
   tipoScramble: 'estado aleatorio',
+  costeScramble: 100, // ms aprox. del primer scramble (tablas); orden de las precargas
   paleta: PALETA_CUBO,
   estadoResuelto: () => geo.resuelto.slice(),
   aplicarMovimiento(e, m) {

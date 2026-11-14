@@ -12,7 +12,7 @@ Aplicación web en un único HTML, sin servidor.
 ## Cómo usarla
 
 1. Elige el puzzle en la barra superior (2x2 … 7x7, Pyraminx, Skewb, Square-1, Megaminx).
-2. **Scramble**: pulsa *Nuevo scramble*; *Copiar* lo copia al portapapeles. La primera vez en cada puzzle se generan sus tablas en segundo plano (unos segundos; hasta ~8 s en el 7x7).
+2. **Scramble**: pulsa *Nuevo scramble*; *Copiar* lo copia al portapapeles. Los scrambles se preparan por adelantado en segundo plano, así que al cambiar de puzzle suele salir al momento; la primera vez en cada puzzle, las tablas del solucionador se generan en segundo plano (unos segundos; hasta ~8 s en el 7x7) sin retrasar el scramble.
 3. **Resolver**: pinta el estado de tu puzzle eligiendo un color de la paleta y tocando las pegatinas (o pulsa *Cargar scramble actual*) y luego *Resolver*. Puedes sujetar el puzzle en cualquier orientación: la solución sale para como lo tengas. *Rellenar cara* (cubos grandes y Megaminx) pinta una cara entera de un toque y *Deshacer* (o Ctrl+Z) deshace el último cambio. Si el estado es imposible, la app dice qué pieza falla. Resolver un 4x4–7x7 tarda 1–7 s de media (hasta ~13 s en el peor caso medido); un Megaminx, unos 2,5–3 s (prueba muchas orientaciones y se queda con la solución más corta).
 4. Recorre la solución con los botones de reproducción (paso a paso, play y velocidad); *Copiar* copia los movimientos. En los puzzles con etapas (cubos grandes, Megaminx) la barra de fases muestra en qué etapa está cada tramo.
 

@@ -235,7 +235,7 @@ export default definirPuzzle({
   capacidades: { scramble: true, validar: true, resolver: true, editar: true },
   tipoScramble: 'movimientos aleatorios (Pochmann)',
   longitudScramble: LINEAS * (POR_LINEA + 1),
-  descripcion: 'Por etapas con búsqueda (IDA*): la cara D y el anillo inferior, después las piezas de F y R, y la última capa con dos macros buscadas automáticamente. Notación de caras (ver la leyenda); cualquier giro de una cara cuenta 1.',
+  descripcion: 'Por etapas con búsqueda (IDA*): la cara D y el anillo inferior, después las piezas de F y R, y la última capa con dos macros buscadas automáticamente: ~90 giros, en ~3 s. Notación de caras (ver la leyenda); cualquier giro de una cara cuenta 1.',
   avisoInicializacion: 'Generando las tablas del Megaminx…',
   paleta: PALETA_MEGA,
   estadoResuelto: () => geo.resuelto.slice(),
