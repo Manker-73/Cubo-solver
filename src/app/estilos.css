@@ -135,6 +135,19 @@ body { font-family: var(--f-texto); font-size: 15px; line-height: 1.5; }
 .fase.f-centros { border-left: 4px solid var(--acento); }
 .fase.f-aristas { border-left: 4px solid var(--ok); }
 .fase.f-3x3 { border-left: 4px solid var(--tenue); }
+.fase.f-base { border-left: 4px solid var(--tenue); }
+.fase.f-anillo { border-left: 4px solid var(--acento); }
+.fase.f-f2l { border-left: 4px solid var(--ok); }
+.fase.f-ultima { border-left: 4px solid var(--error); }
+.movs li.f-anillo:not(.actual) { background: var(--acento-suave); }
+.movs li.f-f2l:not(.actual) { background: var(--ok-suave); }
+.movs li.f-ultima:not(.actual) { background: var(--error-suave); }
+.leyenda { border: 1px solid var(--linea); border-radius: 9px; padding: 6px 10px; font-size: 0.84rem; color: var(--tenue); }
+.leyenda summary { cursor: pointer; font-weight: 600; color: var(--tinta); }
+.leyenda-cuerpo { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+.leyenda-cuerpo p { margin: 0; line-height: 1.45; }
+.leyenda-red { min-height: 0; }
+.leyenda-red svg { max-height: 190px; }
 .fase.hecha { opacity: 0.6; }
 .fase.actual { background: var(--tinta); color: var(--fondo); }
 .fase.actual small { color: var(--fondo); }

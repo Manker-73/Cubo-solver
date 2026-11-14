@@ -22,11 +22,10 @@ const TODAS = CARAS.filter((c) => c !== 'D');
 // Cada etapa: caras permitidas y piezas nuevas (por sus caras). Las piezas
 // resueltas antes que estén en la región de esas caras se protegen solas.
 export const ETAPAS = [
-  { nombre: 'Base 1', grupo: 'base', caras: TODAS, piezas: ['D-B'] },
-  { nombre: 'Base 2', grupo: 'base', caras: TODAS.filter((c) => c !== 'B'), piezas: ['D-DBL', 'DBL-B', 'D-DBL-B'] },
-  { nombre: 'Base 3', grupo: 'base', caras: ['U', 'F', 'R', 'BR', 'BL', 'L', 'DR', 'DBR', 'DL'], piezas: ['D-DL', 'DBL-DL', 'D-DBL-DL'] },
-  { nombre: 'Base 4', grupo: 'base', caras: ['U', 'F', 'R', 'BR', 'BL', 'L', 'DR', 'DBR'], piezas: ['D-DR', 'DR-DL', 'D-DR-DL'] },
-  { nombre: 'Base 5', grupo: 'base', caras: ['U', 'F', 'R', 'BR', 'BL', 'L', 'DBR'], piezas: ['D-DBR', 'DR-DBR', 'DBR-B', 'D-DR-DBR', 'D-DBR-B'] },
+  { nombre: 'Base 1', grupo: 'base', caras: TODAS, piezas: ['D-B', 'D-DBL', 'DBL-B', 'D-DBL-B'] },
+  { nombre: 'Base 2', grupo: 'base', caras: ['U', 'F', 'R', 'BR', 'BL', 'L', 'DR', 'DBR', 'DL'], piezas: ['D-DL', 'DBL-DL', 'D-DBL-DL'] },
+  { nombre: 'Base 3', grupo: 'base', caras: ['U', 'F', 'R', 'BR', 'BL', 'L', 'DR', 'DBR'], piezas: ['D-DR', 'DR-DL', 'D-DR-DL'] },
+  { nombre: 'Base 4', grupo: 'base', caras: ['U', 'F', 'R', 'BR', 'BL', 'L', 'DBR'], piezas: ['D-DBR', 'DR-DBR', 'DBR-B', 'D-DR-DBR', 'D-DBR-B'] },
   { nombre: 'Anillo 1', grupo: 'anillo', caras: ['U', 'F', 'R', 'BR', 'BL', 'L'], piezas: ['BL-B', 'BL-DBL', 'BL-DBL-B'] },
   { nombre: 'Anillo 2', grupo: 'anillo', caras: ['U', 'F', 'R', 'BR', 'L'], piezas: ['BL-L', 'L-DBL', 'L-DL', 'BL-L-DBL', 'L-DBL-DL'] },
   { nombre: 'Anillo 3', grupo: 'anillo', caras: ['U', 'F', 'R', 'BR'], piezas: ['BR-BL', 'BR-B', 'BR-DBR', 'BR-BL-B', 'BR-DBR-B'] },
@@ -49,12 +48,33 @@ export function piezaPorCaras(nom) {
   throw new Error(`No hay ninguna pieza ${nom}`);
 }
 
-/** Grupos de ≤ 3 piezas para las tablas: primero las protegidas, luego las nuevas. */
-function gruposDe(nProt, nNuevas) {
+/**
+ * Grupos de ≤ 3 piezas para las tablas de poda: tríos consecutivos y, después,
+ * tríos que cubren los pares que falten, hasta que cada par de piezas esté junto en
+ * alguna tabla (la heurística, el máximo de las tablas, es así mucho más fuerte).
+ */
+export function gruposDe(n) {
+  if (n <= 3) return [[...Array(n).keys()]];
   const g = [];
-  const trozos = (ini, n) => { for (let k = 0; k < n; k += 3) g.push([...Array(Math.min(3, n - k)).keys()].map((x) => x + ini + k)); };
-  trozos(0, nProt);
-  trozos(nProt, nNuevas);
+  for (let k = 0; k < n; k += 3) {
+    const t = [...Array(Math.min(3, n - k)).keys()].map((x) => x + k);
+    if (t.length < 3) while (t.length < 3) t.unshift(t[0] - 1);
+    g.push(t);
+  }
+  const cubierto = (a, b) => g.some((t) => t.includes(a) && t.includes(b));
+  for (let a = 0; a < n; a++) {
+    for (let b = a + 1; b < n; b++) {
+      if (cubierto(a, b)) continue;
+      // el tercero: el que cubra más pares aún sin cubrir
+      let mejor = -1, mc = -1;
+      for (let c = 0; c < n; c++) {
+        if (c === a || c === b) continue;
+        const nc = (cubierto(a, c) ? 0 : 1) + (cubierto(b, c) ? 0 : 1);
+        if (nc > mc) { mc = nc; mejor = c; }
+      }
+      g.push([a, b, mejor].sort((x, y) => x - y));
+    }
+  }
   return g;
 }
 
@@ -65,7 +85,7 @@ function prepararEtapa(def, previas) {
   const nuevas = def.piezas.map(piezaPorCaras);
   const prot = previas.filter(([o, i]) => carasPieza(o, i).some((f) => caras.includes(f)));
   const piezas = [...prot, ...nuevas];
-  const et = crearEtapa({ nombre: def.nombre, caras, piezas, grupos: gruposDe(prot.length, nuevas.length) });
+  const et = crearEtapa({ nombre: def.nombre, caras, piezas, grupos: gruposDe(piezas.length) });
   return { ...et, def, nProt: prot.length, nuevas };
 }
 
@@ -131,7 +151,7 @@ function resolverEtapaSegura(et, est, opciones, previasEtapa) {
   for (const pz of et.nuevas) {
     const sub = prepararEtapa({ nombre: et.nombre, caras: et.def.caras, piezas: [] }, previas);
     const sub2 = crearEtapa({
-      nombre: et.nombre, caras: sub.caras, piezas: [...sub.piezas, pz], grupos: gruposDe(sub.piezas.length, 1),
+      nombre: et.nombre, caras: sub.caras, piezas: [...sub.piezas, pz], grupos: gruposDe(sub.piezas.length + 1),
     });
     const hh = sub2.piezas.map(([o, id]) => huecoDe(e, o, id));
     const rr = resolverEtapa(sub2, hh, { maxNodos: opciones.maxNodosRespaldo ?? 2e8 });

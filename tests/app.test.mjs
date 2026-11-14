@@ -216,6 +216,83 @@ test('app: cubos grandes (4x4 y 5x5): vistas, rellenar cara, fases y reproducci�
   w.close();
 });
 
+test('app: Megaminx — vistas, rellenar cara, deshacer, leyenda, etapas y reproducción', async (t) => {
+  const ctx = await abrir(t);
+  if (!ctx) return;
+  const { w, doc, hasta, errores } = ctx;
+  const tocar = (el) => el.dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
+  await elegirPuzzle(ctx, 'Megaminx');
+  assert.equal(doc.getElementById('proximamente').hidden, true, 'el Megaminx ya no está "próximamente"');
+  assert.equal(doc.querySelectorAll('#vista-editor .pegatina').length, 132);
+  // vistas: cada "flor" ampliada tiene 66 pegatinas
+  for (const v of ['arriba', 'abajo']) {
+    doc.querySelector(`#vistas-editor [data-vista="${v}"]`).click();
+    assert.equal(doc.querySelectorAll('#vista-editor .pegatina').length, 66, v);
+  }
+  doc.querySelector('#vistas-editor [data-vista="red"]').click();
+  // la leyenda de la notación: la red con las 12 letras
+  const ley = doc.getElementById('leyenda');
+  assert.equal(ley.hidden, false);
+  assert.equal(ley.querySelectorAll('text').length, 12);
+  assert.match(ley.textContent, /R2' = 144° antihorario/);
+  // rellenar una cara con otro color: 22 pegatinas de ese color; el validador se queja
+  const deshacer = doc.getElementById('deshacer');
+  assert.equal(deshacer.disabled, true);
+  const color = doc.querySelectorAll('#paleta .color')[2]; // rojo
+  color.click();
+  doc.querySelector('#paleta [data-herramienta="rellenar"]').click();
+  const cuenta = (hex) => [...doc.querySelectorAll('#vista-editor .pegatina')].filter((x) => x.getAttribute('fill') === hex).length;
+  tocar(doc.querySelector('#vista-editor .pegatina[data-i="0"]'));
+  const rojo = color.style.background;
+  const nRojas = [...doc.querySelectorAll('#vista-editor .pegatina')].filter((x) => x.getAttribute('fill') === '#d62828').length;
+  assert.equal(nRojas, 22, `rellenar cara (${rojo})`);
+  assert.equal(deshacer.disabled, false);
+  doc.getElementById('resolver').click();
+  await hasta(() => doc.querySelector('.mensaje.error'));
+  assert.match(doc.getElementById('mensajes').textContent, /debería haber 11/);
+  // deshacer: vuelve al resuelto
+  deshacer.click();
+  assert.equal(cuenta('#d62828'), 11);
+  assert.equal(deshacer.disabled, true);
+  doc.getElementById('resolver').click();
+  await hasta(() => doc.querySelector('.mensaje.ok'));
+  assert.match(doc.getElementById('mensajes').textContent, /ya está resuelto/);
+  // cargar el scramble y resolver
+  doc.getElementById('cargar').click();
+  assert.equal(deshacer.disabled, false, 'cargar también se puede deshacer');
+  doc.getElementById('resolver').click();
+  await hasta(() => !doc.getElementById('solucion').hidden || doc.querySelector('.mensaje.error'), 60000);
+  assert.equal(doc.querySelector('.mensaje.error'), null, doc.getElementById('mensajes').textContent);
+  assert.match(doc.getElementById('sol-resumen').textContent, /giros de cara/);
+  // etapas: Base 1..4, Anillo 1..3, F2L 1..3, Última capa (alguna puede quedar vacía al simplificar)
+  const fases = [...doc.querySelectorAll('#fases .fase')].map((b) => b.dataset.fase);
+  assert.ok(fases.length >= 9, fases.join(', '));
+  assert.equal(fases[fases.length - 1], 'Última capa');
+  for (const g of ['base', 'anillo', 'f2l', 'ultima']) assert.ok(doc.querySelector(`#fases .fase.f-${g}`), g);
+  // durante la reproducción, el editor muestra la letra de cada cara en su centro
+  assert.equal(doc.querySelectorAll('#vista-editor text').length, 12);
+  const bAnillo = doc.querySelector('#fases [data-fase="Anillo 2"]');
+  bAnillo.click();
+  doc.getElementById('r-adelante').click();
+  assert.match(doc.getElementById('paso').textContent, /· (Anillo 3|F2L 1|F2L 2)/);
+  // solo giros de cara en la lista
+  for (const li of doc.querySelectorAll('#movs li')) assert.match(li.textContent, /^(U|F|R|BR|BL|L|D|DR|DBR|B|DBL|DL)(2'|2|')?$/);
+  const n = doc.querySelectorAll('#movs li').length;
+  for (let i = 0; i < n; i++) doc.getElementById('r-adelante').click();
+  assert.match(doc.getElementById('paso').textContent, /Resuelto/);
+  // pintar sobre el estado mostrado y deshacer: vuelve a ese estado
+  doc.querySelectorAll('#paleta .color')[0].click(); // blanco (con la herramienta de pintar)
+  const k = [...doc.querySelectorAll('#vista-editor .pegatina')].findIndex((x) => x.getAttribute('fill') !== '#f4f4f4');
+  const antes = doc.querySelectorAll('#vista-editor .pegatina')[k].getAttribute('fill');
+  tocar(doc.querySelectorAll('#vista-editor .pegatina')[k]);
+  assert.equal(doc.querySelectorAll('#vista-editor .pegatina')[k].getAttribute('fill'), '#f4f4f4');
+  assert.equal(doc.getElementById('solucion').hidden, true, 'al editar se quita la solución');
+  deshacer.click();
+  assert.equal(doc.querySelectorAll('#vista-editor .pegatina')[k].getAttribute('fill'), antes);
+  assert.deepEqual(errores, []);
+  w.close();
+});
+
 /** Worker simulado con worker_threads que ejecuta el código empaquetado real. */
 function instalarWorker(window, registro) {
   const blobs = new Map();
@@ -246,7 +323,7 @@ test('app: con Web Worker (código empaquetado real en worker_threads)', async (
   const { w, doc, errores } = ctx;
   try {
     assert.match(doc.getElementById('modo-calculo').textContent, /Web Worker/);
-    for (const nombre of ['Square-1', '3x3', 'Skewb', '4x4', '5x5']) {
+    for (const nombre of ['Square-1', '3x3', 'Skewb', '4x4', '5x5', 'Megaminx']) {
       await elegirPuzzle(ctx, nombre);
       assert.match(doc.getElementById('aviso-tablas').textContent, /Web Worker/, nombre);
       doc.getElementById('cargar').click();

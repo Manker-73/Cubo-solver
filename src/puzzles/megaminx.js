@@ -144,29 +144,40 @@ const SOLO = {
   abajo: geo.pegatinas.map((p, i) => (!caraArriba.has(p.cara) ? i : -1)).filter((i) => i >= 0),
 };
 
+const CAJA_RED = cajaDe(geo.pegatinas2D.map((q) => q.poligono));
+const claro = (hex) => {
+  const n = parseInt(hex.slice(1), 16);
+  return 0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255) > 150;
+};
+/** Letra de cada cara sobre su centro (texto SVG; no capta los toques). */
+function etiquetasCentros(estado, solo) {
+  const tam = (CAJA_RED.x1 - CAJA_RED.x0) * 0.028;
+  let txt = '';
+  CENTROS.forEach((i, f) => {
+    if (solo && !solo.includes(i)) return;
+    const pol = geo.pegatinas2D[i].poligono;
+    const x = pol.reduce((a, q) => a + q[0], 0) / pol.length, y = pol.reduce((a, q) => a + q[1], 0) / pol.length;
+    const col = PALETA_MEGA[estado[i]];
+    const fill = !col || claro(col.hex) ? '#111' : '#fff';
+    txt += `<text x="${x.toFixed(2)}" y="${y.toFixed(2)}" font-size="${tam.toFixed(3)}" font-weight="700" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" fill="${fill}" pointer-events="none">${CARAS[f]}</text>`;
+  });
+  return txt;
+}
+
 function renderizar(estado, opciones = {}) {
   const solo = SOLO[opciones.vista] || null;
-  return svgDePegatinas(geo.pegatinas2D, estado, PALETA_MEGA, { ...opciones, solo, margen: solo ? 0.04 : 0.06, grosor: 0.5 });
+  const svg = svgDePegatinas(geo.pegatinas2D, estado, PALETA_MEGA, { ...opciones, solo, margen: solo ? 0.04 : 0.06, grosor: 0.5 });
+  return opciones.etiquetas ? svg.replace('</svg>', etiquetasCentros(estado, solo) + '</svg>') : svg;
 }
 
 /** Red con el nombre de cada cara en su centro (leyenda de la notación). */
 function leyendaNotacion() {
-  let svg = svgDePegatinas(geo.pegatinas2D, geo.resuelto, PALETA_MEGA, { margen: 0.06, grosor: 0.5 });
-  const caja = cajaDe(geo.pegatinas2D.map((p) => p.poligono));
-  const tam = (caja.x1 - caja.x0) * 0.028;
-  let txt = '';
-  CENTROS.forEach((i, f) => {
-    const pol = geo.pegatinas2D[i].poligono;
-    const x = pol.reduce((a, q) => a + q[0], 0) / pol.length, y = pol.reduce((a, q) => a + q[1], 0) / pol.length;
-    const claro = ['blanco', 'amarillo', 'crema', 'verde claro', 'rosa', 'celeste', 'gris'].includes(PALETA_MEGA[f].nombre);
-    txt += `<text x="${x.toFixed(2)}" y="${y.toFixed(2)}" font-size="${tam.toFixed(3)}" font-weight="700" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" fill="${claro ? '#111' : '#fff'}">${CARAS[f]}</text>`;
-  });
-  svg = svg.replace('</svg>', txt + '</svg>');
   return {
-    svg,
-    texto: 'Cada letra es una cara (la que tiene ese centro en la red; a la izquierda, U y sus vecinas vistas desde arriba; a la derecha, D y las suyas vistas desde abajo). '
-      + 'R = 72° en sentido horario mirando la cara R de frente; R\' = 72° antihorario; R2 = 144° horario; R2\' = 144° antihorario. '
-      + 'U = arriba; F, R, BR, BL, L = las de alrededor de U (en sentido horario visto desde arriba); D = abajo; DR, DBR, B, DBL, DL = las de alrededor de D (DR debajo de F y R, B detrás). Cada giro cuenta 1 movimiento.',
+    svg: renderizar(geo.resuelto, { etiquetas: true }),
+    texto: 'Cada letra es una cara: la del centro con esa letra (a la izquierda, U y las de su alrededor vistas desde arriba; a la derecha, D y las suyas vistas desde abajo). '
+      + 'R = 72° en sentido horario mirando la cara R de frente; R\' = 72° antihorario; R2 = 144° horario; R2\' = 144° antihorario. Cada giro cuenta 1. '
+      + 'Arriba: U; a su alrededor, en sentido horario: F (delante), R, BR, BL, L. Abajo: D; a su alrededor: DR (bajo F y R), DBR, B (detrás, opuesta a F), DBL, DL. '
+      + 'Durante la reproducción, el editor muestra estas letras en los centros.',
   };
 }
 

@@ -48,6 +48,7 @@
         <div class="vista editable" id="vista-editor"></div>
         <div class="acciones acciones-editor" id="acciones-editor" hidden></div>
         <div class="acciones">
+          <button type="button" class="boton" id="deshacer" title="Deshacer el último cambio del editor (Ctrl+Z)" disabled>Deshacer</button>
           <button type="button" class="boton" id="resetear">Resetear</button>
           <button type="button" class="boton" id="cargar">Cargar scramble actual</button>
           <button type="button" class="boton principal" id="resolver">Resolver</button>
@@ -59,6 +60,7 @@
             <button type="button" class="boton-texto" id="copiar-sol">Copiar</button>
           </div>
           <div class="fases" id="fases" hidden></div>
+          <details class="leyenda" id="leyenda" hidden></details>
           <ol class="movs" id="movs"></ol>
           <div class="reproductor">
             <button type="button" class="boton icono" id="r-inicio" aria-label="Ir al inicio">⇤</button>
@@ -74,7 +76,7 @@
     </section>
   </main>
   <footer class="pie">
-    <span>Notación WCA. Los scrambles de 2x2, 3x3, Pyraminx, Skewb y Square-1 son de estado aleatorio; los de 4x4–7x7, de movimientos aleatorios.</span>
+    <span>Notación WCA. Los scrambles de 2x2, 3x3, Pyraminx, Skewb y Square-1 son de estado aleatorio; los de 4x4–7x7, de movimientos aleatorios, y los del Megaminx, en notación Pochmann.</span>
     <span id="modo-calculo"></span>
   </footer>
 </div>

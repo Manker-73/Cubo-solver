@@ -200,11 +200,14 @@ export function resolverUltima(e, a) {
   const { lista } = inicializarUltima();
   const r = dosMacros(e, a);
   if (r) return r;
-  let mejor = null;
+  // respaldo: una macro p delante (de menor a mayor longitud); se para al acabar la
+  // primera longitud de p con la que hay solución
+  let mejor = null, largoP = 0;
   const pe = new Uint8Array(5), pa = new Uint8Array(5);
   for (const p of lista) {
     if (p.sec.length === 0) continue;
-    if (mejor && p.sec.length >= mejor.length) break;
+    if (mejor && p.sec.length > largoP) break;
+    largoP = p.sec.length;
     for (let j = 0; j < 5; j++) { pe[j] = p.ae[e[j]]; pa[j] = p.aa[a[j]]; }
     const resto = dosMacros(pe, pa, mejor ? mejor.length - p.sec.length : Infinity);
     if (!resto) continue;

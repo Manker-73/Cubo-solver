@@ -26,7 +26,23 @@ const st = {
   timer: null,
   ocupado: false,
   listos: new Set(), // puzzles con las tablas ya generadas (donde se calcula)
+  historial: [],     // estados anteriores del editor (Deshacer)
 };
+
+const MAX_HISTORIAL = 200;
+/** Guarda el estado del editor antes de cambiarlo (para Deshacer). */
+function recordar() {
+  st.historial.push(st.p.clonar(estadoMostrado()));
+  if (st.historial.length > MAX_HISTORIAL) st.historial.shift();
+}
+function deshacer() {
+  if (!st.historial.length || st.ocupado) return;
+  quitarSolucion();
+  st.seleccion = null;
+  st.editor = st.historial.pop();
+  limpiarMensajes();
+  pintarEditor();
+}
 
 const esperarPintado = () => new Promise((r) => requestAnimationFrame(() => setTimeout(r, 30)));
 
@@ -67,6 +83,7 @@ async function seleccionar(id) {
   st.seleccion = null;
   st.editor = p.estadoResuelto();
   st.sol = null;
+  st.historial = [];
   try { localStorage.setItem('cubo-solver:puzzle', id); } catch { /* sin almacenamiento */ }
   pintarSelector();
   const activo = puedeResolver(p);
@@ -75,6 +92,7 @@ async function seleccionar(id) {
   $('desc-solver').textContent = activo ? (p.descripcion || '') : '';
   $('tipo-scramble').textContent = p.tipoScramble || '';
   for (const b of ['resetear', 'cargar', 'resolver']) $(b).disabled = !activo;
+  pintarLeyenda();
   pintarPaleta();
   pintarAccionesEditor();
   pintarVistas();
@@ -196,6 +214,7 @@ function pintarAccionesEditor() {
     b.textContent = a.etiqueta;
     if (a.titulo) b.title = a.titulo;
     b.addEventListener('click', () => {
+      recordar();
       if (st.sol) { st.editor = estadoMostrado(); quitarSolucion(); }
       try {
         st.editor = st.p.aplicarAccion(st.editor, a.id, { color: st.ultimoColor });
@@ -244,7 +263,8 @@ function pintarEditor() {
   const editable = puedeResolver(p);
   const mostrado = estadoMostrado();
   const editables = editable ? new Set(p.pegatinasEditables(mostrado)) : null;
-  $('vista-editor').innerHTML = p.renderizar(mostrado, { editable, editables, seleccion: st.seleccion, vista: st.vista });
+  $('vista-editor').innerHTML = p.renderizar(mostrado, { editable, editables, seleccion: st.seleccion, vista: st.vista, etiquetas: !!st.sol });
+  $('deshacer').disabled = !editable || st.historial.length === 0;
   pintarSolucion();
 }
 
@@ -252,6 +272,7 @@ function alPulsarPegatina(ev) {
   const t = ev.target.closest('.pegatina');
   if (!t || !puedeResolver(st.p)) return;
   const i = parseInt(t.getAttribute('data-i'), 10);
+  const antes = st.p.clonar(estadoMostrado());
   if (st.sol) { st.editor = estadoMostrado(); quitarSolucion(); }
   limpiarMensajes();
   const ent = entradaPaleta(st.color);
@@ -271,7 +292,21 @@ function alPulsarPegatina(ev) {
   } else {
     st.editor = st.p.pintar(st.editor, i, st.color);
   }
+  if (JSON.stringify(antes) !== JSON.stringify(st.editor)) {
+    st.historial.push(antes);
+    if (st.historial.length > MAX_HISTORIAL) st.historial.shift();
+  }
   pintarEditor();
+}
+
+// ---------- Leyenda de la notación ----------
+function pintarLeyenda() {
+  const caja = $('leyenda');
+  const p = st.p;
+  if (!p.leyendaNotacion || !puedeResolver(p)) { caja.hidden = true; caja.innerHTML = ''; return; }
+  const l = p.leyendaNotacion();
+  caja.hidden = false;
+  caja.innerHTML = `<summary>Notación: qué cara es cada letra</summary><div class="leyenda-cuerpo"><div class="vista leyenda-red">${l.svg}</div><p>${l.texto}</p></div>`;
 }
 
 // ---------- Mensajes ----------
@@ -360,7 +395,7 @@ function pintarSolucion() {
   fases.forEach((f) => {
     const b = document.createElement('button');
     b.type = 'button';
-    b.className = 'fase f-' + f.nombre.replace(/[^a-z0-9]/gi, '');
+    b.className = 'fase f-' + (f.grupo || f.nombre).replace(/[^a-z0-9]/gi, '');
     b.dataset.fase = f.nombre;
     b.dataset.fin = String(f.fin);
     const hecha = st.paso >= f.fin;
@@ -380,7 +415,7 @@ function pintarSolucion() {
     while (fases[faseI] && i >= fases[faseI].fin) faseI++;
     const cls = [];
     if (fases[faseI]) {
-      cls.push('f-' + fases[faseI].nombre.replace(/[^a-z0-9]/gi, ''));
+      cls.push('f-' + (fases[faseI].grupo || fases[faseI].nombre).replace(/[^a-z0-9]/gi, ''));
       if (i === fases[faseI].inicio && i > 0) cls.push('inicio-fase');
     }
     if (i < st.paso - 1) cls.push('hecho');
@@ -454,8 +489,13 @@ function iniciar() {
   });
   $('nuevo').addEventListener('click', nuevoScramble);
   $('vista-editor').addEventListener('click', alPulsarPegatina);
-  $('resetear').addEventListener('click', () => { quitarSolucion(); st.seleccion = null; st.editor = st.p.estadoResuelto(); limpiarMensajes(); pintarEditor(); });
+  $('deshacer').addEventListener('click', deshacer);
+  document.addEventListener('keydown', (ev) => {
+    if ((ev.ctrlKey || ev.metaKey) && !ev.shiftKey && ev.key.toLowerCase() === 'z' && !/input|textarea/i.test(ev.target.tagName)) { ev.preventDefault(); deshacer(); }
+  });
+  $('resetear').addEventListener('click', () => { recordar(); quitarSolucion(); st.seleccion = null; st.editor = st.p.estadoResuelto(); limpiarMensajes(); pintarEditor(); });
   $('cargar').addEventListener('click', () => {
+    recordar();
     quitarSolucion();
     st.seleccion = null;
     st.editor = st.estadoScramble ? st.p.clonar(st.estadoScramble) : st.p.estadoResuelto();
