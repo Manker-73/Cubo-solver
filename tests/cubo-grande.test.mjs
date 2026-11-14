@@ -8,6 +8,9 @@ import { modeloPiezasNxN } from '../src/puzzles/nxn-piezas.js';
 import { aplicarPerm } from '../src/core/perm.js';
 import { rngConSemilla, entero } from '../src/core/rng.js';
 import { CASOS, probarScrambles, debeRechazar, guardarResultado } from './util.mjs';
+import { resolverEnParalelo } from './paralelo.mjs';
+
+const MODULO = new URL('../src/puzzles/cubo-grande.js', import.meta.url).href;
 
 const completo = CASOS >= 1000;
 const casosDe = (N) => (process.env.CASOS_NXN ? +process.env.CASOS_NXN : completo ? (N <= 5 ? 500 : 100) : 20);
@@ -15,7 +18,7 @@ const casosDe = (N) => (process.env.CASOS_NXN ? +process.env.CASOS_NXN : complet
 // el test de abajo) y cotas superiores / estimaciones de la tabla de ESTADO.md.
 export const COTA_INFERIOR = { 4: 35, 5: 52, 6: 75, 7: 99 };
 const COTA_SUPERIOR = { 4: '55 (demostrada; 54 propuesta en 2026)', 5: '130 (demostrada)', 6: '~90–120 (sin confirmar)', 7: '~120–160 (sin confirmar)' };
-const TAMANOS = [4, 5, 6, 7];
+const TAMANOS = process.env.TAMANOS ? process.env.TAMANOS.split(',').map(Number) : [4, 5, 6, 7];
 const puzzles = Object.fromEntries(TAMANOS.map((N) => [N, crearCuboGrande(N)]));
 
 const rotarAzar = (N) => (e, rng) => {
@@ -55,16 +58,21 @@ for (const N of TAMANOS) {
     assert.equal(r.longitudMin, r.longitudMax);
   });
 
-  test(`${N}x${N}: el solver resuelve el 100 % (${casos} casos, cubo reorientado al azar)`, () => {
+  test(`${N}x${N}: el solver resuelve el 100 % (${casos} casos, cubo reorientado al azar)`, async () => {
     const rng = rngConSemilla(100 + N);
     const rotar = rotarAzar(N);
     const L = [], T = [], fasesL = {}, fasesT = {};
+    const scr = [], estados = [];
     for (let i = 0; i < casos; i++) {
       const s = p.generarScramble(rng);
-      const e = rotar(p.aplicarSecuencia(p.estadoResuelto(), s), rng);
-      const t0 = performance.now();
-      const r = p.resolver(e);
-      const dt = performance.now() - t0;
+      scr.push(s);
+      estados.push(rotar(p.aplicarSecuencia(p.estadoResuelto(), s), rng));
+    }
+    // en paralelo (worker_threads): cada hilo genera sus tablas y resuelve los casos que le tocan
+    const par = await resolverEnParalelo({ modulo: MODULO, exportar: 'crearCuboGrande', args: [N], estados });
+    for (let i = 0; i < casos; i++) {
+      const s = scr[i], e = estados[i];
+      const { r, ms: dt } = par.resultados[i];
       assert.ok(r.ok, `caso ${i}: ${(r.errores || []).join(' | ')}`);
       // aplicar movimiento a movimiento con el modelo de pegatinas
       let x = e;
@@ -91,6 +99,7 @@ for (const N of TAMANOS) {
       cotaSuperior: COTA_SUPERIOR[N],
       resueltos: `${casos}/${casos} (100.0%)`,
       casosSolver: casos,
+      hilos: par.hilos,
       longitudMediaSolucion: est(L).media,
       longitudMaxSolucion: Math.max(...L),
       msMedioSolucion: est(T).media,
@@ -170,6 +179,43 @@ for (const N of TAMANOS) {
     console.log('  ' + msgs.join('\n  '));
   });
 }
+
+test('NxN: "aristas libres": las macros no mueven ningún centro ni cambian la paridad de las wings', () => {
+  for (const N of [5, 6, 7].filter((n) => TAMANOS.includes(n))) {
+    const p = puzzles[N];
+    p.inicializar();
+    const { tablas, orbitas } = p._interno();
+    const { macros } = tablas.libresAristas;
+    assert.ok(macros.length > 1000, `${N}x${N}: ${macros.length} macros`);
+    const res = p.estadoResuelto();
+    const centros = orbitas.filter((o) => o.tipo === 'centros').flatMap((o) => o.piezas.map((pz) => pz[0]));
+    const wings = orbitas.filter((o) => o.tipo === 'wings');
+    for (const m of macros) {
+      const e = p.aplicarSecuencia(res, m.movs);
+      assert.ok(centros.every((f) => e[f] === res[f]), `${N}x${N}: ${m.movs.join(' ')} mueve centros`);
+      // paridad de cada órbita de wings (permutación de piezas) par
+      for (const o of wings) {
+        const pieza = new Map(o.piezas.map((pz, j) => [res[pz[0]] + ',' + res[pz[1]], j]));
+        const perm = o.piezas.map((pz) => pieza.get(e[pz[0]] + ',' + e[pz[1]]));
+        let par = 0; for (let i = 0; i < 24; i++) for (let j = i + 1; j < 24; j++) if (perm[j] < perm[i]) par ^= 1;
+        if (N % 2 === 0) assert.equal(par, 0, `${N}x${N}: ${m.movs.join(' ')} cambia la paridad de ${o.nombre}`);
+      }
+    }
+    guardarResultado(`${N}x${N}`, { macrosAristas: macros.length });
+  }
+});
+
+test('NxN: sin "aristas libres" (solo 3-ciclos) y con los conmutadores de la noche 3 sigue resolviendo', () => {
+  const rng = rngConSemilla(77);
+  for (const N of [5, 6, 7].filter((n) => TAMANOS.includes(n))) {
+    const p = puzzles[N];
+    for (const opciones of [{ aristasLibres: false }, { metodo: 'conmutadores' }]) {
+      const e = p.aplicarSecuencia(p.estadoResuelto(), p.generarScramble(rng));
+      const r = p.resolver(e, opciones);
+      assert.ok(r.ok && p.estaResuelto(p.aplicarSecuencia(e, r.movimientos)), `${N}x${N} ${JSON.stringify(opciones)}`);
+    }
+  }
+});
 
 test('NxN: estado resuelto, resuelto reorientado y validador en la orientación pintada', () => {
   for (const N of TAMANOS) {

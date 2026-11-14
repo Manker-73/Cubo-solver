@@ -13,6 +13,7 @@ import { slotMov, NS } from '../src/puzzles/megaminx-busqueda.js';
 import { aplicarPerm } from '../src/core/perm.js';
 import { rngConSemilla, entero } from '../src/core/rng.js';
 import { probarScrambles, guardarResultado, CASOS, debeRechazar } from './util.mjs';
+import { resolverEnParalelo } from './paralelo.mjs';
 
 const completo = CASOS >= 1000;
 const CASOS_SOLVER = process.env.CASOS_MEGA ? +process.env.CASOS_MEGA : completo ? 500 : 20;
@@ -303,19 +304,26 @@ test('Megaminx: última capa — dos macros (o una corta más dos) resuelven los
   });
 });
 
-test(`Megaminx: el solver resuelve el 100 % (${CASOS_SOLVER} casos, puzzle reorientado al azar)`, () => {
+test(`Megaminx: el solver resuelve el 100 % (${CASOS_SOLVER} casos, puzzle reorientado al azar)`, async () => {
   const ini = p.inicializar();
   const rng = rngConSemilla(500);
-  const est0 = { ...estadisticas };
   const L = [], T = [], O = [], porEtapa = {};
+  const scr = [], estados = [];
   for (let i = 0; i < CASOS_SOLVER; i++) {
     const s = p.generarScramble(rng);
     const e = girarAzar(p.aplicarSecuencia(e0, s), rng);
     const v = p.validar(e);
     assert.ok(v.valido, `caso ${i}: ${v.errores.join(' | ')}`);
-    const t0 = performance.now();
-    const r = p.resolver(e);
-    const dt = performance.now() - t0;
+    scr.push(s); estados.push(e);
+  }
+  // en paralelo (worker_threads); los contadores de etapas se suman entre hilos
+  const par = await resolverEnParalelo({
+    modulo: new URL('../src/puzzles/megaminx.js', import.meta.url).href, estados,
+    estadisticas: { modulo: new URL('../src/puzzles/megaminx-solver.js', import.meta.url).href, exportar: 'estadisticas' },
+  });
+  for (let i = 0; i < CASOS_SOLVER; i++) {
+    const s = scr[i], e = estados[i];
+    const { r, ms: dt } = par.resultados[i];
     assert.ok(r.ok, `caso ${i}: ${(r.errores || []).join(' | ')}`);
     // aplicar movimiento a movimiento con el modelo de pegatinas
     let x = e;
@@ -348,8 +356,9 @@ test(`Megaminx: el solver resuelve el 100 % (${CASOS_SOLVER} casos, puzzle reori
     msMax: Math.round(Math.max(...T)),
     orientacionesMedia: +media(O).toFixed(1),
     porEtapa: etapas,
-    etapasResueltas: estadisticas.etapas - est0.etapas,
-    etapasConRespaldo: estadisticas.respaldos - est0.respaldos,
+    etapasResueltas: par.estadisticas.etapas,
+    etapasConRespaldo: par.estadisticas.respaldos,
+    hilos: par.hilos,
     msTablas: ini.ms,
     tablas: { etapas: ini.tablas, macros: ini.macros, bytes: ini.bytes, msEtapas: ini.msEtapas, msUltima: ini.msUltima },
   };

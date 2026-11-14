@@ -4,15 +4,19 @@
 // identificación de esquinas, aristas centrales y wings por colores, centros
 // contados por órbita, y solo las restricciones demostradas en nxn-grupo.js.
 //
-// Solver (todas las piezas se mueven con conmutadores puros, que se buscan solos):
-//   paridad  si la permutación de una órbita de wings es impar, un giro de la
-//            capa interior de esa órbita (paridad OLL en N par)
-//   centros  3-ciclos de centros, órbita a órbita
-//   aristas  3-ciclos de wings (emparejar: en N impar con la arista central,
-//            en N par directamente en su sitio)
-//   paridad  N par: si las esquinas tienen paridad impar, intercambio de las
-//            aristas UF y UB (paridad PLL)
+// Solver:
+//   4x4      reducción por búsqueda en tres fases (tpr4.js)
+//   5x5-7x7  centros   búsqueda por parejas de órbitas (nxn-centros.js); lo que
+//                      falte (los oblicuos del 6x6/7x7), 3-ciclos simples y dobles
+//            aristas   1) "aristas libres": voraz con macros S·(A M A⁻¹)·S⁻¹ que no
+//                         mueven los centros (con un paso de anticipación);
+//                      2) lo que quede, con 3-ciclos de wings. En N impar cada wing
+//                         va con su arista central; en N par se elige al final qué
+//                         arista entera va en cada ranura (la que ya está más formada)
+//            paridad   N par: si la permutación de las aristas no tiene la paridad
+//                      de la de las esquinas, intercambio de las aristas UF y UB
 //   3x3      lo que queda es un 3x3: Kociemba (cubo3.js)
+// Si una búsqueda no termina, se usa el método de conmutadores (siempre correcto).
 // Las soluciones se simplifican uniendo los tramos del mismo eje.
 
 import { definirPuzzle } from '../core/puzzle.js';
@@ -61,6 +65,12 @@ export function crearCuboGrande(N) {
   const wingPorColores = oiWings.map((oi) => new Map(orbitas[oi].piezas.map((pz, j) => [RES[pz[0]] + ',' + RES[pz[1]], j])));
   // Arista (0..11) de cada wing
   const aristaDeWing = oiWings.map((oi) => orbitas[oi].nombresPos.map((n) => NOMBRES_ARISTAS.indexOf(n.split(' ')[0])));
+  // posición a lo largo de la arista (1..N-2) de cada wing, y wing de cada (ranura, posición)
+  const tDeWing = oiWings.map((oi) => orbitas[oi].nombresPos.map((n) => +n.match(/n\.º (\d+)/)[1]));
+  const posWing = new Map();
+  oiWings.forEach((oi, w) => orbitas[oi].piezas.forEach((pz, j) => posWing.set(aristaDeWing[w][j] + ':' + tDeWing[w][j], pz)));
+  // N par: la posición de referencia de cada una (hacia el centro; las dos del medio, entre sí)
+  const refT = (t) => { const m = (N - 2) / 2; return t === m ? m + 1 : t === m + 1 ? m : t < m ? t + 1 : t - 1; };
 
   // ---------- Validador ----------
   function analizarCentrosFijos(estado) {
@@ -367,7 +377,7 @@ export function crearCuboGrande(N) {
       // solo los más cortos de cada pareja de órbitas
       const minimo = new Map();
       for (const d of dobles) { const k = d.ciclos.map((c) => c.oi).sort().join(); minimo.set(k, Math.min(minimo.get(k) ?? 99, d.movs.length)); }
-      const cortos = dobles.filter((d) => d.movs.length <= minimo.get(d.ciclos.map((c) => c.oi).sort().join()) + (opciones0.margenDobles ?? 0));
+      const cortos = dobles.filter((d) => d.movs.length <= minimo.get(d.ciclos.map((c) => c.oi).sort().join()) + (opciones0.margenDobles ?? (N >= 6 ? 2 : 0)));
       dobles.length = 0; dobles.push(...cortos);
     }
     // setups para los dobles: ninguno, un movimiento (caras y capas anchas) o dos caras
@@ -445,7 +455,8 @@ export function crearCuboGrande(N) {
       for (let v = 1; v <= 3; v++) anadirLibre([nombreMovimiento(c, p, v), nombreMovimiento(c, p - 1, 4 - v)]);
     }
     const objCentros = pegCentros.map((f) => RES[f]);
-    tablas = { porOrbita, dobles, setupsD, setups1: setups.length + 1, invSetup, paridadWings, pll, libres, pegCentros, objCentros, ms: 0, tpr: N === 4 ? tpr4() : null, centros: N >= 5 ? crearCentrosNxN(N, b, orbitas, {
+    const libresAristas = N >= 5 ? construirAristasLibres(opciones0) : null;
+    tablas = { porOrbita, dobles, setupsD, setups1: setups.length + 1, invSetup, paridadWings, pll, libres, pegCentros, objCentros, libresAristas, ms: 0, tpr: N === 4 ? tpr4() : null, centros: N >= 5 ? crearCentrosNxN(N, b, orbitas, {
       // bit w: la permutación de la órbita de wings w (respecto a su objetivo) es impar
       bits: (e) => oiWings.reduce((acc, oi, w) => {
         const obj = objetivosWings(e, w);
@@ -459,6 +470,219 @@ export function crearCuboGrande(N) {
     if (tablas.centros) tablas.centros.inicializar();
     tablas.ms = Date.now() - t0 + msK;
     return { ms: tablas.ms };
+  }
+
+  // ---------- Aristas "libres": emparejar con macros que no mueven los centros ----------
+  // Una macro es S · A M A⁻¹ · S⁻¹: S una capa ancha o interior, A un giro de una
+  // de las cuatro caras de alrededor y M un giro de una de las dos caras del eje de S.
+  // Mientras S está hecho, los centros desplazados están en las caras de alrededor, y
+  // A M A⁻¹ deja esas caras como estaban; S⁻¹ los devuelve. Así que los centros no se
+  // mueven y las wings sí. (Se comprueba igualmente sobre el cubo resuelto.)
+  // Solo se usan las que no cambian la paridad de ninguna órbita de wings (respecto a
+  // su objetivo): si no, los 3-ciclos no podrían terminar.
+  function construirAristasLibres(opcionesIni = {}) {
+    const pegAr = []; // pegatinas de wings y aristas centrales
+    for (const oi of oiWings) for (const pz of orbitas[oi].piezas) pegAr.push(...pz);
+    if (impar) for (const pz of orbitas[oiMid].piezas) pegAr.push(...pz);
+    const idxAr = new Map(pegAr.map((f, k) => [f, k]));
+    const centrosOk = (e) => { for (const oi of oiCentros) for (const pz of orbitas[oi].piezas) if (e[pz[0]] !== RES[pz[0]]) return false; return true; };
+    const ejes = [['U', 'D', ['R', 'F', 'L', 'B']], ['R', 'L', ['U', 'F', 'D', 'B']], ['F', 'B', ['U', 'R', 'D', 'L']]];
+    const h = Math.floor(N / 2);
+    const macros = [];
+    const vistos = new Set();
+    const efecto = (movs) => { const P = permSec(movs); return Int16Array.from(pegAr, (f) => idxAr.get(P[f])); };
+    for (const [P1, P2, lados] of ejes) {
+      const Ss = [];
+      for (const c of [P1, P2]) for (let p = 2; p <= h; p++) for (const v of [1, 2, 3]) {
+        Ss.push([nombreMovimiento(c, p, v)]);
+        Ss.push([nombreMovimiento(c, p, v), nombreMovimiento(c, p - 1, 4 - v)]); // capa p sola
+      }
+      // las dos caras del eje a la vez (p. ej. Uw Dw')
+      if (opcionesIni.dosCapas ?? true) for (let p = 2; p <= h; p++) for (let q = 2; q <= h; q++) for (const v of [1, 2, 3]) for (const u of [1, 2, 3]) Ss.push([nombreMovimiento(P1, p, v), nombreMovimiento(P2, q, u)]);
+      const Xs = [];
+      for (const a of lados) for (const va of [1, 2, 3]) for (const m of [P1, P2]) for (const vm of [1, 2, 3]) {
+        Xs.push([nombreMovimiento(a, 1, va), nombreMovimiento(m, 1, vm), nombreMovimiento(a, 1, 4 - va)]);
+      }
+      for (const S of Ss) for (const X of Xs) {
+        const movs = simplificarNxN([...S, ...X, ...invSec(S)], N).movimientos;
+        const e = movs.reduce((x, m) => b.aplicarMovimiento(x, m), RES);
+        if (!centrosOk(e)) continue;
+        if (oiWings.some((oi, w) => paridadRelativa(e, w))) continue;
+        const ef = efecto(movs);
+        const clave = ef.join(',');
+        if (vistos.has(clave) || ef.every((x, k) => x === k)) continue;
+        vistos.add(clave);
+        macros.push({ movs, src: ef });
+      }
+    }
+    // giros de cara (preparación): no cambian los centros
+    const caras = [];
+    for (const c of CARAS) for (const v of [1, 2, 3]) { const m = nombreMovimiento(c, 1, v); caras.push({ movs: [m], src: efecto([m]) }); }
+    return { pegAr, idxAr, macros, caras };
+  }
+
+  /** Paridad de la permutación de la órbita de wings w respecto a su objetivo. */
+  function paridadRelativa(e, w) {
+    const oi = oiWings[w];
+    const obj = objetivosWings(e, w);
+    const cur = orbitas[oi].piezas.map((pz) => wingPorColores[w].get(e[pz[0]] + ',' + e[pz[1]]));
+    return paridad(cur.map((p) => obj.indexOf(p)));
+  }
+
+  /**
+   * Voraz: mientras compense (más de `umbral` wings colocadas por movimiento), un giro
+   * de cara opcional y una macro, lo que coloque más wings por movimiento.
+   */
+  function aristasLibres(ref, aplicar, costeReal, umbral, opc = {}) {
+    const { pegAr, idxAr, macros, caras } = tablas.libresAristas;
+    const nA = pegAr.length;
+    // comparaciones: para cada wing, sus dos pegatinas y las dos que debe igualar
+    // N impar: cada wing con la arista central de su ranura. N par: con la wing vecina
+    // de la misma ranura hacia el centro (las dos del medio, entre sí): así una ranura
+    // está "emparejada" cuando todas sus wings muestran los mismos colores.
+    const comp = [];
+    const mismaCara = (ref, f) => ref[caraDe(ref[0]) === caraDe(f) ? 0 : 1];
+    oiWings.forEach((oi, w) => orbitas[oi].piezas.forEach((pz, j) => {
+      const ref = impar ? orbitas[oiMid].piezas[aristaDeWing[w][j]] : posWing.get(aristaDeWing[w][j] + ':' + refT(tDeWing[w][j]));
+      comp.push([idxAr.get(pz[0]), idxAr.get(mismaCara(ref, pz[0])), idxAr.get(pz[1]), idxAr.get(mismaCara(ref, pz[1]))]);
+    }));
+    const C = Int16Array.from(comp.flat());
+    const nC = comp.length;
+    // por macro: las comparaciones que cambia, con los índices ya compuestos (y'[k] = y[src[k]])
+    if (!tablas.libresAristas.afect) {
+      const deStick = Array.from({ length: nA }, () => []);
+      comp.forEach((c, ci) => c.forEach((k) => deStick[k].push(ci)));
+      tablas.libresAristas.afect = macros.map((m) => {
+        const cs = new Set();
+        for (let k = 0; k < nA; k++) if (m.src[k] !== k) for (const ci of deStick[k]) cs.add(ci);
+        const lista = [...cs];
+        const idx = new Int16Array(4 * lista.length);
+        lista.forEach((ci, t) => { for (let q = 0; q < 4; q++) idx[4 * t + q] = m.src[C[4 * ci + q]]; });
+        return { cis: Int16Array.from(lista), idx };
+      });
+    }
+    const afect = tablas.libresAristas.afect;
+    const aciertos = (x) => {
+      let k = 0;
+      for (let i = 0; i < 4 * nC; i += 4) {
+        if (x[C[i]] === x[C[i + 1]] && x[C[i + 2]] === x[C[i + 3]]) k++;
+      }
+      return k;
+    };
+    const aplicarSrc = (x, src) => { const y = new Int8Array(nA); for (let k = 0; k < nA; k++) y[k] = x[src[k]]; return y; };
+    // los mejores pasos (giro de cara opcional + macro) desde x0, por wings colocadas por movimiento
+    const pasos = (x0, base, n, sinPrep = false) => {
+      const res = [];
+      const pre = [{ movs: [], x: x0 }].concat(sinPrep ? [] : caras.map((c) => ({ movs: c.movs, x: aplicarSrc(x0, c.src) })));
+      const ok = new Uint8Array(nC);
+      let corte = -1;
+      for (const p of pre) {
+        const y = p.x;
+        let bp = 0;
+        for (let ci = 0, i = 0; ci < nC; ci++, i += 4) { ok[ci] = y[C[i]] === y[C[i + 1]] && y[C[i + 2]] === y[C[i + 3]] ? 1 : 0; bp += ok[ci]; }
+        for (let mi = 0; mi < macros.length; mi++) {
+          const { cis, idx } = afect[mi];
+          let g = bp - base;
+          for (let t = 0, i = 0; t < cis.length; t++, i += 4) g += (y[idx[i]] === y[idx[i + 1]] && y[idx[i + 2]] === y[idx[i + 3]] ? 1 : 0) - ok[cis[t]];
+          if (g <= 0) continue;
+          const m = macros[mi];
+          const coste = p.movs.length + m.movs.length;
+          if (g / coste < corte) continue;
+          res.push({ v: g / coste, g, coste, p, m });
+          if (res.length > 4 * n + 16) { res.sort((a, c) => c.v - a.v || a.coste - c.coste); res.length = n; corte = res[n - 1].v; }
+        }
+      }
+      res.sort((a, c) => c.v - a.v || a.coste - c.coste);
+      return res.slice(0, n);
+    };
+    const anticipar = opc.anticiparAristas ?? (N >= 7 ? 10 : 20);
+    for (let iter = 0; iter < 60; iter++) {
+      const x0 = Int8Array.from(pegAr, (f) => ref.e[f]);
+      const base = aciertos(x0);
+      if (base === nC) return;
+      const cand = pasos(x0, base, Math.max(1, anticipar));
+      if (!cand.length) return;
+      let mejor = cand[0], vm = -1;
+      if (anticipar) {
+        // mirar un paso más: primero sin giro de preparación (rápido) para todos los
+        // candidatos y después, para los mejores, con preparación
+        const valor = (c, rapido) => {
+          const y = aplicarSrc(c.p.x, c.m.src);
+          const sig = c.g + base < nC ? pasos(y, base + c.g, 1, rapido)[0] : null;
+          return sig ? (c.g + sig.g) / (c.coste + sig.coste) : c.v;
+        };
+        const nFinos = opc.anticiparFinos ?? (N >= 7 ? 3 : 5);
+        const orden = cand.map((c) => ({ c, v: valor(c, true) })).sort((a, b2) => b2.v - a.v);
+        for (const { c, v } of orden.slice(0, nFinos)) {
+          const vf = Math.max(v, valor(c, false));
+          if (vf > vm) { vm = vf; mejor = c; }
+        }
+      }
+      const movsP = [...mejor.p.movs, ...mejor.m.movs];
+      const real = Math.max(1, costeReal(movsP));
+      if (mejor.g / real < umbral) return;
+      aplicar(movsP);
+    }
+  }
+
+  // N par: objetivo de la wing (w, j) si en su ranura va la arista e (volteada si f)
+  function piezaAsignada(w, j, e, f) {
+    const s = aristaDeWing[w][j];
+    const caras = NOMBRES_ARISTAS[s].split('').map((c) => CARAS.indexOf(c));
+    const cols = NOMBRES_ARISTAS[e].split('').map((c) => CARAS.indexOf(c));
+    const pz = orbitas[oiWings[w]].piezas[j];
+    const c = pz.map((x) => (caraDe(x) === caras[0] ? cols[f] : cols[1 - f]));
+    return wingPorColores[w].get(c[0] + ',' + c[1]);
+  }
+  const objetivosAsignados = (asig, w) => orbitas[oiWings[w]].piezas.map((_, j) => { const a = asig[aristaDeWing[w][j]]; return piezaAsignada(w, j, a.e, a.f); });
+  /**
+   * N par: arista entera (e, volteada f) para cada ranura, empezando por las que ya
+   * tienen más wings bien; con un número par de volteos (si no, no sería un 3x3 posible).
+   */
+  function asignarAristas(e, paridadEsquinas, opcionesPLL) {
+    const cur = oiWings.map((oi, w) => orbitas[oi].piezas.map((pz) => wingPorColores[w].get(e[pz[0]] + ',' + e[pz[1]])));
+    const pun = []; // [puntos, ranura, arista, volteo]
+    for (let s = 0; s < 12; s++) for (let a = 0; a < 12; a++) for (const f of [0, 1]) {
+      let k = 0;
+      oiWings.forEach((oi, w) => orbitas[oi].piezas.forEach((_, j) => { if (aristaDeWing[w][j] === s && cur[w][j] === piezaAsignada(w, j, a, f)) k++; }));
+      pun.push([k, s, a, f]);
+    }
+    pun.sort((x, y) => y[0] - x[0]);
+    const asig = new Array(12).fill(null), usada = new Array(12).fill(false);
+    for (const [k, s, a, f] of pun) if (!asig[s] && !usada[a]) { asig[s] = { e: a, f, k }; usada[a] = true; }
+    if (asig.reduce((t, x) => t + x.f, 0) % 2) {
+      // voltear la ranura en la que menos se pierde
+      let mejor = null;
+      for (let s = 0; s < 12; s++) {
+        const alt = pun.find((x) => x[1] === s && x[2] === asig[s].e && x[3] !== asig[s].f);
+        const perdida = asig[s].k - alt[0];
+        if (!mejor || perdida < mejor.perdida) mejor = { s, perdida, k: alt[0] };
+      }
+      asig[mejor.s] = { e: asig[mejor.s].e, f: 1 - asig[mejor.s].f, k: mejor.k };
+    }
+    // Si la permutación de las aristas no tiene la paridad de la de las esquinas, el 3x3
+    // necesitaría la paridad PLL (~10 movimientos). Intercambiar las aristas de dos
+    // ranuras que aún no estén emparejadas cuesta menos (pocas wings se pierden).
+    if (paridadEsquinas !== undefined && (paridad(asig.map((x) => x.e)) ^ paridadEsquinas)) {
+      const punt = new Map(pun.map(([k, s2, a, f]) => [s2 + ':' + a + ':' + f, k]));
+      let mejor = null;
+      for (let s1 = 0; s1 < 12; s1++) for (let s2 = s1 + 1; s2 < 12; s2++) {
+        const antes = asig[s1].k + asig[s2].k;
+        const fl = asig[s1].f + asig[s2].f;
+        for (const f1 of [0, 1]) for (const f2 of [0, 1]) {
+          if ((f1 + f2) % 2 !== fl % 2) continue;
+          const k1 = punt.get(s1 + ':' + asig[s2].e + ':' + f1), k2 = punt.get(s2 + ':' + asig[s1].e + ':' + f2);
+          const perdida = antes - k1 - k2;
+          if (!mejor || perdida < mejor.perdida) mejor = { perdida, s1, s2, f1, f2, k1, k2 };
+        }
+      }
+      if (mejor && mejor.perdida <= (opcionesPLL ?? 2)) {
+        const e1 = asig[mejor.s1].e, e2 = asig[mejor.s2].e;
+        asig[mejor.s1] = { e: e2, f: mejor.f1, k: mejor.k1 };
+        asig[mejor.s2] = { e: e1, f: mejor.f2, k: mejor.k2 };
+      }
+    }
+    return asig;
   }
 
   // Objetivo de cada wing: la pieza que muestra los colores pedidos en su posición
@@ -584,7 +808,7 @@ export function crearCuboGrande(N) {
       if (!quedan) return;
       if (!cand.length) throw new Error(`No se pudo avanzar con ${ois.map((oi) => orbitas[oi].nombre).join(', ')}`);
       let mejor = null;
-      const evaluados = cand.slice(0, 24).map((x) => { const sec = x.sec(); const real = Math.max(1, costeReal(sec)); return { ...x, sec, real, v1: x.g / real }; });
+      const evaluados = cand.slice(0, opcionesGrupo.top ?? 24).map((x) => { const sec = x.sec(); const real = Math.max(1, costeReal(sec)); return { ...x, sec, real, v1: x.g / real }; });
       evaluados.sort((x, y) => y.v1 - x.v1);
       for (const [k, x] of evaluados.entries()) {
         let valor = x.v1;
@@ -647,6 +871,7 @@ export function crearCuboGrande(N) {
 
   function resolver(estado, opciones = {}) {
     const t0 = performance.now();
+    const presupuesto = opciones.tiempoMax ?? 10000; // ms: por encima, se recortan los pasos opcionales
     const msI = inicializar().yaEstaba ? 0 : tablas.ms;
     const a = analizar(estado);
     if (!a.valido) return { ok: false, errores: a.errores };
@@ -670,8 +895,9 @@ export function crearCuboGrande(N) {
       let r = null;
       const wp = (x, y) => wingPorColores[0].get(x + ',' + y);
       try { r = tablas.tpr.reducir(a.norm, wp, { msMax: opciones.msReduccion ?? 1500, ...opciones.tpr }); } catch (err) { r = null; }
-      // segundo intento, con más margen, antes de pasar al método general
-      if (!r) try { r = tablas.tpr.reducir(a.norm, wp, { msMax: 3000, nodos3b: 3e6, cand3b: 20, ...opciones.tpr }); } catch (err) { r = null; }
+      // segundo intento, con más margen, antes de pasar al método general (si no se ha
+      // ido ya más del 60 % del presupuesto)
+      if (!r && performance.now() - t0 < (opciones.tiempoMax ?? 10000) * 0.6) try { r = tablas.tpr.reducir(a.norm, wp, { msMax: 3000, nodos3b: 3e6, cand3b: 20, ...opciones.tpr }); } catch (err) { r = null; }
       if (r) {
         fase = 'centros'; aplicar(r.fases[0]); aplicar(r.fases[1]);
         cambiarFase('aristas'); aplicar(r.fases[2]); aplicar(r.fases[3]);
@@ -695,6 +921,7 @@ export function crearCuboGrande(N) {
       fase = 'centros';
       const rc = tablas.centros.resolver(ref.e, opciones.centros);
       aplicar(rc.movimientos);
+      if (opciones.traza) opciones.traza.busquedaCentros = (opciones.traza.busquedaCentros || 0) + rc.movimientos.length;
       // si alguna etapa no se pudo hacer, la paridad puede seguir sin arreglar
       cambiarFase('paridad');
       paridadWings();
@@ -711,13 +938,21 @@ export function crearCuboGrande(N) {
     if (opciones.dobles === false) {
       for (const oi of oiCentros) resolverOrbita(oi, ref, orbitas[oi].piezas.map((pz) => RES[pz[0]]), aplicar, costeReal);
     } else {
-      resolverGrupo(oiCentros, ref, Object.fromEntries(oiCentros.map((oi) => [oi, orbitas[oi].piezas.map((pz) => RES[pz[0]])])), aplicar, costeReal);
+      resolverGrupo(oiCentros, ref, Object.fromEntries(oiCentros.map((oi) => [oi, orbitas[oi].piezas.map((pz) => RES[pz[0]])])), aplicar, costeReal, opciones.grupoCentros ?? { top: 48 });
     }
     // 3. aristas
     cambiarFase('aristas');
-    const necesitaPLL = !impar && paridad(modelo3.identificar(ref.e).orbitas[0].perm) === 1;
-    if (opciones.dobles === false) oiWings.forEach((oi, w) => resolverOrbita(oi, ref, objetivosWings(ref.e, w), aplicar, costeReal));
-    else resolverGrupo(oiWings, ref, Object.fromEntries(oiWings.map((oi, w) => [oi, objetivosWings(ref.e, w)])), aplicar, costeReal);
+    const conLibres = tablas.libresAristas && opciones.aristasLibres !== false && opciones.metodo !== 'conmutadores';
+    // límite de tiempo: si los centros ya han tardado más de la mitad, sin anticipación
+    const prisa = performance.now() - t0 > presupuesto * 0.5;
+    if (conLibres) aristasLibres(ref, aplicar, costeReal, opciones.umbralAristas ?? 0.1, prisa ? { ...opciones, anticiparAristas: 0 } : opciones);
+    if (opciones.traza) opciones.traza.libres = (opciones.traza.libres || 0) + movs.filter((_, i) => etq[i] === 'aristas').length;
+    // N par: a qué ranura va cada arista entera (la que ya tiene más wings en ella)
+    const asig = !impar && conLibres ? asignarAristas(ref.e, paridad(modelo3.identificar(ref.e).orbitas[0].perm), opciones.perdidaPLL) : null;
+    const objW = (w) => (asig ? objetivosAsignados(asig, w) : objetivosWings(ref.e, w));
+    const necesitaPLL = !impar && (paridad(modelo3.identificar(ref.e).orbitas[0].perm) ^ (asig ? paridad(asig.map((x) => x.e)) : 0)) === 1;
+    if (opciones.dobles === false) oiWings.forEach((oi, w) => resolverOrbita(oi, ref, objW(w), aplicar, costeReal));
+    else resolverGrupo(oiWings, ref, Object.fromEntries(oiWings.map((oi, w) => [oi, objW(w)])), aplicar, costeReal);
     // 4. paridad PLL
     if (necesitaPLL) {
       cambiarFase('paridad');
@@ -727,7 +962,7 @@ export function crearCuboGrande(N) {
     }
     // 5. 3x3
     cambiarFase('3x3');
-    const r3 = cubo3.resolver(extraer3x3(ref.e), { objetivo: opciones.objetivo ?? 20, msMax: opciones.msMax ?? 400 });
+    const r3 = cubo3.resolver(extraer3x3(ref.e), { objetivo: opciones.objetivo ?? (N >= 5 ? 18 : 20), msMax: opciones.msMax ?? Math.max(150, Math.min(N >= 5 ? 1200 : 400, presupuesto - (performance.now() - t0))) });
     if (!r3.ok) return { ok: false, errores: ['Fallo interno en la fase 3x3: ' + r3.errores.join(' ')] };
     aplicar(r3.movimientos);
     cambiarFase('fin');

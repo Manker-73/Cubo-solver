@@ -21,7 +21,7 @@ src/
     nxn.js          cubos NxN (modelo de pegatinas, notación, dibujo, scramble aleatorio, simplificación de capas)
     nxn-piezas.js   NxN: piezas y órbitas (esquinas, aristas centrales, wings, centros) deducidas de la geometría
     nxn-grupo.js    NxN: demostración de las restricciones (Schreier–Sims + paridades por órbita)
-    cubo-grande.js  4x4–7x7: validador y solver por reducción (búsqueda + conmutadores + Kociemba)
+    cubo-grande.js  4x4–7x7: validador y solver por reducción (búsqueda + "aristas libres" + conmutadores + Kociemba)
     tpr4.js         4x4: reducción por búsqueda en tres fases (centros y aristas, sin paridades)
     nxn-centros.js  5x5–7x7: centros por búsqueda en tres etapas (IDA*, dos órbitas a la vez)
     cubo-comun.js   piezas y mensajes compartidos por 2x2/3x3
@@ -46,6 +46,8 @@ src/
     servicio.js     tablas, scrambles, validación y búsquedas (lo usan el Worker y el hilo principal)
     worker.js       punto de entrada del Worker
 tests/            node --test (npm test)
+  paralelo.mjs    reparte los casos de los tests largos entre worker_threads
+  trabajador.mjs  hilo de trabajo (importa el puzzle, genera sus tablas, resuelve)
 scripts/
   build.mjs       genera dist/index.html y dist/artifact.html
   construir.mjs   empaquetado con esbuild (el Worker va incrustado como texto y se crea desde un blob)
@@ -122,7 +124,8 @@ puzzle no necesita saber nada del Worker, pero su estado debe poder copiarse con
 - `cubo-grande.js`: al inicializar busca 3-ciclos puros de cada órbita de centros y wings (conmutadores [X, A·B·A⁻¹] cuyos soportes se cortan en una pieza) y calcula, para cada trío de posiciones, el setup más corto; también conmutadores "múltiples" (2–4 3-ciclos a la vez).
 - Resolver (noche 4):
   - **4x4**: `tpr4.js` reduce el cubo (centros + aristas emparejadas, sin paridad OLL ni PLL) en tres fases de búsqueda con tablas que se generan al inicializar; luego 3x3 con `cubo3.js`.
-  - **5x5–7x7**: centros con `nxn-centros.js` (búsqueda por grupos de dos órbitas, que deja además la paridad de las wings arreglada) → centros que falten (oblicuos del 6x6/7x7) con 3-ciclos simples y múltiples → aristas con 3-ciclos simples y múltiples → paridad PLL (N par) → 3x3.
+  - **5x5–7x7**: centros con `nxn-centros.js` (búsqueda por grupos de dos órbitas, que deja además la paridad de las wings arreglada) → centros que falten (oblicuos del 6x6/7x7) con 3-ciclos simples y múltiples → **aristas libres** (noche 6): voraz con macros `S · A M A⁻¹ · S⁻¹` que no mueven ningún centro, un giro de cara de preparación y anticipación de un paso; se generan al inicializar (2.880 / 6.048 / 8.496) y cada una guarda qué comparaciones de pegatinas cambia → lo que quede, con 3-ciclos simples y múltiples (N par: hacia la asignación de aristas enteras a ranuras que se elige al acabar el voraz) → paridad PLL (N par, según la paridad de esa asignación) → 3x3 (objetivo 18).
+  - Límite de tiempo `tiempoMax` (10 s): recorta los pasos opcionales (anticipación, tiempo del 3x3, segundo intento del 4x4) si los anteriores ya han tardado; siempre devuelve una solución completa.
   - Si una búsqueda no termina dentro de su límite, se usa el método de conmutadores de la noche 3 para lo que falte (siempre correcto). Detalles y cifras en DECISIONES.md y ESTADO.md.
 
 ### Megaminx (cómo está hecho)
@@ -134,5 +137,8 @@ puzzle no necesita saber nada del Worker, pero su estado debe poder copiarse con
 ## Interfaz: Deshacer
 `main.js` guarda el estado del editor antes de cada cambio (pintar, herramientas, acciones, *Resetear*, *Cargar scramble*; hasta 200) y *Deshacer* (o Ctrl+Z) lo recupera. No necesita nada de los puzzles salvo `clonar`.
 
+## Tests en paralelo
+`tests/paralelo.mjs` (`resolverEnParalelo`) reparte los casos de un test de solver entre worker_threads con una cola dinámica. El hilo principal genera los estados (con la misma semilla que antes) y comprueba cada solución; cada hilo (`tests/trabajador.mjs`) importa el módulo del puzzle, genera sus tablas y llama a `resolver`. Los ficheros de tests se ejecutan de uno en uno (`--test-concurrency=1`) para no tener más hilos que núcleos: varios solvers tienen límites de tiempo.
+
 ## Plan para las próximas noches
-- Todos los puzzles tienen ya validador y solver. Posibles mejoras: aristas del 5x5 por búsqueda (cociente 3,0), scramble de estado aleatorio en el 4x4, y para el Megaminx etapas más grandes (más tablas solapadas) o una búsqueda en haz entre etapas.
+- Todos los puzzles tienen ya validador y solver. Lo que más pesa ahora en el 6x6 y el 7x7 son los centros oblicuos (3-ciclos, ~120 y ~125 movimientos); ver ESTADO.md. Otras mejoras posibles: scramble de estado aleatorio en el 4x4 y, para el Megaminx, etapas más grandes o una búsqueda en haz entre etapas.

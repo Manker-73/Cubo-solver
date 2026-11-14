@@ -1,4 +1,4 @@
-# Estado del proyecto (final de la noche 5 — 14/11/2026)
+# Estado del proyecto (final de la noche 6 — 15/11/2026)
 
 ## Qué funciona
 
@@ -6,13 +6,59 @@
 |---|---|---|---|---|
 | 2x2 | estado aleatorio | sí | óptimo (IDA*, U R F) | sí |
 | 3x3 | estado aleatorio | sí | Kociemba dos fases (~20 mov.) | sí |
-| **4x4 – 7x7** | movimientos aleatorios WCA (40/60/80/100) | sí | **reducción por búsqueda** (4x4: 3 fases estilo TPR; 5x5–7x7: centros por IDA*, resto con conmutadores) → 3x3 | sí (+ rellenar cara, cara ampliada) |
+| **4x4 – 7x7** | movimientos aleatorios WCA (40/60/80/100) | sí | **reducción** (4x4: 3 fases de búsqueda estilo TPR; 5x5–7x7: centros por IDA*, aristas con un voraz de macros que no mueven los centros, resto con conmutadores) → 3x3 | sí (+ rellenar cara, cara ampliada) |
 | Pyraminx | estado aleatorio + puntas | sí | óptimo (BFS completo) + puntas | sí |
 | Skewb | estado aleatorio (uniforme exacto) | sí | óptimo (IDA*) | sí |
 | **Square-1** | **estado aleatorio (uniforme, ≥ 11 mov.)** | **sí** | **dos fases (~11,4 barras)** | **sí** |
 | **Megaminx** | Pochmann (7×11) | **sí** | **por etapas con búsqueda (IDA*) + última capa con macros (~90 giros de cara)** | **sí** (+ rellenar cara, vistas U/D, deshacer) |
 
 Ya no queda ningún puzzle sin validador ni solver.
+
+## Noche 6: 5x5, 6x6 y 7x7 más cortos
+
+### Resultado (`npm test`: 100 tests, 100 pasan, 52 min con 2 núcleos)
+Mismos casos que en la noche 4 (500 en 4x4 y 5x5, 100 en 6x6 y 7x7, misma semilla, cubo reorientado al azar; cada solución se aplica movimiento a movimiento). Longitudes en OBTM.
+
+| Cubo | Antes (noche 4) | Cociente antes | **Ahora** | **Cociente ahora** | Objetivo | Long. máx. (antes → ahora) |
+|---|---|---|---|---|---|---|
+| 4x4 | 54,8 | 1,57 | **54,8** | **1,57** | ≤ 2,0 ✅ (sin cambios) | 216 → 216 |
+| 5x5 | 159,6 | 3,07 | **109,1** | **2,10** | ≤ 3,0 (≤ 155) ✅ | 257 → 208 |
+| 6x6 | 357,6 | 4,77 | **256,2** | **3,42** | ≤ 3,5 (≤ 260) ✅ (justo) | 392 → 291 |
+| 7x7 | 436,5 | 4,41 | **355,7** | **3,59** | ≤ 4,0 (≤ 400) ✅ | 556 → 495 |
+
+Por fase (longitud media, antes → ahora):
+
+| Cubo | Centros | Aristas | Paridad | 3x3 |
+|---|---|---|---|---|
+| 5x5 | 36,5 → 36,4 | **103,7 → 54,3** | 0 → 0,02 | 19,4 → 18,5 |
+| 6x6 | 159,6 → 150,6 | **174,2 → 85,0** | 4,4 → 2,2 | 19,4 → 18,5 |
+| 7x7 | 228,6 → 219,8 | **188,2 → 117,2** | 0,1 → 0,1 | 19,6 → 18,7 |
+
+Tiempos por solución (media / máximo; en el test, 2 hilos en 2 núcleos):
+
+| Cubo | Antes | Ahora | Tablas (1.ª vez) |
+|---|---|---|---|
+| 4x4 | 1,1 s / 13,0 s | 1,2 s / 13,3 s | 2,8 s |
+| 5x5 | 1,1 s / 5,1 s | 2,2 s / 6,7 s | 3,6 s (2.880 macros) |
+| 6x6 | 1,3 s / 3,0 s | 3,5 s / 5,3 s | 4,4 s (6.048) |
+| 7x7 | 4,2 s / 11,8 s | 6,6 s / 12,2 s | 8,2 s (8.496) |
+
+El peor caso de todos sigue por debajo de los 13,7 s de antes (13,3 s, un 4x4 que acaba en el método de respaldo). Las tablas nuevas son pocas: las macros de aristas ocupan unos cientos de KB; nada cerca del límite de 100 MB.
+
+### Qué ha cambiado
+- **Aristas por búsqueda voraz con macros que no mueven los centros** ("aristas libres"): `S · A M A⁻¹ · S⁻¹` (S una capa ancha o interior; A un giro de una cara de alrededor; M un giro de una cara del eje de S). Se generan solas al inicializar. En cada paso, un giro de cara opcional + una macro, lo que más wings coloca por movimiento, con un paso de anticipación (primero rápido, luego fino para los mejores). Coloca casi todo; lo que queda, con los 3-ciclos de antes. Detalles en DECISIONES.md.
+- **6x6 (N par)**: las wings se emparejan entre sí (no con su sitio final) y al acabar se elige qué arista entera va en cada ranura; la paridad PLL se decide con esa asignación. Fue lo que más ayudó en el 6x6 (aristas 172 → 92 con el voraz).
+- 3x3 final con objetivo 18 (−1,2), conmutadores dobles un poco más largos en 6x6/7x7 y el voraz de centros mirando más candidatos (−2 en oblicuos), y límite de tiempo (`tiempoMax`, 10 s) que recorta lo opcional si hace falta.
+- **No funcionó** (y lo dejé fuera): emparejar las aristas del 5x5 por fases tipo dominó con búsqueda exacta. Las aristas solas salen en ~30 movimientos, pero con los centros resueltos la búsqueda no termina (explicación y cifras en DECISIONES.md).
+
+### Tests más rápidos
+- Los tests largos de solver (4x4–7x7, Megaminx) reparten los casos entre **worker_threads** (`tests/paralelo.mjs`); los ficheros van de uno en uno para que los hilos no compitan por los núcleos (los solvers con límite de tiempo darían soluciones distintas).
+- `npm test`: 52 min aquí con 2 núcleos (antes, 64 min con el Megaminx y con las soluciones NxN más rápidas que ahora); el solver del Megaminx pasa de 23 a ~11 min. Con más núcleos baja casi en proporción (el resto, Schreier–Sims del 7x7, última capa exhaustiva, la app, es ~12 min). `HILOS=n` fija el número de hilos. `npm run test:rapido`: 8 min.
+- `TAMANOS=4,5 npm test` (o con `node --test tests/cubo-grande.test.mjs`) prueba solo esos tamaños.
+
+### Qué limita ahora
+- **6x6 y 7x7: los centros oblicuos** (~120 y ~140 movimientos de 3-ciclos): son ya la mitad de la solución. Cualquier movimiento que los mueve mueve también centros en X o en cruz, así que no se pueden buscar por parejas como los demás, y con las aristas aún libres tampoco hay macros cortas que solo los muevan a ellos (las que no mueven X no son más que 3-ciclos).
+- El 6x6 queda en 3,42 con el objetivo en 3,5: cumple, pero con poco margen (en muestras de 30 casos salió entre 255 y 260).
 
 ## Noche 5 (corrección): `R++` del Megaminx y vista previa del scramble
 - **Fallo corregido**: `R++`/`R--` giraban alrededor del eje de R dejando quieta la cara opuesta a R (DBL). Según la WCA (notación Pochmann) y TNoodle, se sujeta la cara **L** y se gira todo lo demás (eje de DBR). Los scrambles se aplicaban mal: un scramble hecho en un Megaminx real no coincidía con la vista previa. `D++` y `U` estaban bien.
@@ -216,12 +262,12 @@ Métricas del Square-1: **barras**; **WCA** = Regulación 12c4 (cada `(x,y)` y c
 - El solver del Square-1 no es óptimo: ~11,4 barras de media (los de TNoodle suelen tener 11–13). La primera solución sale en ~7 ms, pero en algún caso raro tarda más (máximo medido 1,3 s, en una de las 19.305 formas).
 - La primera vez que se elige el Square-1 se tarda ~1 s en generar las tablas (en el Worker, la página no se bloquea). En el hilo principal (sin Worker) ese segundo sí bloquea.
 - El editor del Square-1 supone la orientación de referencia (blanco arriba, azul delante, corte según 12c1); no reorienta colores como el de los cubos.
-- La suite completa tarda ~64 min (cubos grandes ~40 min, Megaminx ~25 min: 500 soluciones de ~2,7 s y la última capa exhaustiva); `npm run test:rapido` tarda ~7 min (20 casos por tamaño de NxN y de Megaminx, Schreier–Sims solo hasta el 5x5, muestra de 1.000 últimas capas).
-- Soluciones NxN: 55 / 160 / 358 / 437 de media (antes 195 / 269 / 527 / 687); ver la sección de la noche 4. El tiempo de resolución ha subido a 1–4 s (máximo medido 13,7 s en un 4x4 que acaba usando el método de respaldo) y las tablas tardan 4–8 s la primera vez.
+- La suite completa tarda ~52 min con 2 núcleos (en paralelo con worker_threads; menos con más núcleos); `npm run test:rapido` tarda ~8 min (20 casos por tamaño de NxN y de Megaminx, Schreier–Sims solo hasta el 5x5, muestra de 1.000 últimas capas).
+- Soluciones NxN: 55 / 109 / 256 / 356 de media (noche 4: 55 / 160 / 358 / 437); ver la sección de la noche 6. Resolver tarda 1–7 s de media (máximo medido 13,3 s en un 4x4 que acaba usando el método de respaldo) y las tablas 3–8 s la primera vez.
 - Los scrambles de 4x4–7x7 siguen siendo de movimientos aleatorios (TNoodle usa estado aleatorio en el 4x4).
 - Megaminx: los scrambles siguen siendo de movimientos aleatorios (Pochmann, como exige la WCA). Resolver tarda ~2,5–3 s porque prueba orientaciones hasta agotar el tiempo (`tiempoMax`); la primera vez se generan sus tablas (~1,3 s). En el móvil la red completa queda pequeña: para pintar, mejor las vistas "Arriba (U)" y "Abajo (D)".
 
-## Siguiente paso recomendado (noche 6)
-1. **Megaminx más corto**: etapas más grandes (p. ej. Base 2 + Base 3 con más tablas solapadas; ahorra ~2,5 giros pero hoy tarda demasiado) o búsqueda en haz entre etapas; macros de última capa con más caras.
-2. **5x5**: aristas por búsqueda (fases tipo dominó) para bajar del cociente 3,0.
+## Siguiente paso recomendado (noche 7)
+1. **Oblicuos del 6x6/7x7**: son lo que más pesa. Ideas no probadas: construir primero "barras" (oblicuo A + oblicuo B del mismo color, que con giros de hasta dos capas viajan juntos) y resolver luego el 6x6 como un 5x5 virtual (capas 1, 2, bloque 3–4, 5, 6) con la búsqueda de centros del 5x5.
+2. **Megaminx más corto**: etapas más grandes o búsqueda en haz entre etapas; macros de última capa con más caras.
 3. **4x4**: scramble de estado aleatorio (las tablas de `tpr4.js` sirven de base).
