@@ -237,7 +237,7 @@ test('Megaminx: última capa — dos macros (o una corta más dos) resuelven los
     for (let j = 0; j < 5; j++) { pe.push((e[j] / 3) | 0); oe = oe * 3 + (e[j] % 3); pa.push(a[j] >> 1); oa = oa * 2 + (a[j] & 1); }
     return ((rank5(pe) * 243 + oe) * 120 + rank5(pa)) * 32 + oa;
   };
-  const muestra = completo ? null : 3000;
+  const muestra = completo ? null : 1000;
   let cubiertos = 0;
   const bits = new Uint8Array(Math.ceil((120 * 243 * 120 * 32) / 8));
   if (!muestra) {

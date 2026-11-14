@@ -198,7 +198,17 @@ function dosMacros(e, a, cota = Infinity) {
  */
 export function resolverUltima(e, a) {
   const { lista } = inicializarUltima();
-  const r = dosMacros(e, a);
+  // dos macros, también tras un giro previo de U (U, U2, U2', U': las macros de 1 giro)
+  let r = dosMacros(e, a);
+  const pe0 = new Uint8Array(5), pa0 = new Uint8Array(5);
+  for (const u of lista) {
+    if (u.sec.length !== 1) continue;
+    for (let j = 0; j < 5; j++) { pe0[j] = u.ae[e[j]]; pa0[j] = u.aa[a[j]]; }
+    const resto = dosMacros(pe0, pa0, r ? r.length : Infinity);
+    if (!resto) continue;
+    const sec = unirSeguidos([...u.sec, ...resto]);
+    if (!r || sec.length < r.length) r = sec;
+  }
   if (r) return r;
   // respaldo: una macro p delante (de menor a mayor longitud); se para al acabar la
   // primera longitud de p con la que hay solución

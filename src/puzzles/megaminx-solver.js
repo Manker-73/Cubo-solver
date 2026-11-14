@@ -12,7 +12,7 @@
 //
 // Métrica: cualquier giro de una cara (72° o 144°, en cualquier sentido) = 1.
 
-import { crearEtapa, resolverEtapa, carasPieza, ADY } from './megaminx-busqueda.js';
+import { crearEtapa, resolverEtapa, cotaEtapa, carasPieza, ADY } from './megaminx-busqueda.js';
 import { inicializarUltima, resolverUltima, ESQ_LL, ARI_LL, unirSeguidos } from './megaminx-ultima.js';
 import { modelo, ESQUINAS, ARISTAS, ORB_ESQ, ORB_ARI, sigmaDeCentros, reetiquetar } from './megaminx-piezas.js';
 import { geo, IDX, CARAS, MOVS_CARA } from './megaminx-geo.js';
@@ -142,8 +142,8 @@ const huecoDe = (est, o, id) => {
  */
 function resolverEtapaSegura(et, est, opciones, previasEtapa) {
   const huecos = et.piezas.map(([o, id]) => huecoDe(est, o, id));
-  const r = resolverEtapa(et, huecos, { maxNodos: opciones.maxNodos ?? 4e7 });
-  if (r) return r.movs;
+  const r = resolverEtapa(et, huecos, { maxNodos: opciones.maxNodos ?? 4e7, varias: opciones.varias ?? 1 });
+  if (r) return r.varias;
   // respaldo: piezas nuevas de una en una
   const movs = [];
   let e = est;
@@ -160,23 +160,49 @@ function resolverEtapaSegura(et, est, opciones, previasEtapa) {
     movs.push(...rr.movs);
     previas = [...previas, pz];
   }
-  return movs;
+  return [movs];
 }
 
-/** Resuelve un estado de piezas (centros en su sitio). Devuelve { movs, fases } (índices de giro). */
-function resolverOrientacion(est0, opciones) {
+/** Huecos locales de la última capa (ver megaminx-ultima.js). */
+function estadoUltima(est) {
+  const e = ESQ_LL.map((id) => { const h = huecoDe(est, ORB_ESQ, id); return ESQ_LL.indexOf(Math.floor(h / 3)) * 3 + (h % 3); });
+  const a = ARI_LL.map((id) => { const h = huecoDe(est, ORB_ARI, id); return ARI_LL.indexOf(Math.floor(h / 2)) * 2 + (h % 2); });
+  return { e, a };
+}
+
+/** Etapas desde `desde` (inclusive) hasta `hasta` (exclusive) sobre un estado parcial. */
+function avanzar(parcial, desde, hasta, opciones) {
   const { etapas } = EST;
-  let est = est0;
-  const tramos = [];
-  let previas = [];
-  for (const et of etapas) {
-    const movs = resolverEtapaSegura(et, est, opciones, previas);
+  let { est, tramos, previas } = parcial;
+  tramos = tramos.slice();
+  for (let k = desde; k < hasta; k++) {
+    const et = etapas[k];
+    const opcs = resolverEtapaSegura(et, est, opciones, previas);
+    // entre las soluciones más cortas de la etapa, la que deja más fácil la siguiente
+    // (cota de sus tablas) o, en la última, la que deja la última capa más corta
+    let movs = opcs[0];
+    if (opcs.length > 1) {
+      let mejor = Infinity;
+      for (const c of opcs) {
+        let x = est;
+        for (const m of c) x = modelo.aplicarPiezas(x, MOVS_CARA[m]);
+        let v;
+        if (k + 1 < etapas.length) v = cotaEtapa(etapas[k + 1], etapas[k + 1].piezas.map(([o, id]) => huecoDe(x, o, id)));
+        else { const { e, a } = estadoUltima(x); v = resolverUltima(e, a).length; }
+        if (v < mejor) { mejor = v; movs = c; }
+      }
+    }
     for (const m of movs) est = modelo.aplicarPiezas(est, MOVS_CARA[m]);
     tramos.push({ nombre: et.def.nombre, grupo: et.def.grupo, movs });
     previas = [...previas, ...et.nuevas];
   }
-  const e = ESQ_LL.map((id) => { const h = huecoDe(est, ORB_ESQ, id); return ESQ_LL.indexOf(Math.floor(h / 3)) * 3 + (h % 3); });
-  const a = ARI_LL.map((id) => { const h = huecoDe(est, ORB_ARI, id); return ARI_LL.indexOf(Math.floor(h / 2)) * 2 + (h % 2); });
+  return { est, tramos, previas, largo: tramos.reduce((x, t) => x + t.movs.length, 0) };
+}
+
+/** Termina un estado parcial: las etapas que falten y la última capa. */
+function terminar(parcial, desde, opciones) {
+  const { est, tramos } = avanzar(parcial, desde, EST.etapas.length, opciones);
+  const { e, a } = estadoUltima(est);
   const ll = resolverUltima(e, a);
   if (!ll) throw new Error('Megaminx: no se encontró la última capa');
   tramos.push({ nombre: ULTIMA.nombre, grupo: ULTIMA.grupo, movs: ll });
@@ -227,23 +253,31 @@ export function simplificarTramos(tramos) {
 
 /**
  * Resuelve un estado de pegatinas cuyos centros ya tienen el color de su cara
- * (estado validado y reetiquetado). opciones: { tiempoMax (ms), orientaciones (máximo),
+ * (estado validado y reetiquetado). opciones: { tiempoMax (ms, 2500), orientaciones
+ * (máximo, 60), preEtapas (3), varias (soluciones por etapa entre las que elegir, 6),
  * maxNodos }. Devuelve { movimientos, fases, orientacionesProbadas }.
  */
-export function resolverMegaminx(estado, opciones = {}) {
+export function resolverMegaminx(estado, opcionesUsuario = {}) {
   inicializarSolver();
+  const opciones = { varias: 6, ...opcionesUsuario };
   const t0 = Date.now();
   const tiempoMax = opciones.tiempoMax ?? 2500;
-  const maxOr = opciones.orientaciones ?? 60;
+  const maxOr = Math.min(opciones.orientaciones ?? 60, 60);
+  const pre = Math.min(opciones.preEtapas ?? 3, EST.etapas.length);
+  // 1) las primeras etapas en todas las orientaciones (son baratas) y, por orden de
+  //    lo que han costado, 2) terminar tantas como dé el tiempo
+  const candidatos = [];
+  for (let k = 0; k < maxOr; k++) {
+    const o = EST.orientaciones[k];
+    const { orbitas } = modelo.identificar(o.girar(estado));
+    candidatos.push({ o, k, parcial: avanzar({ est: orbitas, tramos: [], previas: [] }, 0, maxOr > 1 ? pre : 0, opciones) });
+  }
+  candidatos.sort((x, y) => x.parcial.largo - y.parcial.largo || x.k - y.k);
   let mejor = null;
   let probadas = 0;
-  // orden de prueba: la identidad y después las demás, en un orden fijo
-  for (let k = 0; k < EST.orientaciones.length && probadas < maxOr; k++) {
+  for (const { o, parcial } of candidatos) {
     if (probadas > 0 && Date.now() - t0 > tiempoMax) break;
-    const o = EST.orientaciones[(k * 7) % 60];
-    const eg = o.girar(estado);
-    const { orbitas } = modelo.identificar(eg);
-    const tramos = resolverOrientacion(orbitas, opciones);
+    const tramos = terminar(parcial, maxOr > 1 ? pre : 0, opciones);
     // traducir los giros al puzzle original
     for (const t of tramos) t.movs = t.movs.map((m) => o.mapa[m >> 2] * 4 + (m & 3));
     const s = simplificarTramos(tramos);

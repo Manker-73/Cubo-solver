@@ -306,6 +306,7 @@ function pintarLeyenda() {
   if (!p.leyendaNotacion || !puedeResolver(p)) { caja.hidden = true; caja.innerHTML = ''; return; }
   const l = p.leyendaNotacion();
   caja.hidden = false;
+  caja.open = !!(window.matchMedia && window.matchMedia('(min-width: 700px)').matches);
   caja.innerHTML = `<summary>Notación: qué cara es cada letra</summary><div class="leyenda-cuerpo"><div class="vista leyenda-red">${l.svg}</div><p>${l.texto}</p></div>`;
 }
 

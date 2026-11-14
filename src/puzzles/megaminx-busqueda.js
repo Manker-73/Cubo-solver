@@ -104,9 +104,10 @@ function tablaPoda(orbs, meta, nMov, loc) {
 
 /**
  * IDA* de una etapa desde los huecos (globales) actuales de sus piezas.
- * Devuelve { movs: [índices de giro], nodos } o null si se pasa de maxNodos.
+ * Devuelve { movs: [índices de giro], varias: [hasta `varias` soluciones de la misma
+ * longitud mínima], nodos } o null si se pasa de maxNodos.
  */
-export function resolverEtapa(et, huecos, { maxNodos = 2e6, maxProf = 30 } = {}) {
+export function resolverEtapa(et, huecos, { maxNodos = 2e6, maxProf = 30, varias = 1 } = {}) {
   const n = et.n;
   const { orbs, meta, tablas, grupos, movs, caraMov, loc } = et;
   const nMov = movs.length;
@@ -120,7 +121,7 @@ export function resolverEtapa(et, huecos, { maxNodos = 2e6, maxProf = 30 } = {})
   }
   const camino = new Int32Array(maxProf + 1);
   let nodos = 0;
-  let solucion = null;
+  const soluciones = [];
   const g0 = Int32Array.from(grupos, (g) => g[0]);
   const g1 = Int32Array.from(grupos, (g) => (g.length > 1 ? g[1] : -1));
   const g2 = Int32Array.from(grupos, (g) => (g.length > 2 ? g[2] : -1));
@@ -142,7 +143,7 @@ export function resolverEtapa(et, huecos, { maxNodos = 2e6, maxProf = 30 } = {})
   function dfs(prof, ultima) {
     const base = prof * n;
     const hv = h(base);
-    if (hv === 0 && resuelto(base)) { solucion = Array.from(camino.subarray(0, prof), (i) => movs[i]); return true; }
+    if (hv === 0 && resuelto(base)) { soluciones.push(Array.from(camino.subarray(0, prof), (i) => movs[i])); return soluciones.length >= varias; }
     if (prof + hv > limite) return false;
     if (nodos > maxNodos) return true;
     const sig = base + n;
@@ -160,8 +161,24 @@ export function resolverEtapa(et, huecos, { maxNodos = 2e6, maxProf = 30 } = {})
   if (h0 >= 99) return null;
   for (limite = h0; limite <= maxProf; limite++) {
     dfs(0, -1);
-    if (solucion) return { movs: solucion, nodos };
+    if (soluciones.length) return { movs: soluciones[0], varias: soluciones, nodos };
     if (nodos > maxNodos) return null;
   }
   return null;
+}
+
+/** Cota inferior (heurística de las tablas) de lo que falta en una etapa. */
+export function cotaEtapa(et, huecos) {
+  const { orbs, tablas, grupos, loc } = et;
+  let hm = 0;
+  for (let gi = 0; gi < grupos.length; gi++) {
+    const g = grupos[gi], t = tablas[gi];
+    let idx = loc[orbs[g[0]]].l[huecos[g[0]]];
+    if (g.length > 1) idx += t.r0 * loc[orbs[g[1]]].l[huecos[g[1]]];
+    if (g.length > 2) idx += t.r01 * loc[orbs[g[2]]].l[huecos[g[2]]];
+    const v = t.d[idx];
+    if (v < 0) return 99;
+    if (v > hm) hm = v;
+  }
+  return hm;
 }

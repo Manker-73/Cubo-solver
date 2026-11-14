@@ -151,7 +151,7 @@ const claro = (hex) => {
 };
 /** Letra de cada cara sobre su centro (texto SVG; no capta los toques). */
 function etiquetasCentros(estado, solo) {
-  const tam = (CAJA_RED.x1 - CAJA_RED.x0) * 0.028;
+  const tam = (CAJA_RED.x1 - CAJA_RED.x0) * 0.036;
   let txt = '';
   CENTROS.forEach((i, f) => {
     if (solo && !solo.includes(i)) return;
