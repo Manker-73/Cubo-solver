@@ -10,26 +10,36 @@
 | Pyraminx | estado aleatorio + puntas | sí | óptimo (BFS completo) + puntas | sí |
 | Skewb | estado aleatorio (uniforme exacto) | sí | óptimo (IDA*) | sí |
 | **Square-1** | **estado aleatorio (uniforme, ≥ 11 mov.)** | **sí** | **dos fases (~11,4 barras)** | **sí** |
-| **Megaminx** | Pochmann (7×11) | **sí** | **por etapas con búsqueda (IDA*) + última capa con macros (~88 giros de cara)** | **sí** (+ rellenar cara, vistas U/D, deshacer) |
+| **Megaminx** | Pochmann (7×11) | **sí** | **por etapas con búsqueda (IDA*) + última capa con macros (~90 giros de cara)** | **sí** (+ rellenar cara, vistas U/D, deshacer) |
 
 Ya no queda ningún puzzle sin validador ni solver.
 
+## Noche 5 (corrección): `R++` del Megaminx y vista previa del scramble
+- **Fallo corregido**: `R++`/`R--` giraban alrededor del eje de R dejando quieta la cara opuesta a R (DBL). Según la WCA (notación Pochmann) y TNoodle, se sujeta la cara **L** y se gira todo lo demás (eje de DBR). Los scrambles se aplicaban mal: un scramble hecho en un Megaminx real no coincidía con la vista previa. `D++` y `U` estaban bien.
+- **Los centros se mueven, y es lo correcto**: los movimientos Pochmann giran casi todo el puzzle, así que tras el scramble los centros acaban en otro sitio (60 (todas) orientaciones distintas en 1000 scrambles, siempre rotaciones rígidas). La vista previa ahora se muestra **siempre en la orientación de referencia** (blanco arriba, verde oscuro delante), y debajo se indica dónde quedan el blanco y el verde y que hay que girar el puzzle entero para que coincida. *Cargar scramble actual* carga ese estado reorientado.
+- Tests nuevos (`tests/megaminx-pochmann.test.mjs`):
+  - Las pegatinas que no mueve `R++` (falla con el código antiguo).
+  - Los centros tras cada movimiento Pochmann, contra TNoodle.
+  - Rigidez de los centros y vista previa fija en 1000 scrambles.
+  - Validador y solver sobre el estado reorientado: 1000/1000.
+- `npm run test:rapido`: 96/96 (7 min). Detalles en DECISIONES.md.
+
 ## Noche 5: Megaminx
 
-### Resultado (`npm test`: 93 tests, 93 pasan, 64 min; tras el último cambio del solver se repitió el fichero del Megaminx: 13/13, 23 min)
+### Resultado (`npm test`: 93 tests, 93 pasan, 64 min; tras el último cambio del solver se repitió el fichero del Megaminx: 13/13, 23 min; y otra vez tras corregir `R++`, con los scrambles ya bien aplicados: 13/13 + 5/5 de `megaminx-pochmann`, 26 min — estas son las cifras de abajo; con el `R++` erróneo la media era 88,05)
 500 casos: scramble Pochmann → puzzle reorientado al azar (una de sus 60 orientaciones) → validador → solver → la solución se aplica giro a giro con el modelo de pegatinas → cada pegatina queda con el color de su centro. Además, sin giros que se puedan unir y con las etapas cubriendo toda la solución.
 
 | | Valor |
 |---|---|
 | Resueltos | **500/500 (100 %)** |
-| Longitud media (giros de cara) | **88,05** |
-| Longitud mínima / máxima | 68 / 95 |
+| Longitud media (giros de cara) | **89,53** |
+| Longitud mínima / máxima | 82 / 94 |
 | Cota inferior por conteo (calculada aquí) | **48** |
-| **Cociente media / cota inferior** | **1,83** |
+| **Cociente media / cota inferior** | **1,87** |
 | Tiempo medio / máximo por solución | 2,6 s / 3,0 s |
-| Orientaciones probadas (media) | 22,8 de 60 |
+| Orientaciones probadas (media) | 22,5 de 60 |
 | Tablas (1.ª vez) | 1,2 s: 59 tablas de poda (409 ms) + 10.765 macros de última capa (822 ms); 2,9 MB en memoria |
-| Etapas que necesitaron el respaldo (partirse en sub-etapas) | 0 de 170.523 |
+| Etapas que necesitaron el respaldo (partirse en sub-etapas) | 0 de 169.255 |
 
 Métrica: cualquier giro de una cara (72° o 144°, en cualquier sentido) = 1. Objetivo orientativo (< 200): ✅, con margen.
 
@@ -37,7 +47,7 @@ Longitud media por etapa:
 
 | Base 1 | Base 2 | Base 3 | Base 4 | Anillo 1 | Anillo 2 | Anillo 3 | F2L 1 | F2L 2 | F2L 3 | Última capa |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 6,47 | 5,30 | 5,23 | 9,25 | 5,34 | 9,05 | 8,80 | 8,82 | 5,49 | 9,49 | 14,80 |
+| 7,13 | 5,44 | 5,44 | 9,43 | 5,48 | 9,16 | 8,81 | 8,89 | 5,49 | 9,40 | 14,85 |
 
 - **Base 1–4**: la cara D y las aristas del anillo inferior (15 piezas); **Anillo 1–3**: las piezas de BL, L y BR que tocan el anillo inferior (13); **F2L 1–3**: las 12 piezas de F y R que no son de U, solo con U, F, R; **Última capa**: las 10 piezas de U con dos macros. Detalle en DECISIONES.md.
 - Evolución durante la noche (20 casos): primera versión 95,0 → tablas que cubren todos los pares (más orientaciones en el mismo tiempo) 92,1 → orientaciones ordenadas por sus primeras etapas 91,0 → varias soluciones por etapa 88,2.

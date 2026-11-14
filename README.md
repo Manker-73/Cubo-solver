@@ -4,7 +4,7 @@ Generador de scrambles WCA, validador de estado y solucionador visual de puzzles
 Aplicación web en un único HTML, sin servidor.
 
 - **Scrambles**: 2x2 a 7x7, Square-1, Skewb, Pyraminx y Megaminx (estado aleatorio en 2x2, 3x3, Pyraminx, Skewb y Square-1).
-- **Validador y solucionador en todos los puzzles**: 2x2 (óptimo), 3x3 (dos fases de Kociemba), 4x4 (reducción en tres fases de búsqueda, sin paridades OLL ni PLL, ~55 movimientos) y 5x5 a 7x7 (reducción con búsqueda por etapas en los centros y conmutadores en el resto), Pyraminx (óptimo), Skewb (óptimo), Square-1 (dos fases: forma de cubo y permutación, solo con giros posibles) y Megaminx (por etapas con búsqueda IDA* y la última capa con macros buscadas automáticamente; ~88 giros de cara de media).
+- **Validador y solucionador en todos los puzzles**: 2x2 (óptimo), 3x3 (dos fases de Kociemba), 4x4 (reducción en tres fases de búsqueda, sin paridades OLL ni PLL, ~55 movimientos) y 5x5 a 7x7 (reducción con búsqueda por etapas en los centros y conmutadores en el resto), Pyraminx (óptimo), Skewb (óptimo), Square-1 (dos fases: forma de cubo y permutación, solo con giros posibles) y Megaminx (por etapas con búsqueda IDA* y la última capa con macros buscadas automáticamente; ~90 giros de cara de media).
 - Las tablas se generan en el navegador dentro de un Web Worker (la página no se bloquea); si no hay Worker, en el hilo principal.
 
 **App en línea: https://manker-73.github.io/Cubo-solver/**
@@ -17,7 +17,7 @@ Aplicación web en un único HTML, sin servidor.
 4. Recorre la solución con los botones de reproducción (paso a paso, play y velocidad); *Copiar* copia los movimientos. En los puzzles con etapas (cubos grandes, Megaminx) la barra de fases muestra en qué etapa está cada tramo.
 
 ### Notación del Megaminx
-Los scrambles están en notación Pochmann (`R++`, `D--`, `U'`), como en la WCA. Las soluciones usan notación de caras: **U** arriba; a su alrededor, en sentido horario, **F** (delante), **R**, **BR**, **BL**, **L**; **D** abajo y a su alrededor **DR** (debajo de F y R), **DBR**, **B** (detrás, opuesta a F), **DBL**, **DL**. `R` = 72° en sentido horario mirando la cara R, `R'` = 72° antihorario, `R2` = 144° horario, `R2'` = 144° antihorario; cada giro cuenta 1. La app tiene una leyenda con la red y la letra de cada cara, y durante la reproducción muestra las letras en los centros.
+Los scrambles están en notación Pochmann (`R++`, `D--`, `U'`), como en la WCA: se empieza con el blanco arriba y el verde oscuro delante; `R++` = sujetar la cara de la izquierda y girar el resto 2/5 en sentido horario visto desde la derecha; `D++` = sujetar la de arriba y girar el resto visto desde abajo. Como estos movimientos giran casi todo el puzzle, al acabar los centros están en otro sitio: la vista previa se muestra con el blanco arriba y el verde delante, y debajo se indica cómo girar el puzzle para que coincida. Las soluciones usan notación de caras: **U** arriba; a su alrededor, en sentido horario, **F** (delante), **R**, **BR**, **BL**, **L**; **D** abajo y a su alrededor **DR** (debajo de F y R), **DBR**, **B** (detrás, opuesta a F), **DBL**, **DL**. `R` = 72° en sentido horario mirando la cara R, `R'` = 72° antihorario, `R2` = 144° horario, `R2'` = 144° antihorario; cada giro cuenta 1. La app tiene una leyenda con la red y la letra de cada cara, y durante la reproducción muestra las letras en los centros.
 
 Funciona sin conexión una vez cargada: todo se calcula en el navegador.
 

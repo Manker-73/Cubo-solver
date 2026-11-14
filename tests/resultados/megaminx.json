@@ -5,16 +5,16 @@
   "longitudMax": 77,
   "msPorScramble": 0.09,
   "casos": 1000,
-  "fecha": "2026-11-14T16:34:33.555Z",
+  "fecha": "2026-11-14T17:41:06.142Z",
   "ordenGrupo": "100669616553523347122516032313645505168688116411019768627200000000000",
-  "msSchreierSims": 2619,
+  "msSchreierSims": 3192,
   "mensajes": {
     "girada": "Hay una esquina girada: la suma de los giros de las esquinas no es múltiplo de 3 (alguna esquina está girada 120° respecto a lo posible).",
     "volteada": "Hay una arista volteada: el número de aristas volteadas es impar.",
     "dosEsquinas": "La permutación de las esquinas es impar (por ejemplo, dos esquinas intercambiadas): es imposible, porque cada giro mueve las esquinas en ciclos de 5.",
     "dosAristas": "La permutación de las aristas es impar (por ejemplo, dos aristas intercambiadas): es imposible, porque cada giro mueve las aristas en ciclos de 5.",
-    "especular": "La esquina de BL-L-DBL (rojo-rosa-morado) tiene los colores de una esquina real pero en orden especular: esa pieza no existe.",
-    "colores": "Hay 10 pegatinas de color amarillo y debería haber 11 (una cara entera). | Hay 12 pegatinas de color azul y debería haber 11 (una cara entera).",
+    "especular": "La esquina de BL-L-DBL (blanco-verde oscuro-rojo) tiene los colores de una esquina real pero en orden especular: esa pieza no existe.",
+    "colores": "Hay 10 pegatinas de color verde claro y debería haber 11 (una cara entera). | Hay 12 pegatinas de color rosa y debería haber 11 (una cara entera).",
     "centrosEspeculares": "Los centros están en orden especular (como vistos en un espejo): ningún Megaminx tiene los colores así colocados.",
     "centrosOpuestos": "Los centros rojo (F) y crema (B) están en caras opuestas, pero en el Megaminx el opuesto del rojo es el naranja. | Los centros verde oscuro (R) y naranja (DBL) están en caras opuestas, pero en el Megaminx el opuesto del verde oscuro es el crema."
   },
@@ -27,7 +27,7 @@
   ],
   "ultimaCapa": {
     "macros": 10765,
-    "msMacros": 822,
+    "msMacros": 1030,
     "secuenciasRecorridas": 449389,
     "estados": 4665600,
     "conDosMacros": 4661530,
@@ -37,36 +37,46 @@
   "solver": {
     "casosSolver": 500,
     "resueltos": "500/500 (100%)",
-    "longitudMedia": 88.05,
-    "longitudMax": 95,
-    "longitudMin": 68,
+    "longitudMedia": 89.53,
+    "longitudMax": 94,
+    "longitudMin": 82,
     "cotaInferior": 48,
-    "cociente": 1.83,
-    "msMedio": 2612,
-    "msMax": 3009,
-    "orientacionesMedia": 22.8,
+    "cociente": 1.87,
+    "msMedio": 2611,
+    "msMax": 3008,
+    "orientacionesMedia": 22.5,
     "porEtapa": {
-      "Base 1": 6.47,
-      "Base 2": 5.3,
-      "Base 3": 5.23,
-      "Base 4": 9.25,
-      "Anillo 1": 5.34,
-      "Anillo 2": 9.05,
-      "Anillo 3": 8.8,
-      "F2L 1": 8.82,
+      "Base 1": 7.13,
+      "Base 2": 5.44,
+      "Base 3": 5.44,
+      "Base 4": 9.43,
+      "Anillo 1": 5.48,
+      "Anillo 2": 9.16,
+      "Anillo 3": 8.81,
+      "F2L 1": 8.89,
       "F2L 2": 5.49,
-      "F2L 3": 9.49,
-      "Última capa": 14.8
+      "F2L 3": 9.4,
+      "Última capa": 14.85
     },
-    "etapasResueltas": 170523,
+    "etapasResueltas": 169255,
     "etapasConRespaldo": 0,
-    "msTablas": 1241,
+    "msTablas": 1582,
     "tablas": {
       "etapas": 59,
       "macros": 10765,
       "bytes": 2928719,
-      "msEtapas": 409,
-      "msUltima": 822
+      "msEtapas": 534,
+      "msUltima": 1030
     }
+  },
+  "pochmann": {
+    "scrambles": 1000,
+    "orientacionesDistintasTrasElScramble": 60,
+    "orientacionesEnLaVistaPrevia": 1
+  },
+  "vistaPrevia": {
+    "casos": 1000,
+    "resueltos": "1000/1000",
+    "longitudMediaUnaOrientacion": 97.72
   }
 }

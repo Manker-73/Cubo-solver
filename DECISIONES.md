@@ -43,7 +43,7 @@ Decisiones que he tomado yo cuando había dudas, para que puedas revisarlas.
 
 ## Megaminx
 - Notación Pochmann: 7 líneas de 10 movimientos R/D alternos (empezando por R), cada uno `++` o `--` al azar, y la línea termina en `U` si el último fue `D++` o en `U'` si fue `D--` (como TNoodle).
-- `R++` gira todo menos la capa de la cara opuesta a R, 144° en sentido horario visto desde R; `D++` igual con el eje de D (todo menos la capa de U). La vista previa se calcula con el motor geométrico (132 pegatinas, dos "flores").
+- ~~`R++` gira todo menos la capa de la cara opuesta a R, 144° en sentido horario visto desde R~~ **(mal; corregido en la noche 5: ver "Corrección: R++ y vista previa del scramble")**; `D++` gira todo menos la capa de U, 144° en sentido horario visto desde D. La vista previa se calcula con el motor geométrico (132 pegatinas, dos "flores").
 - Los 12 colores eran orientativos en la noche 1 (no hay un esquema único oficial). **Noche 5: confirmados** con un Megaminx físico, igual que la red (ver abajo).
 
 # Noche 2
@@ -253,3 +253,26 @@ Cada etapa resuelve unas pocas piezas con IDA* usando un conjunto de caras que s
 - **Rellenar cara** (como en el NxN) y **Deshacer** (nuevo, para todos los puzzles: botón y Ctrl+Z; deshace pintar, herramientas, acciones, *Resetear* y *Cargar scramble*, hasta 200 pasos).
 - Reproducción: las etapas en la barra de fases (Base 1–4, Anillo 1–3, F2L 1–3, Última capa; coloreadas por grupo), "Paso 36/90 · Anillo 3" y las letras de las caras en los centros del editor.
 - Campos nuevos (opcionales) de la interfaz común: `leyendaNotacion()` (`{svg, texto}`, se muestra en un desplegable bajo las fases; abierto por defecto en pantallas anchas), `renderizar(estado, {etiquetas})` y `fases[].grupo` (clase de color de la fase).
+
+# Noche 5 (corrección): R++ y vista previa del scramble
+
+## Problema
+En la vista previa del scramble del Megaminx, los centros cambiaban de color de un scramble a otro (siempre los 12 colores, como si el puzzle entero estuviera girado).
+
+## Diagnóstico: las dos cosas a la vez
+**(a) Que los centros se muevan es lo correcto.** Los movimientos Pochmann `R++` y `D++` giran todo el puzzle salvo una capa, así que equivalen a una rotación del puzzle entero más un giro de esa capa: tras el scramble, los centros están en otro sitio respecto a como se empezó (blanco arriba, verde delante). En un Megaminx real pasa lo mismo, y TNoodle dibuja así su imagen (no la reorienta). Comprobado en un test con 1000 scrambles: la disposición de los centros es siempre una de las 60 rotaciones rígidas del esquema (las vecinas siguen siendo vecinas y en el mismo orden). En 1000 scrambles aparecen las 60 orientaciones.
+
+**(b) Pero además había un fallo en `R++`.** Se definía como "todo menos la capa de la cara opuesta a R (DBL), girado alrededor del eje de R". La definición de la WCA (notación de Stefan Pochmann) es **sujetar la cara L y girar todo lo demás**, 2/5 en sentido horario visto desde la derecha. En TNoodle (`MegaminxPuzzle.java`), `R` es `bigTurn(DBR)`: todo menos la capa opuesta a DBR, que es L, girado como la cara DBR. Así que nuestro `R++` giraba el bloque equivocado y alrededor del eje equivocado. Un scramble hecho en un Megaminx real no coincidía con nuestra vista previa, aunque fuera un estado válido. Ni el validador ni el solver lo notaban: un estado válido se resuelve igual. `D++` (todo menos U, visto desde abajo) y `U` sí estaban bien.
+- No pude ejecutar el código de TNoodle aquí (el entorno no deja ejecutar código descargado), así que lo usé como referencia leída. De `bigTurn` (los `swapCenters` y `swapWholeFace`) saqué cómo se mueven los centros en un quinto de `R` y de `D`, y los tests comparan con eso.
+- El test de `D++` contra los ciclos de TNoodle pasaba ya con el código antiguo. Eso confirma que nuestro sentido de giro y el de TNoodle coinciden, y que el fallo estaba solo en `R++`.
+
+## Corrección
+- `megaminx-geo.js`: `R++`/`R--` giran ahora las pegatinas que no son de la capa L alrededor del eje de DBR (`eje: DBR, umbral: −H`).
+- Tests nuevos (`tests/megaminx-pochmann.test.mjs`):
+  - Tras `R++`, las únicas pegatinas que no se mueven son la capa L y el centro de DBR (con el código antiguo eran la capa DBL y el centro de R: **el test falla con el código antiguo y pasa con el nuevo**).
+  - `R++ L2'` es una rotación del puzzle entero.
+  - Los centros tras `R++`, `R--`, `D++` y `D--` coinciden con los de TNoodle.
+  - Rigidez de los centros en 1000 scrambles.
+- **Vista previa**: después de aplicar el scramble, se aplica al estado la rotación del puzzle entero (una de las 60) que devuelve los centros a la orientación de referencia (blanco arriba, verde oscuro delante; los colores comprobados con el Megaminx físico). Solo cambia cómo se muestra: el scramble es el mismo. Es el campo opcional `estadoVistaScramble(estado)` de la interfaz común; `main.js` lo usa para la vista previa y para *Cargar scramble actual*, que carga ese mismo estado reorientado.
+- **Indicación bajo la vista previa** (`notaScramble(movs)`): "Empieza con el blanco arriba y el verde oscuro delante. Al terminar, el centro blanco queda en X y el verde oscuro en Y: gira el Megaminx entero hasta poner el blanco arriba y el verde oscuro delante, y coincidirá con la imagen." X e Y se calculan para cada scramble.
+- Verificación: en 1000 scrambles la vista previa tiene siempre los mismos colores de centro en las mismas posiciones. El estado reorientado pasa el validador y el solver lo resuelve en el 100 % de 1000 casos (con una orientación, para que el test no tarde). La prueba de humo comprueba la vista previa en tres scrambles, la indicación y que el editor tras *Cargar* muestra exactamente la vista previa.

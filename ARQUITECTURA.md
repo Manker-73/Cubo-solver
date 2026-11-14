@@ -89,6 +89,8 @@ Opcional (según `capacidades`):
 | `vistasEditor` | `[{id, nombre}]`: vistas del editor (la primera es la de por defecto); `renderizar` recibe `{vista}` (NxN: red completa o una cara ampliada) |
 | `resolver(...).fases` | `[{nombre, inicio, fin}]`: tramos de la solución (la interfaz los muestra en la reproducción) |
 | `buscarRedundanciaSolucion(movs)` | redundancias en una solución (por defecto, la regla de los scrambles; NxN: tramos que se pueden escribir con menos movimientos) |
+| `estadoVistaScramble(estado)` | estado que muestra la vista previa del scramble y que carga *Cargar scramble actual* (Megaminx: el mismo, girado entero a la orientación de referencia, porque los movimientos Pochmann giran casi todo el puzzle) |
+| `notaScramble(movs)` | texto bajo la vista previa (Megaminx: cómo sujetar el puzzle al terminar para que coincida con la imagen) |
 | `leyendaNotacion()` | `{svg, texto}`: leyenda de la notación de las soluciones (Megaminx); la interfaz la muestra en un desplegable |
 | `renderizar(estado, {etiquetas})` | la interfaz pide `etiquetas: true` mientras hay una solución (Megaminx: letra de cada cara en su centro) |
 | `resolver(...).fases[].grupo` | clase de color de la fase (`f-<grupo>`); si no hay, se usa el nombre |
