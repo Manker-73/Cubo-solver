@@ -30,7 +30,13 @@ src/
     kociemba.js     algoritmo de dos fases (cubies, coordenadas, tablas, búsqueda)
     pyraminx.js     Pyraminx
     skewb.js        Skewb
-    megaminx.js     Megaminx (scramble Pochmann + vista)
+    megaminx.js     Megaminx: scramble Pochmann, validador, editor, dibujo, notación
+    megaminx-geo.js     Megaminx: geometría, red, giros de las 12 caras y de Pochmann, 60 rotaciones
+    megaminx-piezas.js  Megaminx: piezas (12 centros, 20 esquinas, 30 aristas) y orientación libre
+    megaminx-grupo.js   Megaminx: restricciones (Schreier–Sims) y cota inferior por conteo
+    megaminx-busqueda.js  Megaminx: etapas (IDA* con tablas de poda de ≤ 3 piezas por región)
+    megaminx-solver.js  Megaminx: las etapas, orientaciones, simplificación y respaldo
+    megaminx-ultima.js  Megaminx: última capa con macros buscadas por colisiones
     square1.js      Square-1: estado de colores, validador, editor, dibujo y scramble
     square1-motor.js  Square-1: formas, paridad, tablas, solver en dos fases, estado aleatorio
   app/            interfaz
@@ -83,6 +89,9 @@ Opcional (según `capacidades`):
 | `vistasEditor` | `[{id, nombre}]`: vistas del editor (la primera es la de por defecto); `renderizar` recibe `{vista}` (NxN: red completa o una cara ampliada) |
 | `resolver(...).fases` | `[{nombre, inicio, fin}]`: tramos de la solución (la interfaz los muestra en la reproducción) |
 | `buscarRedundanciaSolucion(movs)` | redundancias en una solución (por defecto, la regla de los scrambles; NxN: tramos que se pueden escribir con menos movimientos) |
+| `leyendaNotacion()` | `{svg, texto}`: leyenda de la notación de las soluciones (Megaminx); la interfaz la muestra en un desplegable |
+| `renderizar(estado, {etiquetas})` | la interfaz pide `etiquetas: true` mientras hay una solución (Megaminx: letra de cada cara en su centro) |
+| `resolver(...).fases[].grupo` | clase de color de la fase (`f-<grupo>`); si no hay, se usa el nombre |
 | `aplicarSecuencia`, `invertir` | se rellenan automáticamente |
 | `tipoScramble`, `descripcion`, `avisoInicializacion`, `describirLongitud(movs)` | textos para la interfaz |
 
@@ -114,5 +123,14 @@ puzzle no necesita saber nada del Worker, pero su estado debe poder copiarse con
   - **5x5–7x7**: centros con `nxn-centros.js` (búsqueda por grupos de dos órbitas, que deja además la paridad de las wings arreglada) → centros que falten (oblicuos del 6x6/7x7) con 3-ciclos simples y múltiples → aristas con 3-ciclos simples y múltiples → paridad PLL (N par) → 3x3.
   - Si una búsqueda no termina dentro de su límite, se usa el método de conmutadores de la noche 3 para lo que falte (siempre correcto). Detalles y cifras en DECISIONES.md y ESTADO.md.
 
+### Megaminx (cómo está hecho)
+- `megaminx-geo.js`: el motor geométrico da las 132 pegatinas, la red (dos flores), los 48 giros de cara (`R`, `R'`, `R2`, `R2'`…), los de Pochmann (`R++`, `D--`, `U`) y las 60 rotaciones. `megaminx-piezas.js` agrupa las pegatinas en piezas por las capas en las que están y crea el modelo de piezas; los centros pintados dan la orientación (se reetiquetan los colores).
+- `megaminx-busqueda.js`: una etapa = caras permitidas + piezas objetivo. Los huecos (posición·orientación) se numeran dentro de la región de la etapa; tablas de poda exactas de grupos de ≤ 3 piezas que cubren todos los pares; IDA* con la heurística del máximo, que puede devolver varias soluciones de la longitud mínima.
+- `megaminx-solver.js`: 10 etapas que van retirando caras (Base 1–4, Anillo 1–3, F2L 1–3; ver DECISIONES.md), última capa con `megaminx-ultima.js` (dos macros de una biblioteca de ~10.800, encontradas al inicializar por colisiones de secuencias de U, F, R), todo en varias de las 60 orientaciones mientras quede tiempo; simplificación con conmutación de caras no vecinas.
+- Restricciones y cota inferior: `megaminx-grupo.js` (los tests las comprueban).
+
+## Interfaz: Deshacer
+`main.js` guarda el estado del editor antes de cada cambio (pintar, herramientas, acciones, *Resetear*, *Cargar scramble*; hasta 200) y *Deshacer* (o Ctrl+Z) lo recupera. No necesita nada de los puzzles salvo `clonar`.
+
 ## Plan para las próximas noches
-- **Megaminx**: el motor geométrico ya genera las 132 pegatinas y los giros; falta validador y un solver por etapas. El enfoque de conmutadores puros de `cubo-grande.js` (búsqueda automática de 3-ciclos + setups por BFS) se puede reutilizar para las últimas piezas.
+- Todos los puzzles tienen ya validador y solver. Posibles mejoras: aristas del 5x5 por búsqueda (cociente 3,0), scramble de estado aleatorio en el 4x4, y para el Megaminx etapas más grandes (más tablas solapadas) o una búsqueda en haz entre etapas.

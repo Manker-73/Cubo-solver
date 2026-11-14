@@ -79,6 +79,7 @@ export function gruposDe(n) {
 }
 
 let EST = null;
+const ABANDONO = new Error('orientación abandonada');
 /** Contadores (para los tests): etapas resueltas y cuántas necesitaron el respaldo. */
 export const estadisticas = { etapas: 0, respaldos: 0 };
 
@@ -147,6 +148,8 @@ function resolverEtapaSegura(et, est, opciones, previasEtapa) {
   const r = resolverEtapa(et, huecos, { maxNodos: opciones.maxNodos ?? 4e7, varias: opciones.varias ?? 1 });
   estadisticas.etapas++;
   if (r) return r.varias;
+  // si ya hay otra solución, esta orientación se abandona (no merece la pena partirla)
+  if (opciones.abandonar) throw ABANDONO;
   estadisticas.respaldos++;
   // respaldo: piezas nuevas de una en una
   const movs = [];
@@ -261,6 +264,8 @@ export function simplificarTramos(tramos) {
  * (máximo, 60), preEtapas (3), varias (soluciones por etapa entre las que elegir, 6),
  * maxNodos }. Devuelve { movimientos, fases, orientacionesProbadas }.
  */
+const LIMITE_PRUEBA = 2e6;
+
 export function resolverMegaminx(estado, opcionesUsuario = {}) {
   inicializarSolver();
   const opciones = { varias: 6, ...opcionesUsuario };
@@ -270,18 +275,27 @@ export function resolverMegaminx(estado, opcionesUsuario = {}) {
   const pre = Math.min(opciones.preEtapas ?? 3, EST.etapas.length);
   // 1) las primeras etapas en todas las orientaciones (son baratas) y, por orden de
   //    lo que han costado, 2) terminar tantas como dé el tiempo
+  // (en las orientaciones de prueba, una etapa que pase de LIMITE_PRUEBA nodos hace que
+  //  esa orientación se abandone; la primera que se termina usa los límites normales)
+  const prueba = { ...opciones, abandonar: true, maxNodos: Math.min(opciones.maxNodos ?? Infinity, LIMITE_PRUEBA) };
   const candidatos = [];
   for (let k = 0; k < maxOr; k++) {
     const o = EST.orientaciones[k];
     const { orbitas } = modelo.identificar(o.girar(estado));
-    candidatos.push({ o, k, parcial: avanzar({ est: orbitas, tramos: [], previas: [] }, 0, maxOr > 1 ? pre : 0, opciones) });
+    const inicio = { est: orbitas, tramos: [], previas: [] };
+    let parcial = inicio, desde = 0;
+    if (maxOr > 1) {
+      try { parcial = avanzar(inicio, 0, pre, prueba); desde = pre; } catch (e) { if (e !== ABANDONO) throw e; }
+    }
+    candidatos.push({ o, k, parcial, desde });
   }
-  candidatos.sort((x, y) => x.parcial.largo - y.parcial.largo || x.k - y.k);
+  candidatos.sort((x, y) => (y.desde - x.desde) || (x.parcial.largo - y.parcial.largo) || (x.k - y.k));
   let mejor = null;
   let probadas = 0;
-  for (const { o, parcial } of candidatos) {
+  for (const { o, parcial, desde } of candidatos) {
     if (probadas > 0 && Date.now() - t0 > tiempoMax) break;
-    const tramos = terminar(parcial, maxOr > 1 ? pre : 0, opciones);
+    let tramos;
+    try { tramos = terminar(parcial, desde, probadas > 0 ? prueba : opciones); } catch (e) { if (e !== ABANDONO) throw e; continue; }
     // traducir los giros al puzzle original
     for (const t of tramos) t.movs = t.movs.map((m) => o.mapa[m >> 2] * 4 + (m & 3));
     const s = simplificarTramos(tramos);

@@ -1,4 +1,4 @@
-# Estado del proyecto (final de la noche 4 — 13/11/2026)
+# Estado del proyecto (final de la noche 5 — 14/11/2026)
 
 ## Qué funciona
 
@@ -10,7 +10,59 @@
 | Pyraminx | estado aleatorio + puntas | sí | óptimo (BFS completo) + puntas | sí |
 | Skewb | estado aleatorio (uniforme exacto) | sí | óptimo (IDA*) | sí |
 | **Square-1** | **estado aleatorio (uniforme, ≥ 11 mov.)** | **sí** | **dos fases (~11,4 barras)** | **sí** |
-| Megaminx | Pochmann (7×11) | — | próximamente | próximamente |
+| **Megaminx** | Pochmann (7×11) | **sí** | **por etapas con búsqueda (IDA*) + última capa con macros (~88 giros de cara)** | **sí** (+ rellenar cara, vistas U/D, deshacer) |
+
+Ya no queda ningún puzzle sin validador ni solver.
+
+## Noche 5: Megaminx
+
+### Resultado (`npm test`: 93 tests, 93 pasan, 64 min; tras el último cambio del solver se repitió el fichero del Megaminx: 13/13, 23 min)
+500 casos: scramble Pochmann → puzzle reorientado al azar (una de sus 60 orientaciones) → validador → solver → la solución se aplica giro a giro con el modelo de pegatinas → cada pegatina queda con el color de su centro. Además, sin giros que se puedan unir y con las etapas cubriendo toda la solución.
+
+| | Valor |
+|---|---|
+| Resueltos | **500/500 (100 %)** |
+| Longitud media (giros de cara) | **88,05** |
+| Longitud mínima / máxima | 68 / 95 |
+| Cota inferior por conteo (calculada aquí) | **48** |
+| **Cociente media / cota inferior** | **1,83** |
+| Tiempo medio / máximo por solución | 2,6 s / 3,0 s |
+| Orientaciones probadas (media) | 22,8 de 60 |
+| Tablas (1.ª vez) | 1,2 s: 59 tablas de poda (409 ms) + 10.765 macros de última capa (822 ms); 2,9 MB en memoria |
+| Etapas que necesitaron el respaldo (partirse en sub-etapas) | 0 de 170.523 |
+
+Métrica: cualquier giro de una cara (72° o 144°, en cualquier sentido) = 1. Objetivo orientativo (< 200): ✅, con margen.
+
+Longitud media por etapa:
+
+| Base 1 | Base 2 | Base 3 | Base 4 | Anillo 1 | Anillo 2 | Anillo 3 | F2L 1 | F2L 2 | F2L 3 | Última capa |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 6,47 | 5,30 | 5,23 | 9,25 | 5,34 | 9,05 | 8,80 | 8,82 | 5,49 | 9,49 | 14,80 |
+
+- **Base 1–4**: la cara D y las aristas del anillo inferior (15 piezas); **Anillo 1–3**: las piezas de BL, L y BR que tocan el anillo inferior (13); **F2L 1–3**: las 12 piezas de F y R que no son de U, solo con U, F, R; **Última capa**: las 10 piezas de U con dos macros. Detalle en DECISIONES.md.
+- Evolución durante la noche (20 casos): primera versión 95,0 → tablas que cubren todos los pares (más orientaciones en el mismo tiempo) 92,1 → orientaciones ordenadas por sus primeras etapas 91,0 → varias soluciones por etapa 88,2.
+
+### Restricciones demostradas (Schreier–Sims, 2,5 s)
+| Grupo | Orden calculado | Significa |
+|---|---|---|
+| Esquinas | 20!/2 · 3¹⁹ | permutación par y giro total ≡ 0 (mód. 3) |
+| Aristas | 30!/2 · 2²⁹ | permutación par y número par de volteos |
+| Puzzle entero | producto ≈ 1,0067·10⁶⁸ | esquinas y aristas independientes: **no hay relación de paridad entre ellas** |
+
+Todos los scrambles pasan el validador (1000); los estados alterados fallan.
+
+### Estados imposibles probados
+Rechazados, con su mensaje: esquina girada; arista volteada; dos esquinas intercambiadas; dos aristas intercambiadas; dos esquinas **y** dos aristas intercambiadas a la vez (dos mensajes); pieza especular ("…tiene los colores de una esquina real pero en orden especular"); pieza inexistente o repetida; colores de más o de menos ("Hay 12 pegatinas de color azul y debería haber 11"); centros repetidos; centros con los opuestos mal ("…están en caras opuestas, pero en el Megaminx el opuesto del rojo es el naranja") y centros en orden especular.
+Aceptados y resueltos: dos esquinas giradas en sentidos opuestos, dos aristas volteadas, 3-ciclos de esquinas y de aristas, dos parejas intercambiadas, y el puzzle pintado en cualquiera de sus 60 orientaciones.
+
+### Última capa: comprobada en todos los casos
+Los 4.665.600 estados posibles de la última capa (con el resto resuelto): 4.661.530 se resuelven con dos macros y los 4.070 restantes con una macro corta delante y dos más; el test los recorre todos y comprueba cada solución (75 s). Una última capa al azar sale en ~18 giros; en el solver, ~15.
+
+### Interfaz
+- Editor y "Resolver" activos en el Megaminx. Vistas **Red / Arriba (U) / Abajo (D)** (en el móvil, pegatinas de ~11 px en la red y ~30 px en cada flor), **Rellenar cara** y **Deshacer** (nuevo, en todos los puzzles; también Ctrl+Z).
+- Leyenda "Notación: qué cara es cada letra" (red con las letras y explicación de R, R', R2, R2') y, durante la reproducción, las letras en los centros del editor. Barra de etapas coloreada por grupo y "Paso 36/90 · Anillo 3".
+- Prueba de humo (jsdom): Megaminx sin Worker (vistas, rellenar, deshacer, leyenda, etapas, reproducción completa) y con el Worker real.
+- **Comprobado en Chromium real** (Chrome 1280 px y móvil 390 px, tema claro y oscuro): tablas en el Worker (~1,3 s), solución en ~2,5–3 s, reproducción hasta el final, sin errores en consola ni scroll horizontal.
 
 ## Noche 4: soluciones NxN más cortas
 
@@ -154,11 +206,12 @@ Métricas del Square-1: **barras**; **WCA** = Regulación 12c4 (cada `(x,y)` y c
 - El solver del Square-1 no es óptimo: ~11,4 barras de media (los de TNoodle suelen tener 11–13). La primera solución sale en ~7 ms, pero en algún caso raro tarda más (máximo medido 1,3 s, en una de las 19.305 formas).
 - La primera vez que se elige el Square-1 se tarda ~1 s en generar las tablas (en el Worker, la página no se bloquea). En el hilo principal (sin Worker) ese segundo sí bloquea.
 - El editor del Square-1 supone la orientación de referencia (blanco arriba, azul delante, corte según 12c1); no reorienta colores como el de los cubos.
-- La suite completa tarda ~18 min (el Square-1 recorre las 19.305 formas y Schreier–Sims del 7x7 tarda ~70 s); `npm run test:rapido` tarda ~2,5 min (20 casos por tamaño de NxN, Schreier–Sims solo hasta el 5x5).
+- La suite completa tarda ~64 min (cubos grandes ~40 min, Megaminx ~25 min: 500 soluciones de ~2,7 s y la última capa exhaustiva); `npm run test:rapido` tarda @RAPIDO@ (20 casos por tamaño de NxN y de Megaminx, Schreier–Sims solo hasta el 5x5, muestra de 1.000 últimas capas).
 - Soluciones NxN: 55 / 160 / 358 / 437 de media (antes 195 / 269 / 527 / 687); ver la sección de la noche 4. El tiempo de resolución ha subido a 1–4 s (máximo medido 13,7 s en un 4x4 que acaba usando el método de respaldo) y las tablas tardan 4–8 s la primera vez.
 - Los scrambles de 4x4–7x7 siguen siendo de movimientos aleatorios (TNoodle usa estado aleatorio en el 4x4).
-- Los colores del Megaminx y la orientación de su red siguen siendo orientativos.
+- Megaminx: los scrambles siguen siendo de movimientos aleatorios (Pochmann, como exige la WCA). Resolver tarda ~2,5–3 s porque prueba orientaciones hasta agotar el tiempo (`tiempoMax`); la primera vez se generan sus tablas (~1,3 s). En el móvil la red completa queda pequeña: para pintar, mejor las vistas "Arriba (U)" y "Abajo (D)".
 
-## Siguiente paso recomendado (noche 5)
-1. **Megaminx**: el motor geométrico ya da las 132 pegatinas y los giros. Modelo de piezas con `crearModeloPiezas` (o el método de órbitas de `nxn-piezas.js`), validador demostrando las restricciones con `nxn-grupo.js` adaptado, y solver por etapas; las últimas piezas se pueden hacer con el buscador automático de 3-ciclos puros + setups de `cubo-grande.js` (habría que extraerlo a `src/core/`).
-2. Opcional: aristas del 5x5 por búsqueda (para bajar del cociente 3,0) y scramble de estado aleatorio para el 4x4 (las tablas de `tpr4.js` sirven de base).
+## Siguiente paso recomendado (noche 6)
+1. **Megaminx más corto**: etapas más grandes (p. ej. Base 2 + Base 3 con más tablas solapadas; ahorra ~2,5 giros pero hoy tarda demasiado) o búsqueda en haz entre etapas; macros de última capa con más caras.
+2. **5x5**: aristas por búsqueda (fases tipo dominó) para bajar del cociente 3,0.
+3. **4x4**: scramble de estado aleatorio (las tablas de `tpr4.js` sirven de base).
