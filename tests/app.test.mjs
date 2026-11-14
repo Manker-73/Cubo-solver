@@ -10,6 +10,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
 import { Worker as NodeWorker } from 'node:worker_threads';
+import { CENTROS as CENTROS_MEGA } from '../src/puzzles/megaminx-piezas.js';
+import { PALETA_MEGA } from '../src/puzzles/megaminx-geo.js';
 
 const raiz = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const espera = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -69,6 +71,7 @@ test('app: sin Worker, construye, carga y resuelve un scramble en cada puzzle co
     await elegirPuzzle(ctx, nombre);
     const chip = doc.querySelectorAll('#selector .chip')[k];
     assert.ok(doc.getElementById('scramble').textContent.length > 0, nombre + ': scramble vacío');
+    assert.equal(doc.getElementById('nota-scramble').hidden, nombre !== 'Megaminx', nombre + ': indicación bajo la vista previa');
     const conSolver = chip.classList.contains('con-solver');
     assert.equal(doc.getElementById('proximamente').hidden, conSolver, nombre + ': aviso "próximamente"');
     if (nombre === 'Square-1') assert.ok(conSolver, 'el Square-1 ya no está "próximamente"');
@@ -223,6 +226,23 @@ test('app: Megaminx — vistas, rellenar cara, deshacer, leyenda, etapas y repro
   const tocar = (el) => el.dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
   await elegirPuzzle(ctx, 'Megaminx');
   assert.equal(doc.getElementById('proximamente').hidden, true, 'el Megaminx ya no está "próximamente"');
+  // vista previa del scramble: siempre con los centros en su sitio (blanco arriba, verde delante),
+  // con la indicación de cómo sujetar el puzzle
+  const centrosDe = (sel) => CENTROS_MEGA.map((i) => doc.querySelector(`${sel} polygon[data-i="${i}"]`).getAttribute('fill'));
+  const ref = PALETA_MEGA.map((c) => c.hex);
+  for (let k = 0; k < 3; k++) {
+    assert.deepEqual(centrosDe('#vista-scramble'), ref, 'centros de la vista previa');
+    assert.equal(doc.getElementById('nota-scramble').hidden, false);
+    assert.match(doc.getElementById('nota-scramble').textContent, /el centro blanco queda en \w+ y el verde oscuro en \w+/);
+    doc.getElementById('nuevo').click();
+    await hasta(() => !doc.getElementById('nuevo').disabled);
+    await espera(60);
+  }
+  // "Cargar scramble actual" carga ese mismo estado ya reorientado
+  doc.getElementById('cargar').click();
+  assert.deepEqual(centrosDe('#vista-editor'), ref, 'centros del editor tras cargar');
+  assert.equal(doc.querySelector('#vista-editor svg').innerHTML.replace(/ class="pegatina"/g, ''), doc.querySelector('#vista-scramble svg').innerHTML, 'el editor muestra lo mismo que la vista previa');
+  doc.getElementById('deshacer').click(); // vuelve al resuelto, sin historial
   assert.equal(doc.querySelectorAll('#vista-editor .pegatina').length, 132);
   // vistas: cada "flor" ampliada tiene 66 pegatinas
   for (const v of ['arriba', 'abajo']) {

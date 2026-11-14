@@ -70,15 +70,22 @@ export const IDX = Object.fromEntries(CARAS.map((n, i) => [n, i]));
 const caras = carasDesdeVertices(V, normales);
 export const H = 0.7; // profundidad de los cortes (fracción del inradio)
 const T = (2 * Math.PI) / 5;
-const nU = normales[IDX.U], nR = normales[IDX.R], nD = normales[IDX.D], nF = normales[IDX.F];
+const nU = normales[IDX.U], nDBR = normales[IDX.DBR], nD = normales[IDX.D], nF = normales[IDX.F];
 
-// Movimientos Pochmann (scrambles) y giros de cara (soluciones)
+// Movimientos Pochmann (scrambles; WCA, Stefan Pochmann; igual que TNoodle):
+//   R++ / R--: sujetar la cara L y girar todo lo demás 2/5 de vuelta, en sentido
+//              horario / antihorario visto desde la derecha. El eje es el de L y DBR
+//              (su opuesta): todo menos la capa L, girado como la cara DBR. (Hasta la
+//              noche 5 se giraba alrededor del eje de R dejando quieta DBL: mal.)
+//   D++ / D--: sujetar la cara U y girar todo lo demás 2/5, visto desde abajo.
+//   U / U':    la cara U, 1/5.
+// Giros de cara (soluciones)
 export const SUFIJOS = ['', '2', "2'", "'"]; // 1, 2, 3 y 4 quintos de vuelta en sentido horario
 const giros = {
   U: { eje: nU, ang: -T, umbral: H },
   "U'": { eje: nU, ang: T, umbral: H },
-  'R++': { eje: nR, ang: -2 * T, umbral: -H },
-  'R--': { eje: nR, ang: 2 * T, umbral: -H },
+  'R++': { eje: nDBR, ang: -2 * T, umbral: -H },
+  'R--': { eje: nDBR, ang: 2 * T, umbral: -H },
   'D++': { eje: nD, ang: -2 * T, umbral: -H },
   'D--': { eje: nD, ang: 2 * T, umbral: -H },
 };

@@ -11,7 +11,7 @@
 import { definirPuzzle } from '../core/puzzle.js';
 import { svgDePegatinas, cajaDe } from '../core/render.js';
 import { rngSeguro } from '../core/rng.js';
-import { paridad } from '../core/perm.js';
+import { paridad, aplicarPerm } from '../core/perm.js';
 import { geo, PALETA_MEGA, CARAS, IDX, normales, partirGiro, MOVS_CARA } from './megaminx-geo.js';
 import { modelo, ESQUINAS, ARISTAS, CENTROS, sigmaDeCentros, reetiquetar, nombrePos, ORB_ESQ } from './megaminx-piezas.js';
 import { inicializarSolver, solverInicializado, resolverMegaminx, ETAPAS } from './megaminx-solver.js';
@@ -191,6 +191,28 @@ function estaResuelto(e) {
   return true;
 }
 
+// ---------- Vista previa del scramble ----------
+// Los movimientos Pochmann giran casi todo el puzzle, así que tras el scramble los
+// centros quedan en otro sitio (en el puzzle real también). La vista previa se
+// muestra siempre en la orientación de referencia (blanco arriba, verde oscuro
+// delante): el mismo estado, girado entero. No cambia el scramble.
+const CENTROS_REF = CENTROS.map((_, f) => f);
+function estadoVistaScramble(estado) {
+  for (const P of geo.rotaciones) {
+    const r = aplicarPerm(estado, P);
+    if (CENTROS.every((i, f) => r[i] === CENTROS_REF[f])) return r;
+  }
+  return estado; // centros pintados a mano que no son una orientación: tal cual
+}
+/** Dónde quedan los centros blanco y verde tras el scramble y cómo sujetarlo para que coincida. */
+function notaScramble(movs) {
+  let x = geo.resuelto.slice();
+  for (const m of movs) x = geo.aplicar(x, m);
+  const c = CENTROS.map((i) => x[i]);
+  const blanco = CARAS[c.indexOf(IDX.U)], verde = CARAS[c.indexOf(IDX.F)];
+  return `Empieza con el blanco arriba y el verde oscuro delante. Al terminar, el centro blanco queda en ${blanco} y el verde oscuro en ${verde}: gira el Megaminx entero hasta poner el blanco arriba y el verde oscuro delante, y coincidirá con la imagen.`;
+}
+
 // ---------- Puzzle ----------
 export default definirPuzzle({
   id: 'megaminx',
@@ -258,6 +280,8 @@ export default definirPuzzle({
     return `${movs.length} giro${movs.length === 1 ? '' : 's'} de cara`;
   },
   generarScramble,
+  estadoVistaScramble,
+  notaScramble,
   geo,
   etapas: ETAPAS,
   movsCara: MOVS_CARA,

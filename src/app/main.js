@@ -139,6 +139,9 @@ async function nuevoScramble() {
     if (st.p !== p) return;
     st.scramble = r.movimientos;
     st.estadoScramble = p.aplicarSecuencia(p.estadoResuelto(), st.scramble);
+    // puzzles cuyos scrambles giran el puzzle entero (Megaminx): se muestra (y se
+    // carga en el editor) en la orientación de referencia
+    if (p.estadoVistaScramble) st.estadoScramble = p.estadoVistaScramble(st.estadoScramble);
   } catch (err) {
     mensaje('error', `No se pudo generar el scramble: ${err.message}`);
     return;
@@ -152,6 +155,9 @@ async function nuevoScramble() {
   el.classList.toggle('largo', texto.length > 140);
   $('longitud').textContent = p.describirLongitud ? p.describirLongitud(st.scramble) : `${st.scramble.length} movimientos`;
   $('vista-scramble').innerHTML = p.renderizar(st.estadoScramble, {});
+  const nota = $('nota-scramble');
+  nota.textContent = p.notaScramble ? p.notaScramble(st.scramble) : '';
+  nota.hidden = !p.notaScramble;
 }
 
 // ---------- Editor ----------
