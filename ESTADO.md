@@ -1,6 +1,6 @@
 # Estado del proyecto (final de la noche 9 — 15/11/2026)
 
-> Progreso de la noche 9: corrección del primer "Resolver" ✔ · 5x5 ✔ · Pyraminx ✔ · Skewb ✔ · Square-1 ✔ · números de las OLL ✔ · Megaminx ✘ · 6x6/7x7 ✘ · tests y Chromium ✔ · documentación ✔ · publicación (ver abajo).
+> Progreso de la noche 9: corrección del primer "Resolver" ✔ · 5x5 ✔ · Pyraminx ✔ · Skewb ✔ · Square-1 ✔ · números de las OLL ✔ · Megaminx ✘ · 6x6/7x7 ✘ · tests y Chromium ✔ · documentación ✔ · push, GitHub Pages (despliegue del último commit comprobado en la web: un clic en *Resolver* nada más cargar → "Generando tablas…" → solución) y artifact republicado ✔.
 
 ## Qué funciona
 
