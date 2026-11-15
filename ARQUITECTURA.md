@@ -47,7 +47,10 @@ src/
     objetivos-cubo.js objetivo de cada etapa comprobado sobre las pegatinas (lo usan los métodos y los tests)
     metodos-3x3.js    3x3: por capas para principiantes y CFOP (también la etapa 3x3 del 4x4)
     metodos-2x2.js    2x2: por capas y Ortega
-    metodos-nxn.js    4x4: reducción humana (centros, aristas, 3x3 sobre un cubo virtual y paridades)
+    metodos-nxn.js    4x4 y 5x5: reducción humana (centros —en el 5x5, X y cruz por separado—, aristas, 3x3 sobre un cubo virtual y paridades)
+    metodos-pyraminx.js  Pyraminx: puntas, centros, primera capa y última capa
+    metodos-skewb.js     Skewb: primera capa (arriba), esquinas de abajo (sledgehammers) y centros
+    metodos-square1.js   Square-1: forma de cubo, orientar, permutar y paridad (con las tablas de la fase 2 del solver)
   app/            interfaz
     plantilla.html, estilos.css
     main.js         interfaz (solo usa la interfaz común)
@@ -65,6 +68,8 @@ scripts/
   construir.mjs   empaquetado con esbuild (el Worker va incrustado como texto y se crea desde un blob)
   bench.mjs       benchmark de todos los solvers (npm run bench)
   comprobar-3d.py comprobación en Chromium real de la vista 3D (Playwright; capturas y FPS en docs/capturas/)
+  comprobar-aprender.py  modo aprender en Chromium real (escritorio y móvil)
+  comprobar-primer-resolver.py  un solo clic en "Resolver" nada más cargar la página (caché vacía; móvil con la CPU a ×4)
 ```
 
 ## Interfaz común de un puzzle
@@ -200,9 +205,16 @@ Cómo se construyen las soluciones:
 - **Recetas** (método de principiantes): lo que haría una persona, paso a paso (girar el cubo para tener el hueco delante a la derecha, poner la esquina encima, repetir R U R' U' hasta que baje bien…).
 - **Algoritmos** (última capa, PBL, paridades, emparejar aristas): búsqueda de coste uniforme sobre combinaciones de "macros" (ajustes de una capa y algoritmos con nombre) que cumplan el objetivo. Los textos de cada caso (cuántas aristas orientadas, qué intercambia una PLL…) se calculan del estado.
 - **4x4**: centros y aristas de pieza en pieza con macros humanas (giros de cara, Uw/Dw, conmutadores como `Rw U Rw'`, `Uw' R U R' F R' F' R Uw`) sobre una proyección del estado (solo centros o solo aristas, cada macro convertida en permutación); los cuatro últimos centros con dos tablas exactas (2¹⁶ estados) en el subgrupo F, R, B, L, Uw, Dw, que no toca los centros de arriba y abajo. Después, las etapas del 3x3 sobre un **3x3 virtual** (esquinas, una pieza de cada arista y un centro) a través de un guion intermedio que traduce los movimientos (`Rw` del 3x3 → `3Rw`) y las piezas; las paridades OLL y PLL se detectan en el 3x3 virtual (aristas volteadas impares; paridad distinta de esquinas y aristas) y se arreglan con sus algoritmos entre etapas.
-- Cada método comprueba al final de cada etapa su objetivo (`objetivos-cubo.js`); los tests lo comprueban otra vez aplicando la solución movimiento a movimiento.
+- **5x5**: centros en seis partes (X y cruz de cada centro; los dos primeros con una búsqueda exacta sobre las casillas de sus cuatro piezas, los cuatro últimos con dos tablas de 2¹⁶ como el 4x4; la cruz necesita conmutadores [capa interior, capa del medio] porque, con la X hecha, las piezas en cruz opuestas viajan juntas), aristas de tres piezas trabajando siempre en la de la izquierda hasta completarla (slice–flip–slice) con la paridad de aristas del 5x5, y el 3x3 virtual como en el 4x4 (en N impar no hay paridades de 3x3).
+- **Pyraminx, Skewb y Square-1** (`metodos-pyraminx.js`, `metodos-skewb.js`, `metodos-square1.js`): cada puzzle pasa sus piezas (validador, modelo de piezas, tablas del solver) a una fábrica `crearAprender…`, que devuelve `aprender(estado)`. Trabajan con los colores normalizados del validador (cualquier orientación) y escriben los textos con los colores reales. En el Square-1 el estado no es una lista de pegatinas: los bloques no llevan `piezas` y la interfaz no resalta nada.
+- Cada método comprueba al final de cada etapa su objetivo (`objetivos-cubo.js` o comprobaciones propias); los tests lo comprueban otra vez aplicando la solución movimiento a movimiento, con comprobaciones independientes del método (`tests/aprender.test.mjs`).
+- **Números de las OLL**: `tests/oll-numeros.test.mjs` contiene dos referencias de la comunidad y comprueba que cada algoritmo con número resuelve el caso de ese número (el caso se calcula sobre el cubo).
 
 Para añadir un método: una función que reciba el estado, cree un guion con `crearGuion`, añada etapas y bloques, y devuelva `g.resultado(id)`; en el puzzle, `metodosAprender` y `aprender`. La interfaz y el Worker (`op: 'aprender'`) no necesitan cambios.
+
+## Interfaz: arranque
+- El puzzle inicial se elige **al momento** al cargar la página, sin esperar a que los Workers respondan al ping (las peticiones esperan en la cola del motor). Los botones que necesitan un puzzle (*Resetear*, *Cargar*, *Resolver*, *Nuevo scramble*, *Copiar*) empiezan desactivados en el HTML y `seleccionar` los activa.
+- *Resolver* nunca ignora un clic: si las tablas del puzzle no están, muestra "Generando tablas… X s · la solución aparecerá al terminar." (el tiempo desde que empezaron a generarse; `asegurarTablas` comparte una sola petición y un solo aviso por puzzle) y la solución aparece sola al terminar.
 
 ## Interfaz: cambio de puzzle, scrambles precargados y Workers
 - **Al elegir un puzzle, los dos paneles cambian a la vez, en el mismo instante** (`seleccionar` es síncrona hasta ahí): el de resolver, y el del scramble con su etiqueta y, si no hay uno precargado, el puzzle nuevo resuelto y "Generando scramble…" (copiar, cargar y el reproductor del scramble desactivados). Las tablas del solver se piden después y no retrasan el scramble.
@@ -217,5 +229,5 @@ Para añadir un método: una función que reciba el estado, cree un guion con `c
 `tests/paralelo.mjs` (`resolverEnParalelo`) reparte los casos de un test de solver entre worker_threads con una cola dinámica. El hilo principal genera los estados (con la misma semilla que antes) y comprueba cada solución; cada hilo (`tests/trabajador.mjs`) importa el módulo del puzzle, genera sus tablas y llama a `resolver`. Los ficheros de tests se ejecutan de uno en uno (`--test-concurrency=1`) para no tener más hilos que núcleos: varios solvers tienen límites de tiempo.
 
 ## Plan para las próximas noches
-- Modo aprender en más puzzles: 5x5 (la reducción del 4x4 no basta para sus centros: hacen falta macros propias para los centros en X y en cruz), Pyraminx, Skewb, Square-1 y Megaminx.
+- Modo aprender en Megaminx (por capas) y 6x6/7x7 (reducción como el 5x5, más los centros oblicuos).
 - Todos los puzzles tienen ya validador y solver. Lo que más pesa ahora en el 6x6 y el 7x7 son los centros oblicuos (3-ciclos, ~120 y ~125 movimientos); ver ESTADO.md. Otras mejoras posibles: scramble de estado aleatorio en el 4x4 y, para el Megaminx, etapas más grandes o una búsqueda en haz entre etapas.

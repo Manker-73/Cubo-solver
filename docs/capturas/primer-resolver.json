@@ -1,0 +1,78 @@
+{
+  "escritorio/3x3/resuelto": {
+    "clic_a_los_s": 0.64,
+    "respuesta_a_los_s": 2.24,
+    "vio_generando": true,
+    "resuelto": true,
+    "mensajes": [
+      "Generando tablas… 0,5 s · la solución aparecerá al terminar.",
+      "Generando tablas… 0,6 s · la solución aparecerá al terminar.",
+      "Generando tablas… 0,7 s · la solución aparecerá al terminar.",
+      "El puzzle ya está resuelto."
+    ],
+    "errores": []
+  },
+  "escritorio/3x3/scramble": {
+    "clic_a_los_s": 2.45,
+    "respuesta_a_los_s": 4.3,
+    "vio_generando": true,
+    "resuelto": true,
+    "mensajes": [
+      "Generando tablas… 2,0 s · la solución aparecerá al terminar.",
+      "Generando tablas… 2,1 s · la solución aparecerá al terminar.",
+      "Generando tablas… 2,2 s · la solución aparecerá al terminar.",
+      "Estado válido. Sigue la solución paso a paso con los controles."
+    ],
+    "errores": []
+  },
+  "escritorio/5x5/scramble": {
+    "clic_a_los_s": 2.69,
+    "respuesta_a_los_s": 12.07,
+    "vio_generando": true,
+    "resuelto": true,
+    "mensajes": [
+      "Generando tablas… 1,7 s · la solución aparecerá al terminar.",
+      "Generando tablas… 1,8 s · la solución aparecerá al terminar.",
+      "Generando tablas… 2,0 s · la solución aparecerá al terminar.",
+      "Estado válido. Sigue la solución paso a paso con los controles."
+    ],
+    "errores": []
+  },
+  "movil/3x3/resuelto": {
+    "clic_a_los_s": 1.21,
+    "respuesta_a_los_s": 3.73,
+    "vio_generando": true,
+    "resuelto": true,
+    "mensajes": [
+      "Generando tablas… 0,9 s · la solución aparecerá al terminar.",
+      "Generando tablas… 1,0 s · la solución aparecerá al terminar.",
+      "Generando tablas… 1,1 s · la solución aparecerá al terminar.",
+      "El puzzle ya está resuelto."
+    ],
+    "errores": []
+  },
+  "movil/3x3/scramble": {
+    "clic_a_los_s": 3.53,
+    "respuesta_a_los_s": 4.23,
+    "vio_generando": false,
+    "resuelto": true,
+    "mensajes": [
+      "Buscando solución…",
+      "Estado válido. Sigue la solución paso a paso con los controles."
+    ],
+    "errores": []
+  },
+  "movil/5x5/scramble": {
+    "clic_a_los_s": 2.26,
+    "respuesta_a_los_s": 12.94,
+    "vio_generando": true,
+    "resuelto": true,
+    "mensajes": [
+      "Generando tablas… 0,7 s · la solución aparecerá al terminar.",
+      "Generando tablas… 0,8 s · la solución aparecerá al terminar.",
+      "Generando tablas… 0,9 s · la solución aparecerá al terminar.",
+      "Estado válido. Sigue la solución paso a paso con los controles."
+    ],
+    "errores": []
+  }
+}

@@ -3,17 +3,17 @@
   "longitudMedia": 60,
   "longitudMin": 60,
   "longitudMax": 60,
-  "msPorScramble": 0.13,
+  "msPorScramble": 0.1,
   "casos": 100,
-  "fecha": "2026-11-15T02:00:52.460Z",
-  "msTablas": 4807,
+  "fecha": "2026-11-15T03:26:01.710Z",
+  "msTablas": 4633,
   "longitudConmutador": 10,
   "resueltos": "20/20 (100.0%)",
   "casosSolver": 20,
-  "longitudMediaSolucion": 103.5,
+  "longitudMediaSolucion": 103.4,
   "longitudMaxSolucion": 114,
-  "msMedioSolucion": 2382.56,
-  "msMaxSolucion": 4977.6,
+  "msMedioSolucion": 2348.16,
+  "msMaxSolucion": 4860.1,
   "fases": {
     "paridad": {
       "longitudMedia": 0,
@@ -25,22 +25,22 @@
     "centros": {
       "longitudMedia": 33.3,
       "longitudMax": 39,
-      "msMedio": 1278.33,
-      "msMax": 4035.6,
+      "msMedio": 1267.67,
+      "msMax": 4064,
       "casosConFase": 20
     },
     "aristas": {
       "longitudMedia": 52.1,
       "longitudMax": 60,
-      "msMedio": 345.62,
-      "msMax": 495.4,
+      "msMedio": 335.48,
+      "msMax": 471.8,
       "casosConFase": 20
     },
     "3x3": {
-      "longitudMedia": 18.1,
+      "longitudMedia": 18,
       "longitudMax": 20,
-      "msMedio": 757.48,
-      "msMax": 1203.4,
+      "msMedio": 743.88,
+      "msMax": 1202.3,
       "casosConFase": 20
     }
   },
@@ -55,7 +55,7 @@
     "relacionesVisibles": [
       "esquinas + aristas centrales"
     ],
-    "ms": 4144
+    "ms": 3916
   },
   "cotaInferior": 52,
   "cociente": 1.99,

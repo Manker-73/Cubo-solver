@@ -1,4 +1,6 @@
-# Estado del proyecto (final de la noche 8 — 15/11/2026)
+# Estado del proyecto (final de la noche 9 — 15/11/2026)
+
+> Progreso de la noche 9: corrección del primer "Resolver" ✔ · 5x5 ✔ · Pyraminx ✔ · Skewb ✔ · Square-1 ✔ · números de las OLL ✔ · Megaminx ✘ · 6x6/7x7 ✘ · tests y Chromium ✔ · documentación ✔ · publicación (ver abajo).
 
 ## Qué funciona
 
@@ -12,7 +14,51 @@
 | **Square-1** | **estado aleatorio (uniforme, ≥ 11 mov.)** | **sí** | **dos fases (~11,4 barras)** | **sí** |
 | **Megaminx** | Pochmann (7×11) | **sí** | **por etapas con búsqueda (IDA*) + última capa con macros (~90 giros de cara)** | **sí** (+ rellenar cara, vistas U/D, deshacer) |
 
-Ya no queda ningún puzzle sin validador ni solver. **Modo aprender** (solución por un método humano, explicada por etapas): 2x2, 3x3 y 4x4.
+Ya no queda ningún puzzle sin validador ni solver. **Modo aprender** (solución por un método humano, explicada por etapas): 2x2, 3x3, 4x4, **5x5, Pyraminx, Skewb y Square-1** (falta Megaminx, 6x6 y 7x7).
+
+## Noche 9
+
+### 1. Corrección: el primer "Resolver" tras cargar la página
+- **Causa** (reproducida en Chromium real, caché vacía): el puzzle inicial se elegía cuando los dos Workers respondían al ping (~1 s en escritorio, ~1,6 s con la CPU a ×4). En ese tiempo los botones ya estaban activos y el clic en *Resolver* llegaba con `st.p = null`: un `TypeError` dentro de una promesa y nada en pantalla. El segundo clic sí funcionaba. Detalles en DECISIONES.md.
+- **Ahora**: el puzzle inicial se elige al momento (las peticiones esperan en la cola del motor), los botones empiezan desactivados en el HTML hasta que hay puzzle, y *Resolver* nunca ignora un clic: si las tablas se están generando muestra **"Generando tablas… X s · la solución aparecerá al terminar."** y la solución aparece sola.
+- **Tests**: dos nuevos en la prueba de humo (Worker simulado con ping de 1,5 s y tablas de 1,2 s): un clic nada más cargar, y un clic con un scramble cargado mientras se generan las tablas. Los dos **fallan con el código antiguo** (el segundo con el mismo `TypeError`) y pasan con el nuevo.
+- **Chromium real** (`scripts/comprobar-primer-resolver.py`; contexto nuevo con la caché desactivada; escritorio y móvil con la CPU a ×4): un solo clic en cuanto el botón está activo, en el 3x3 resuelto, el 3x3 con scramble y el 5x5 con scramble (tablas de ~9 s): los 6 casos responden sin otro clic, con "Generando tablas… X s" mientras tanto y sin errores en consola (`docs/capturas/primer-resolver.json`).
+
+### 2. Modo aprender en más puzzles
+| Puzzle | Método | Etapas |
+|---|---|---|
+| **5x5** | Reducción (3x3 por capas o CFOP) | Centro blanco: X · Centro blanco: cruz · Centro amarillo: X · Centro amarillo: cruz · Últimos cuatro centros: X · Últimos cuatro centros: cruz · Aristas (tredges, con la **paridad de aristas** del 5x5 cuando aparece) · las del 3x3 elegido |
+| **Pyraminx** | Principiantes | Puntas · Centros · Primera capa (3 aristas) · Última capa (ciclo de tres aristas, voltear dos aristas) |
+| **Skewb** | Principiantes | Primera capa (arriba: la de la esquina que no se mueve) · Esquinas de abajo (sledgehammers) · Centros |
+| **Square-1** | Principiantes | Forma de cubo · Orientar esquinas · Orientar aristas · Permutar esquinas (y capa del medio) · Paridad (si hace falta) · Permutar aristas |
+
+Resultados (`tests/aprender.test.mjs` con `CASOS=500`; cada solución se aplica movimiento a movimiento y **tras cada etapa se comprueba su objetivo** con comprobaciones del test, independientes del método; estados al azar y el puzzle girado entero al azar):
+
+| Puzzle / método | Resueltos | Giros (media / máx.) | Rotaciones (media) | Tiempo medio |
+|---|---|---|---|---|
+| 5x5 reducción + capas | **500/500** | 424,5 / 494 | 31,5 | 0,36 s |
+| 5x5 reducción + CFOP | **500/500** | 336,5 / 394 | 28,9 | 0,43 s |
+| Pyraminx principiantes | **500/500** | 26,4 / 37 | — | 8 ms |
+| Skewb principiantes | **500/500** | 22,0 / 29 | — | 11 ms |
+| Square-1 principiantes | **500/500** | 60,4 / 85 (WCA: cada (x,y) y cada "/" = 1) | — | 0,11 s |
+| 4x4, 3x3, 2x2 (de nuevo) | **500/500** en los seis métodos | como en la noche 8 | | |
+
+Por etapa (media): 5x5 (CFOP): centros 4,1 + 16,5 + 7,6 + 25,0 + 12,3 + 45,6 · aristas 192 (con las rotaciones para tener delante cada arista) · el resto como el 3x3. Pyraminx: puntas 2,7 · centros 2,0 · primera capa 9,9 · última capa 11,7. Skewb: primera capa 7,6 · esquinas 5,5 · centros 8,9. Square-1: forma de cubo 9,0 · orientar esquinas 3,9 · orientar aristas 8,5 · permutar esquinas 10,1 · paridad 27 movimientos cuando aparece (~la mitad de las veces) · permutar aristas 15,4.
+
+- **5x5**: con la X de un centro hecha, las piezas en cruz opuestas solo se mueven juntas con giros de caras y capas del medio; por eso la cruz usa conmutadores de una capa interior y una del medio (`Uw U' 3Rw Rw' 3Rw Rw' U Uw' Rw 3Rw' Rw 3Rw'`). Los dos primeros centros se hacen con una búsqueda exacta y se explican pieza a pieza; los cuatro últimos, en dos pasos (separar colores por parejas de caras y cada uno a su cara), como el 4x4. Las aristas, trabajando en la de la izquierda hasta completarla, con la pieza que falta a la derecha y `Uw' R U R' F R' F' R Uw`. Lo más largo son las aristas (~165 giros + rotaciones).
+- **Skewb**: el orden es el de los métodos de principiantes habituales (capa → esquinas → centros), no "centros antes que esquinas" como decía la tarea: los algoritmos de centros que no mueven esquinas son los que se enseñan; lo contrario necesita algoritmos de esquinas que respeten los centros. Y la primera capa es la de arriba porque con la notación WCA la esquina de arriba delante a la derecha no se mueve nunca (DECISIONES.md).
+- **Square-1**: el algoritmo de paridad (14 barras) lo calcula el solver al iniciar y está comprobado; no es uno de los de memoria de la comunidad. Su estado no es una lista de pegatinas, así que no se resaltan piezas.
+- **Megaminx, 6x6 y 7x7: no hechos** (el selector no aparece). Prioricé dejar bien los otros cuatro; el porqué, en DECISIONES.md.
+- Fallo corregido de paso: en `datosNxN` las dos caras de algunas aristas iban en orden contrario (en el 4x4 no se notaba; en el 5x5, sí).
+
+### 3. Números de las OLL
+- Las **57** OLL llevan ahora su número (antes solo 21–27 y 45), comprobado contra **dos referencias** de la comunidad en `tests/oll-numeros.test.mjs`: el caso de cada referencia se calcula sobre el cubo (aplicando su inversa al resuelto), las dos referencias coinciden en los 57 números y son 57 casos distintos, y cada algoritmo de la app resuelve el caso de su número.
+- Al comparar salieron dos errores de una de las fuentes (su "OLL 20" es la 28; llama 26 a la Sune) y uno nuestro: la variante de OLL 20 que se descartaba al cargar no era una OLL. Corregida (`r U R' U' M2 U R U' R' U' M'`): pasan las 61 y los 216 casos de orientación se resuelven con **un solo** algoritmo (el test ya no admite dos).
+
+### Comprobaciones
+- Prueba de humo (jsdom, en 2D): modo aprender en 3x3 (×2), 2x2 (×2), 4x4, **5x5, Pyraminx, Skewb y Square-1**: selector, explicación, longitud frente a la óptima, piezas resaltadas (salvo Square-1), algoritmos con nombre, hasta "Resuelto" con el puzzle resuelto; el 6x6 no muestra el selector.
+- `npm run test:rapido`: **146/146** (16 min); antes de empezar, 137/137. `tests/aprender.test.mjs` con `CASOS=500`: 13/13 (incluidos los seis métodos de 2x2, 3x3 y 4x4 otra vez, porque cambió código compartido del 4x4).
+- Chromium real (`scripts/comprobar-aprender.py`, escritorio 1280×900 y móvil 390×844, WebGL por SwiftShader): los 9 casos (3x3 ×2, 2x2 ×2, 4x4, 5x5, Pyraminx, Skewb, Square-1) llegan a "Resuelto" paso a paso y a ×8, sin scroll horizontal ni errores de consola; piezas resaltadas en 3D en todos los pasos salvo los de girar el cubo entero (y en ninguno del Square-1, que no resalta). Capturas en `docs/capturas/aprender-*.jpg`.
 
 ## Noche 8: modo aprender
 
@@ -56,7 +102,7 @@ Además:
 - `npm run test:rapido`: 137 tests, 137 pasan (~17 min con 2 núcleos; el modo aprender con 100 casos por método). Los tests anteriores siguen pasando.
 
 ### Ideas / pendiente
-- 5x5 (centros en X y en cruz por separado), Pyraminx y Skewb (sus métodos de principiantes son cortos), Square-1 y Megaminx.
+- (Noche 9: hechos 5x5, Pyraminx, Skewb y Square-1.) Faltan Megaminx y 6x6/7x7.
 - 4x4: las aristas (~84 giros) son lo más largo; con el método "3-2-3" o eligiendo mejor qué arista emparejar se podrían acortar.
 - Elegir el color de la cruz (ahora siempre blanca) y mostrar el "caso" de F2L con su dibujo.
 
@@ -383,7 +429,8 @@ Métricas del Square-1: **barras**; **WCA** = Regulación 12c4 (cada `(x,y)` y c
 - Los scrambles de 4x4–7x7 siguen siendo de movimientos aleatorios (TNoodle usa estado aleatorio en el 4x4).
 - Megaminx: los scrambles siguen siendo de movimientos aleatorios (Pochmann, como exige la WCA). Resolver tarda ~2,5–3 s porque prueba orientaciones hasta agotar el tiempo (`tiempoMax`); la primera vez se generan sus tablas (~1,3 s). En el móvil la red completa queda pequeña: para pintar, mejor las vistas "Arriba (U)" y "Abajo (D)".
 
-## Siguiente paso recomendado (noche 8: modo aprender; después)
+## Siguiente paso recomendado (después de la noche 9)
+0. **Modo aprender en Megaminx** (por capas: estrella, primera capa, F2L de las capas del medio y la última capa en cuatro pasos) y en **6x6/7x7** (reducción como el 5x5 más los centros oblicuos). En el 5x5, acortar las aristas (~165 giros) eligiendo mejor qué arista completar.
 1. **Oblicuos del 6x6/7x7**: son lo que más pesa. Ideas no probadas: construir primero "barras" (oblicuo A + oblicuo B del mismo color, que con giros de hasta dos capas viajan juntos) y resolver luego el 6x6 como un 5x5 virtual (capas 1, 2, bloque 3–4, 5, 6) con la búsqueda de centros del 5x5.
 2. **Megaminx más corto**: etapas más grandes o búsqueda en haz entre etapas; macros de última capa con más caras.
 3. **4x4**: scramble de estado aleatorio (las tablas de `tpr4.js` sirven de base).

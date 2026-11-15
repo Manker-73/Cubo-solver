@@ -3,11 +3,11 @@
   "longitudMedia": 77,
   "longitudMin": 77,
   "longitudMax": 77,
-  "msPorScramble": 0.28,
+  "msPorScramble": 0.35,
   "casos": 100,
-  "fecha": "2026-11-15T02:00:42.974Z",
+  "fecha": "2026-11-15T03:25:52.536Z",
   "ordenGrupo": "100669616553523347122516032313645505168688116411019768627200000000000",
-  "msSchreierSims": 3686,
+  "msSchreierSims": 3556,
   "mensajes": {
     "girada": "Hay una esquina girada: la suma de los giros de las esquinas no es múltiplo de 3 (alguna esquina está girada 120° respecto a lo posible).",
     "volteada": "Hay una arista volteada: el número de aristas volteadas es impar.",
@@ -27,7 +27,7 @@
   ],
   "ultimaCapa": {
     "macros": 10765,
-    "msMacros": 951,
+    "msMacros": 867,
     "secuenciasRecorridas": 449389,
     "muestra": 1000,
     "longitudMediaAlAzar": 17.9
@@ -40,9 +40,9 @@
     "longitudMin": 82,
     "cotaInferior": 48,
     "cociente": 1.88,
-    "msMedio": 2636,
-    "msMax": 2986,
-    "orientacionesMedia": 18,
+    "msMedio": 2596,
+    "msMax": 2794,
+    "orientacionesMedia": 17.8,
     "porEtapa": {
       "Base 1": 7,
       "Base 2": 5.65,
@@ -56,16 +56,16 @@
       "F2L 3": 9.55,
       "Última capa": 14.85
     },
-    "etapasResueltas": 6143,
+    "etapasResueltas": 6108,
     "etapasConRespaldo": 0,
     "hilos": 2,
-    "msTablas": 1486,
+    "msTablas": 1405,
     "tablas": {
       "etapas": 59,
       "macros": 10765,
       "bytes": 2928719,
-      "msEtapas": 523,
-      "msUltima": 951
+      "msEtapas": 527,
+      "msUltima": 867
     }
   },
   "pochmann": {

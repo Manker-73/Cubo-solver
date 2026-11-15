@@ -1,7 +1,7 @@
 # Comprobación en Chromium real del modo aprender (opcional; Python + Playwright + Chrome).
 #   npm run build && python3 scripts/comprobar-aprender.py
 # Escritorio (1280 px, claro) y móvil (390 px, oscuro, táctil): en el 3x3 (principiantes y CFOP)
-# y el 2x2 (principiantes y Ortega), carga el scramble, elige el método, resuelve y recorre la
+# el 2x2 (principiantes y Ortega), el 4x4 y el 5x5 (CFOP), el Pyraminx, el Skewb y el Square-1, carga el scramble, elige el método, resuelve y recorre la
 # solución en 3D: en cada paso (al momento, mientras se anima el giro) comprueba que la explicación es la del bloque actual y que las
 # piezas resaltadas en la vista 3D son las del bloque. Después la reproduce entera a ×8 y, en 2D,
 # comprueba el resaltado del dibujo. Sin errores en consola ni scroll horizontal.
@@ -16,7 +16,9 @@ CONFIGS = [
     ('escritorio', dict(viewport={'width': 1280, 'height': 900}, color_scheme='light')),
     ('movil', dict(viewport={'width': 390, 'height': 844}, device_scale_factor=2, is_mobile=True, has_touch=True, color_scheme='dark')),
 ]
-CASOS = [('3x3', 'principiantes'), ('3x3', 'cfop'), ('2x2', 'principiantes'), ('2x2', 'ortega'), ('4x4', 'cfop')]
+CASOS = [('3x3', 'principiantes'), ('3x3', 'cfop'), ('2x2', 'principiantes'), ('2x2', 'ortega'), ('4x4', 'cfop'),
+         ('5x5', 'cfop'), ('Pyraminx', 'principiantes'), ('Skewb', 'principiantes'), ('Square-1', 'principiantes')]
+SIN_RESALTE = {'Square-1'}  # su estado no es una lista de pegatinas: no se resaltan piezas
 
 ESTADO = """() => {
   const v = window.cuboSolver.vista3D('editor');

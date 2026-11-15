@@ -5,7 +5,7 @@ Aplicación web en un único HTML, sin servidor.
 
 - **Scrambles**: 2x2 a 7x7, Square-1, Skewb, Pyraminx y Megaminx (estado aleatorio en 2x2, 3x3, Pyraminx, Skewb y Square-1).
 - **Validador y solucionador en todos los puzzles**: 2x2 (óptimo), 3x3 (dos fases de Kociemba), 4x4 (reducción en tres fases de búsqueda, sin paridades OLL ni PLL, ~55 movimientos) y 5x5 a 7x7 (reducción: búsqueda por etapas en los centros, aristas emparejadas con un voraz de macros que no mueven los centros y conmutadores para lo que quede; ~109, ~256 y ~356 movimientos), Pyraminx (óptimo), Skewb (óptimo), Square-1 (dos fases: forma de cubo y permutación, solo con giros posibles) y Megaminx (por etapas con búsqueda IDA* y la última capa con macros buscadas automáticamente; ~90 giros de cara de media).
-- **Modo aprender** (2x2, 3x3 y 4x4): además de la solución por ordenador, una solución por un **método humano** explicada paso a paso: 3x3 por capas para principiantes o CFOP; 2x2 por capas o Ortega; 4x4 por reducción (con el 3x3 por capas o CFOP y las paridades).
+- **Modo aprender** (2x2, 3x3, 4x4, 5x5, Pyraminx, Skewb y Square-1): además de la solución por ordenador, una solución por un **método humano** explicada paso a paso: 3x3 por capas para principiantes o CFOP; 2x2 por capas o Ortega; 4x4 y 5x5 por reducción (con el 3x3 por capas o CFOP y las paridades); Pyraminx, Skewb y Square-1 por sus métodos de principiantes.
 - Las tablas se generan en el navegador dentro de un Web Worker (la página no se bloquea); si no hay Worker, en el hilo principal.
 
 **App en línea: https://manker-73.github.io/Cubo-solver/**
@@ -14,10 +14,10 @@ Aplicación web en un único HTML, sin servidor.
 
 1. Elige el puzzle en la barra superior (2x2 … 7x7, Pyraminx, Skewb, Square-1, Megaminx).
 2. **Scramble**: pulsa *Nuevo scramble*; *Copiar* lo copia al portapapeles. Los scrambles se preparan por adelantado en segundo plano, así que al cambiar de puzzle suele salir al momento; la primera vez en cada puzzle, las tablas del solucionador se generan en segundo plano (unos segundos; hasta ~8 s en el 7x7) sin retrasar el scramble.
-3. **Resolver**: pinta el estado de tu puzzle eligiendo un color de la paleta y tocando las pegatinas (o pulsa *Cargar scramble actual*) y luego *Resolver*. Puedes sujetar el puzzle en cualquier orientación: la solución sale para como lo tengas. *Rellenar cara* (cubos grandes y Megaminx) pinta una cara entera de un toque y *Deshacer* (o Ctrl+Z) deshace el último cambio. Si el estado es imposible, la app dice qué pieza falla. Resolver un 4x4–7x7 tarda 1–7 s de media (hasta ~13 s en el peor caso medido); un Megaminx, unos 2,5–3 s (prueba muchas orientaciones y se queda con la solución más corta).
+3. **Resolver** (un clic basta; si las tablas aún se están generando, se ve "Generando tablas… X s" y la solución aparece al terminar): pinta el estado de tu puzzle eligiendo un color de la paleta y tocando las pegatinas (o pulsa *Cargar scramble actual*) y luego *Resolver*. Puedes sujetar el puzzle en cualquier orientación: la solución sale para como lo tengas. *Rellenar cara* (cubos grandes y Megaminx) pinta una cara entera de un toque y *Deshacer* (o Ctrl+Z) deshace el último cambio. Si el estado es imposible, la app dice qué pieza falla. Resolver un 4x4–7x7 tarda 1–7 s de media (hasta ~13 s en el peor caso medido); un Megaminx, unos 2,5–3 s (prueba muchas orientaciones y se queda con la solución más corta).
 4. Recorre la solución con los botones de reproducción (paso a paso, play y velocidad); *Copiar* copia los movimientos. En los puzzles con etapas (cubos grandes, Megaminx) la barra de fases muestra en qué etapa está cada tramo.
 
-### Modo aprender (2x2, 3x3 y 4x4)
+### Modo aprender (2x2, 3x3, 4x4, 5x5, Pyraminx, Skewb y Square-1)
 Para aprender a resolver el puzzle, no solo resolverlo. Encima de *Resolver* hay un selector **Solución**: *Solución óptima (por ordenador)* o *Aprender (método …)*.
 
 | Puzzle | Métodos |
@@ -25,14 +25,18 @@ Para aprender a resolver el puzzle, no solo resolverlo. Encima de *Resolver* hay
 | 3x3 | **Principiantes (por capas)**: cruz blanca, esquinas blancas con R U R' U', segunda capa con los algoritmos de la derecha y la izquierda, y la última capa en cuatro pasos (F R U R' U' F', Sune, A-perm, U-perm). **CFOP**: cruz planificada entera, F2L por parejas, OLL (57 casos) y PLL (21 casos). |
 | 2x2 | **Principiantes (por capas)**: una esquina blanca de referencia, la primera capa con R U R' U', la cara amarilla con Sune y las esquinas con la T-perm. **Ortega**: cara blanca, OLL (7 casos) y PBL (las dos capas a la vez). |
 | 4x4 | **Reducción**: centro blanco, centro amarillo, los cuatro centros de los lados, emparejar las aristas, y el resto como un 3x3 (por capas o CFOP), con la **paridad OLL** y la **paridad PLL** cuando aparecen. |
+| 5x5 | **Reducción**: cada centro en dos partes (primero la X y luego la cruz: blanco, amarillo y los cuatro de los lados), aristas de tres piezas (tredges, con la **paridad de aristas** del 5x5 cuando aparece) y el resto como un 3x3 (por capas o CFOP). |
+| Pyraminx | **Principiantes**: puntas, centros, primera capa (las tres aristas de abajo) y última capa con dos algoritmos (ciclo de tres aristas y voltear dos aristas). |
+| Skewb | **Principiantes**: primera capa (la de arriba, la de la esquina que no se mueve con R, U, L, B), esquinas de abajo con sledgehammers (R' B R B'…) y centros. |
+| Square-1 | **Principiantes**: forma de cubo, orientar esquinas y aristas, permutar esquinas (y la capa del medio), **paridad** si hace falta y permutar aristas. |
 
 Al resolver en modo aprender:
-- La solución va dividida en **etapas con nombre** (barra de fases); el recuadro de explicación dice el **objetivo** de la etapa actual y lista sus pasos: qué consigue cada bloque de movimientos ("Lleva la arista blanca y roja abajo…", "Pareja 2: junta la esquina… con la arista…"), con el **nombre del algoritmo** cuando es uno conocido (*Sune*, *PLL T-perm*, *OLL 27 (Sune)*, *Paridad OLL*…). Tocar un paso salta al final de ese paso.
-- En la vista 3D (y en 2D) se **resaltan las piezas** con las que se trabaja en cada paso; las demás quedan atenuadas.
+- La solución va dividida en **etapas con nombre** (barra de fases); el recuadro de explicación dice el **objetivo** de la etapa actual y lista sus pasos: qué consigue cada bloque de movimientos ("Lleva la arista blanca y roja abajo…", "Pareja 2: junta la esquina… con la arista…"), con el **nombre del algoritmo** cuando es uno conocido (*Sune*, *PLL T-perm*, *OLL 33*, *Paridad OLL*, *Sledgehammer*…; las 57 OLL llevan su número, comprobado contra dos referencias de la comunidad). Tocar un paso salta al final de ese paso.
+- En la vista 3D (y en 2D) se **resaltan las piezas** con las que se trabaja en cada paso; las demás quedan atenuadas (en todos menos el Square-1).
 - Arriba se muestra la **longitud total** del método frente a la de la **solución óptima** (por ejemplo, "Método CFOP: 56 giros (+ 4 giros del cubo entero) · solución óptima: 20 giros"). Las rotaciones del cubo entero (`x`, `y`, `z`) se cuentan aparte.
 - Los nombres estándar (F2L, OLL, PLL, T-perm, Sune…) se dejan en inglés; las explicaciones, en español. Los algoritmos son los habituales de la comunidad; los casos de la última capa (y lo que hace cada PLL) se describen a partir del estado real, no de una tabla.
 
-Longitudes medias (500 casos por método): 3x3 por capas ~145 giros y CFOP ~56; 2x2 por capas ~70 y Ortega ~23; 4x4 por reducción ~270 (por capas) y ~183 (CFOP). Aún no hay modo aprender en 5x5–7x7, Pyraminx, Skewb, Square-1 ni Megaminx.
+Longitudes medias (500 casos por método): 3x3 por capas ~145 giros y CFOP ~56; 2x2 por capas ~70 y Ortega ~23; 4x4 por reducción ~270 (por capas) y ~183 (CFOP); 5x5 ~424 y ~337; Pyraminx ~26; Skewb ~22; Square-1 ~60 movimientos. Aún no hay modo aprender en 6x6, 7x7 ni Megaminx.
 
 ### Vista 3D
 - La vista previa del scramble y la reproducción de la solución se ven en **3D**, con los giros animados: arrastra con el ratón o el dedo para girar el puzzle (*Vista inicial* lo devuelve a su sitio). Los botones **2D / 3D** cambian entre el modelo 3D y la red plana.
@@ -62,7 +66,7 @@ npm run build
 
 ```
 npm test            # 1000 casos por puzzle (500 en 4x4, 5x5, Megaminx y el modo aprender, 100 en 6x6 y 7x7); ~65 min
-npm run test:rapido # 100 casos por puzzle (20 en 4x4–7x7 y Megaminx; 100 en el modo aprender); ~17 min
+npm run test:rapido # 100 casos por puzzle (20 en 4x4–7x7 y Megaminx; 100 en el modo aprender); ~16 min
 npm run bench       # benchmark de los solvers (N=200 npm run bench para más casos)
 ```
 
