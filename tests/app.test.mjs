@@ -556,7 +556,7 @@ function workerControlado(window, ctl) {
         : m.op === 'inicializar' ? { ms: 1, yaEstaba: false }
         : m.op === 'scramble' ? { movimientos: (FALSO[m.puzzle] || ['R', 'U']).slice(), ms: 1 }
         : m.op === 'validar' ? { valido: true, errores: [] } : { ok: true, movimientos: [], errores: [], ms: 1 };
-      const d = m.op === 'scramble' ? (ctl.retraso[m.puzzle] || 0) : 0;
+      const d = m.op === 'scramble' ? (ctl.retraso[m.puzzle] || 0) : ((ctl.retrasoOp || {})[m.op] || 0);
       setTimeout(() => { if (m.op === 'scramble' && m.puzzle === 'pyraminx') ctl.pyraminxRespondido = Date.now(); this.onmessage && this.onmessage({ data: { id: m.id, ok: true, resultado: r } }); }, d);
     }
     terminate() {}
@@ -596,6 +596,77 @@ test('app: una respuesta tardía de un puzzle anterior no cambia la vista (y que
   // del 6x6/7x7 se hace sin que el usuario elija ese puzzle
   assert.ok(!ctl.mensajes.some((m) => m.op === 'inicializar' && ['6x6', '7x7'].includes(m.puzzle)));
   assert.deepEqual(ctx.errores, []);
+  ctx.w.close();
+});
+
+// ---------- Primer "Resolver" tras cargar la página (corrección de la noche 9) ----------
+// Antes, el puzzle inicial se elegía cuando los dos Workers respondían al ping (~1 s en
+// Chromium de escritorio, ~1,6 s con la CPU a ×4; más en un móvil). En ese tiempo los botones
+// estaban activos y un clic en "Resolver" llamaba a resolver() con st.p = null: TypeError en
+// una promesa, nada en pantalla. El segundo clic (ya con el puzzle elegido) sí funcionaba.
+async function abrirSinEsperar(t, ctl) {
+  let JSDOM;
+  try { ({ JSDOM } = await import('jsdom')); } catch { t.skip('jsdom no instalado'); return null; }
+  const { VirtualConsole } = await import('jsdom');
+  const vc = new VirtualConsole();
+  const errores = [];
+  vc.on('jsdomError', (e) => { if (!/HTMLCanvasElement/.test(e.message)) errores.push(e.message); });
+  const dom = new JSDOM(construir(), { runScripts: 'dangerously', pretendToBeVisual: true, url: 'https://localhost/', virtualConsole: vc,
+    beforeParse: (win) => {
+      workerControlado(win, ctl);
+      win.addEventListener('error', (e) => errores.push(e.message));
+      win.addEventListener('unhandledrejection', (e) => errores.push(String(e.reason && e.reason.message)));
+    } });
+  const doc = dom.window.document;
+  const hasta = async (cond, ms = 15000) => {
+    const t0 = Date.now();
+    while (!cond()) { if (Date.now() - t0 > ms) throw new Error('tiempo agotado: ' + doc.getElementById('mensajes').textContent); await espera(20); }
+  };
+  return { w: dom.window, doc, hasta, errores };
+}
+
+test('app: el primer clic en Resolver nada más cargar la página basta (Workers aún arrancando y tablas generándose)', async (t) => {
+  // ping de los Workers 1,5 s (como un móvil lento) y tablas del solver 1,2 s
+  const ctl = { workers: 0, mensajes: [], retraso: {}, retrasoOp: { ping: 1500, inicializar: 1200 } };
+  const ctx = await abrirSinEsperar(t, ctl);
+  if (!ctx) return;
+  const { doc, hasta, errores } = ctx;
+  const msgs = () => doc.getElementById('mensajes').textContent;
+  // nada más cargar (los Workers aún no han respondido al ping): un solo clic
+  doc.getElementById('resolver').click();
+  assert.equal(doc.querySelector('#selector .chip[aria-pressed="true"]').textContent, '3x3', 'el puzzle inicial se elige al momento');
+  // se ve que está esperando a las tablas, con el tiempo
+  await hasta(() => /Generando tablas… \d+,\d s/.test(msgs()), 3000);
+  await espera(400);
+  assert.match(msgs(), /Generando tablas… (0,[3-9]|[1-9]\d*,\d) s · la solución aparecerá al terminar/);
+  assert.equal(doc.getElementById('resolver').disabled, true);
+  // y la solución llega al terminar, sin otro clic
+  await hasta(() => /ya está resuelto/.test(msgs()), 10000);
+  assert.equal(ctl.mensajes.filter((m) => m.op === 'resolver').length, 1);
+  assert.equal(ctl.mensajes.filter((m) => m.op === 'inicializar').length, 1, 'una sola petición de tablas');
+  assert.deepEqual(errores, []);
+  ctx.w.close();
+});
+
+test('app: Resolver con un scramble cargado mientras se generan las tablas: un clic y aparece la solución', async (t) => {
+  const ctl = { workers: 0, mensajes: [], retraso: {}, retrasoOp: { ping: 300, inicializar: 1500 } };
+  const ctx = await abrirSinEsperar(t, ctl);
+  if (!ctx) return;
+  const { w, doc, hasta, errores } = ctx;
+  // el Worker simulado responde la solución de verdad (R U → U' R')
+  const original = w.Worker.prototype.postMessage;
+  w.Worker.prototype.postMessage = function (m) {
+    if (m.op !== 'resolver') return original.call(this, m);
+    ctl.mensajes.push(m);
+    setTimeout(() => this.onmessage({ data: { id: m.id, ok: true, resultado: { ok: true, movimientos: ["U'", "R'"], errores: [], ms: 1 } } }), 50);
+  };
+  await hasta(() => !doc.getElementById('cargar').disabled);
+  doc.getElementById('cargar').click();
+  doc.getElementById('resolver').click();
+  await hasta(() => !doc.getElementById('solucion').hidden, 10000);
+  assert.equal(doc.querySelectorAll('#movs li').length, 2);
+  assert.equal(ctl.mensajes.filter((m) => m.op === 'resolver').length, 1);
+  assert.deepEqual(errores, []);
   ctx.w.close();
 });
 

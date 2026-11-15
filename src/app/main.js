@@ -227,6 +227,7 @@ async function seleccionar(id) {
   $('desc-solver').textContent = activo ? (p.descripcion || '') : '';
   $('tipo-scramble').textContent = p.tipoScramble || '';
   for (const b of ['resetear', 'cargar', 'resolver']) $(b).disabled = !activo;
+  $('nuevo').disabled = false;
   pintarLeyenda();
   pintarMetodo();
   pintarPaleta();
@@ -244,18 +245,30 @@ async function seleccionar(id) {
 function textoSegundos(ms) { return (ms / 1000).toFixed(1).replace('.', ',') + ' s'; }
 
 const tablasEnCamino = new Map(); // puzzle -> promesa de 'inicializar' (una sola petición por puzzle)
-async function asegurarTablas() {
+const avisoEnCamino = new Map(); // puzzle -> promesa de asegurarTablas (un solo aviso con su reloj)
+const inicioTablas = new Map();  // puzzle -> instante en que se empezaron a generar sus tablas
+function asegurarTablas() {
   const p = st.p;
-  if (!p.capacidades.resolver || st.listos.has(p.id)) return;
+  if (!p.capacidades.resolver || st.listos.has(p.id)) return Promise.resolve();
+  if (!avisoEnCamino.has(p.id)) avisoEnCamino.set(p.id, generarTablas(p).finally(() => avisoEnCamino.delete(p.id)));
+  return avisoEnCamino.get(p.id);
+}
+async function generarTablas(p) {
   const aviso = $('aviso-tablas');
   aviso.hidden = false;
   aviso.classList.add('cargando');
   const base = p.avisoInicializacion || 'Generando tablas de búsqueda…';
   const dondeTxt = () => (motor.modo() === 'worker' ? ' (en segundo plano)' : '');
   const t0 = performance.now();
+  inicioTablas.set(p.id, t0);
   aviso.textContent = base + dondeTxt();
-  // el aviso es de este puzzle: si se cambia de puzzle, deja de actualizarse
-  const reloj = setInterval(() => { if (st.p === p) aviso.textContent = `${base}${dondeTxt()} ${textoSegundos(performance.now() - t0)}`; }, 100);
+  // el aviso es de este puzzle: si se cambia de puzzle, deja de actualizarse (y vuelve al volver)
+  const reloj = setInterval(() => {
+    if (st.p !== p) return;
+    aviso.hidden = false;
+    aviso.classList.add('cargando');
+    aviso.textContent = `${base}${dondeTxt()} ${textoSegundos(performance.now() - t0)}`;
+  }, 100);
   try {
     if (!tablasEnCamino.has(p.id)) tablasEnCamino.set(p.id, motor.pedir('inicializar', p.id).finally(() => tablasEnCamino.delete(p.id)));
     const r = await tablasEnCamino.get(p.id);
@@ -300,6 +313,10 @@ function pedirScramble(p, prioridad) {
 function rellenarPrecargas(p) {
   if (!st.precargados.has(p.id)) pedirScramble(p, 'media').catch(() => {});
   st.visitados.add(p.id);
+  // las de los demás puzzles, cuando ya se sabe si hay Worker (sin él, solo las baratas)
+  motor.listo.then(() => precargarOtros(p));
+}
+function precargarOtros(p) {
   const local = motor.modo() !== 'worker';
   const candidatos = PUZZLES
     .filter((q) => q !== p && !st.precargados.has(q.id) && !st.enCamino.has(q.id))
@@ -681,21 +698,39 @@ function mensaje(tipo, texto) {
   d.className = 'mensaje ' + tipo;
   d.textContent = texto;
   $('mensajes').appendChild(d);
+  return d;
 }
 
 // ---------- Resolver ----------
 async function resolver() {
   const p = st.p;
+  // Un clic nunca se pierde en silencio: si aún no hay puzzle (no debería pasar: el
+  // inicial se elige al arrancar y los botones empiezan desactivados) o ya se está
+  // resolviendo, se dice.
+  if (!p) { mensaje('info', 'Cargando la aplicación… vuelve a pulsar en un momento.'); return; }
+  if (ocupado()) { mensaje('info', 'Ya se está calculando la solución: aparecerá aquí al terminar.'); return; }
+  if (!puedeResolver(p)) { mensaje('error', 'Este puzzle aún no tiene solucionador.'); return; }
   const sel = st.sel; // si se cambia de puzzle (aunque se vuelva a este), la respuesta no se muestra
   const vigente = () => st.p === p && st.sel === sel;
-  if (!puedeResolver(p) || ocupado()) return;
-  if (st.sol) { st.editor = st.sol.base; quitarSolucion(); }
-  st.seleccion = null;
-  limpiarMensajes();
   st.ocupado = p.id;
   $('resolver').disabled = true;
+  let reloj = null;
   try {
-    await asegurarTablas();
+    if (st.sol) { st.editor = st.sol.base; quitarSolucion(); }
+    st.seleccion = null;
+    limpiarMensajes();
+    if (!st.listos.has(p.id)) {
+      // tablas en camino (o por pedir): el clic queda en espera, con el tiempo a la vista
+      const pedidas = asegurarTablas();
+      const t0 = inicioTablas.get(p.id) ?? performance.now();
+      const m = mensaje('info', `Generando tablas… ${textoSegundos(performance.now() - t0)} · la solución aparecerá al terminar.`);
+      reloj = setInterval(() => { m.textContent = `Generando tablas… ${textoSegundos(performance.now() - t0)} · la solución aparecerá al terminar.`; }, 100);
+      await pedidas;
+      clearInterval(reloj);
+      reloj = null;
+      if (!vigente()) return;
+      limpiarMensajes();
+    }
     const v = await motor.pedir('validar', p.id, { estado: st.editor });
     if (!vigente()) return;
     if (!v.valido) {
@@ -727,6 +762,7 @@ async function resolver() {
     limpiarMensajes();
     mensaje('error', `Error al resolver: ${err.message}`);
   } finally {
+    if (reloj) clearInterval(reloj);
     if (st.ocupado === p.id) st.ocupado = false;
     if (vigente()) {
       $('resolver').disabled = !puedeResolver(st.p);
@@ -929,7 +965,10 @@ function iniciar() {
   let inicial = '3x3';
   try { inicial = localStorage.getItem('cubo-solver:puzzle') || inicial; } catch { /* sin almacenamiento */ }
   if (!PUZZLES.some((p) => p.id === inicial)) inicial = '3x3';
-  motor.listo.then(() => seleccionar(inicial));
+  // El puzzle inicial se elige al momento (antes se esperaba al ping de los Workers,
+  // ~1–2 s, y un clic en ese tiempo daba con st.p = null y se perdía sin aviso). Las
+  // peticiones esperan en la cola del motor hasta que los Workers responden.
+  seleccionar(inicial);
 }
 
 iniciar();
