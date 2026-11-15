@@ -16,6 +16,7 @@ const ahora = () => (globalThis.performance || Date).now();
  *   scramble                  -> { movimientos, ms }
  *   validar   (estado)        -> { valido, errores }
  *   resolver  (estado)        -> { ok, movimientos, errores, ms, fases }
+ *   aprender  (estado, opciones.metodo) -> guion del método humano (ver src/aprender/guion.js)
  */
 export function atender(msg) {
   if (msg.op === 'ping') return 'ok';
@@ -42,6 +43,12 @@ export function atender(msg) {
       if (!p.capacidades.resolver) throw new Error(`${p.nombre} no tiene solucionador`);
       const r = p.resolver(msg.estado, msg.opciones || {});
       return { ok: r.ok, movimientos: r.movimientos || [], errores: r.errores || [], ms: r.ms, fases: r.fases || null };
+    }
+    case 'aprender': {
+      if (!p.aprender) throw new Error(`${p.nombre} no tiene modo aprender`);
+      const t0 = ahora();
+      const r = p.aprender(msg.estado, (msg.opciones || {}).metodo);
+      return { ...r, ms: ahora() - t0 };
     }
     default:
       throw new Error(`Operación desconocida: ${msg.op}`);

@@ -1,18 +1,18 @@
 {
-  "msTablas": 710,
+  "msTablas": 894,
   "casos": 100,
-  "fecha": "2026-11-14T23:18:28.404Z",
+  "fecha": "2026-11-15T00:41:07.527Z",
   "scrambles": 100,
   "longitudMedia": 20.74,
   "longitudMin": 19,
   "longitudMax": 21,
-  "msPorScramble": 18.76,
+  "msPorScramble": 23.23,
   "resueltos": "100/100 (100.0%)",
   "longitudMediaSolucion": 19.76,
   "longitudMaxSolucion": 20,
-  "msMedioSolucion": 63.77,
-  "msMaxSolucion": 924.9,
-  "msInicializacion": 710,
+  "msMedioSolucion": 72.01,
+  "msMaxSolucion": 927.4,
+  "msInicializacion": 894,
   "grupo": {
     "ordenH": "43252003274489856000",
     "estados": "43252003274489856000",
@@ -22,6 +22,6 @@
     "relacionesVisibles": [
       "esquinas + aristas centrales"
     ],
-    "ms": 52
+    "ms": 105
   }
 }

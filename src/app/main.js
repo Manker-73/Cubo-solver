@@ -40,6 +40,7 @@ const st = {
   v3d: { previa: null, editor: null },
   pasoScramble: 0,   // paso del reproductor del scramble (n = scramble aplicado)
   prefijos: [],      // estados del scramble tras 0..n movimientos (orientación real)
+  metodos: {},       // modo aprender: método elegido en cada puzzle ('' = solución óptima)
 };
 const ms3D = () => 420 / st.velocidad;
 const ocupado = () => !!st.ocupado && !!st.p && st.ocupado === st.p.id;
@@ -227,6 +228,7 @@ async function seleccionar(id) {
   $('tipo-scramble').textContent = p.tipoScramble || '';
   for (const b of ['resetear', 'cargar', 'resolver']) $(b).disabled = !activo;
   pintarLeyenda();
+  pintarMetodo();
   pintarPaleta();
   pintarAccionesEditor();
   pintarVistas();
@@ -502,11 +504,25 @@ function pintarEditor() {
       if (st.seleccion != null) {
         const sel = vista.geometria.pegatinas.find((q) => q.indice === st.seleccion);
         v.resaltar(sel ? vista.geometria.pegatinas.map((q, k) => (q.pieza === sel.pieza ? k : -1)).filter((k) => k >= 0) : null);
-      } else if (v.escena.resaltado && v._resalteEditor) v.resaltar(null);
+      } else if (v.escena.resaltado && (v._resalteEditor || v._resalteAprender)) v.resaltar(null);
       v._resalteEditor = st.seleccion != null;
+      v._resalteAprender = false;
+      // modo aprender: las piezas en las que se trabaja en este paso
+      const peg = st.seleccion == null ? pegatinasResaltadas() : null;
+      if (peg) {
+        const set = new Set(peg);
+        v.resaltar(vista.geometria.pegatinas.map((q, k) => (set.has(q.indice) ? k : -1)).filter((k) => k >= 0), 'brillo');
+        v._resalteAprender = true;
+      }
     }
   } else {
     $('vista-editor').innerHTML = p.renderizar(mostrado, { editable, editables, seleccion: st.seleccion, vista: st.vista, etiquetas: !!st.sol });
+    const peg = pegatinasResaltadas();
+    if (peg) {
+      const svg = $('vista-editor').querySelector('svg');
+      if (svg) svg.classList.add('con-resalte');
+      for (const i of peg) { const el = $('vista-editor').querySelector(`[data-i="${i}"]`); if (el) el.classList.add('resaltada'); }
+    }
   }
   pintarModos();
   $('deshacer').disabled = !editable || st.historial.length === 0;
@@ -551,6 +567,99 @@ function tocarPegatina(i) {
   pintarEditor();
 }
 
+// ---------- Modo aprender: selector de método ----------
+/** Método humano elegido en el puzzle actual ('' = solución óptima por ordenador). */
+function metodoActual(p = st.p) {
+  const m = st.metodos[p.id] || '';
+  return p.metodosAprender && p.metodosAprender.some((x) => x.id === m) ? m : '';
+}
+function pintarMetodo() {
+  const p = st.p;
+  const caja = $('metodo');
+  caja.hidden = !p.metodosAprender || !puedeResolver(p);
+  if (caja.hidden) return;
+  const sel = $('sel-metodo');
+  sel.innerHTML = '';
+  const opciones = [{ id: '', texto: 'Solución óptima (por ordenador)' }].concat(p.metodosAprender.map((m) => ({ id: m.id, texto: `Aprender (método ${m.nombre})` })));
+  for (const o of opciones) {
+    const op = document.createElement('option');
+    op.value = o.id;
+    op.textContent = o.texto;
+    sel.appendChild(op);
+  }
+  sel.value = metodoActual(p);
+}
+function cambiarMetodo() {
+  st.metodos[st.p.id] = $('sel-metodo').value;
+  try { localStorage.setItem('cubo-solver:metodos', JSON.stringify(st.metodos)); } catch { /* sin almacenamiento */ }
+  if (st.sol) { st.editor = st.sol.base; quitarSolucion(); }
+  limpiarMensajes();
+  pintarEditor();
+}
+
+/** Bloque del modo aprender en el que está el paso k (el siguiente movimiento), o null. */
+function bloqueDelPaso(k) {
+  const s = st.sol;
+  if (!s || !s.etapas || k >= s.movimientos.length) return null;
+  for (const et of s.etapas) for (const b of et.bloques) if (k >= b.inicio && k < b.fin) return { etapa: et, bloque: b };
+  return null;
+}
+/** Pegatinas (índices del estado) de las piezas del bloque actual en el paso actual. */
+function pegatinasResaltadas() {
+  const x = bloqueDelPaso(st.paso);
+  if (!x || !x.bloque.piezas.length) return null;
+  const p = st.p;
+  // se siguen las pegatinas desde el inicio del bloque: un "estado" con el índice de cada pegatina
+  let id = p.estadoResuelto().map((_, i) => i);
+  for (let i = x.bloque.inicio; i < st.paso; i++) id = p.aplicarMovimiento(id, st.sol.movimientos[i]);
+  const quiero = new Set(x.bloque.piezas);
+  const r = [];
+  id.forEach((orig, j) => { if (quiero.has(orig)) r.push(j); });
+  return r;
+}
+
+function pintarExplicacion() {
+  const caja = $('explicacion');
+  const s = st.sol;
+  if (!s || !s.etapas) { caja.hidden = true; caja.innerHTML = ''; return; }
+  caja.hidden = false;
+  const n = s.movimientos.length;
+  const x = bloqueDelPaso(st.paso);
+  // etapa a mostrar: la del siguiente movimiento (o la última al terminar)
+  const et = x ? x.etapa : s.etapas[s.etapas.length - 1];
+  const ie = s.etapas.indexOf(et);
+  caja.innerHTML = '';
+  const h = document.createElement('h3');
+  h.textContent = st.paso >= n ? `¡Resuelto! Última etapa: ${et.nombre}` : `Etapa ${ie + 1}/${s.etapas.length} · ${et.nombre}`;
+  const obj = document.createElement('p');
+  obj.className = 'objetivo';
+  obj.textContent = et.objetivo;
+  const ol = document.createElement('ol');
+  for (const b of et.bloques) {
+    const li = document.createElement('li');
+    if (st.paso >= b.fin) li.classList.add('hecho');
+    if (x && x.bloque === b) li.classList.add('actual');
+    const t = document.createElement('span');
+    t.textContent = b.texto;
+    li.appendChild(t);
+    if (b.algoritmo) {
+      const a = document.createElement('span');
+      a.className = 'alg';
+      a.textContent = b.algoritmo;
+      li.appendChild(a);
+    }
+    const c = document.createElement('code');
+    c.textContent = s.movimientos.slice(b.inicio, b.fin).join(' ');
+    li.appendChild(c);
+    li.title = 'Ir al final de este paso';
+    li.addEventListener('click', () => { repSol.parar(); repSol.irA(b.fin); });
+    ol.appendChild(li);
+  }
+  caja.append(h, obj, ol);
+  const act = ol.querySelector('li.actual');
+  if (act && ol.scrollHeight > ol.clientHeight) ol.scrollTop = Math.max(0, act.offsetTop - ol.offsetTop - 40);
+}
+
 // ---------- Leyenda de la notación ----------
 function pintarLeyenda() {
   const caja = $('leyenda');
@@ -591,6 +700,8 @@ async function resolver() {
       v.errores.forEach((e) => mensaje('error', e));
       return;
     }
+    const metodo = metodoActual(p);
+    if (metodo) { await resolverAprendiendo(p, metodo, vigente); return; }
     mensaje('info', 'Buscando solución…');
     await esperarPintado();
     const r = await motor.pedir('resolver', p.id, { estado: st.editor });
@@ -621,6 +732,29 @@ async function resolver() {
   }
 }
 
+/** Modo aprender: solución por el método humano (y la óptima, para comparar la longitud). */
+async function resolverAprendiendo(p, metodo, vigente) {
+  const nombre = p.metodosAprender.find((m) => m.id === metodo).nombre;
+  mensaje('info', `Preparando la solución paso a paso (método ${nombre})…`);
+  await esperarPintado();
+  const base = p.clonar(st.editor);
+  const r = await motor.pedir('aprender', p.id, { estado: base, opciones: { metodo } });
+  if (!vigente()) return;
+  let optima = null;
+  try {
+    const o = await motor.pedir('resolver', p.id, { estado: base });
+    if (o.ok) optima = o.movimientos.length;
+  } catch { /* la comparación es opcional */ }
+  if (!vigente()) return;
+  limpiarMensajes();
+  if (!r.ok) { (r.errores && r.errores.length ? r.errores : ['No se pudo resolver.']).forEach((e) => mensaje('error', e)); return; }
+  if (r.movimientos.length === 0) { mensaje('ok', 'El puzzle ya está resuelto.'); return; }
+  st.sol = { movimientos: r.movimientos, base, ms: r.ms, fases: r.fases || null, etapas: r.etapas, giros: r.giros, metodo: nombre, optima };
+  st.paso = 0;
+  pintarVistas();
+  mensaje('ok', `Estado válido. Solución por el método ${nombre}, etapa a etapa: avanza con los controles y lee qué consigue cada paso.`);
+}
+
 function quitarSolucion() {
   repSol.cancelar();
   const habia = !!st.sol;
@@ -642,11 +776,15 @@ function faseDelPaso(k) {
 
 function pintarSolucion() {
   const caja = $('solucion');
-  if (!st.sol) { caja.hidden = true; return; }
+  if (!st.sol) { caja.hidden = true; pintarExplicacion(); return; }
   caja.hidden = false;
   const n = st.sol.movimientos.length;
   const largo = st.p.describirLongitud ? st.p.describirLongitud(st.sol.movimientos) : `${n} movimiento${n === 1 ? '' : 's'}`;
-  $('sol-resumen').textContent = `${largo} · ${Math.max(1, Math.round(st.sol.ms))} ms`;
+  if (st.sol.etapas) {
+    const rot = n - st.sol.giros;
+    $('sol-resumen').textContent = `Método ${st.sol.metodo}: ${st.sol.giros} giros${rot ? ` (+ ${rot} ${rot === 1 ? 'giro' : 'giros'} del cubo entero)` : ''}`
+      + (st.sol.optima != null ? ` · solución óptima: ${st.sol.optima} giros` : '');
+  } else $('sol-resumen').textContent = `${largo} · ${Math.max(1, Math.round(st.sol.ms))} ms`;
   // Fases: un botón por tramo que lleva al final de ese tramo
   const barra = $('fases');
   const fases = st.sol.fases || [];
@@ -679,6 +817,7 @@ function pintarSolucion() {
       cls.push('f-' + (fases[faseI].grupo || fases[faseI].nombre).replace(/[^a-z0-9]/gi, ''));
       if (i === fases[faseI].inicio && i > 0) cls.push('inicio-fase');
     }
+    if (/^[xyz]/.test(m)) cls.push('rotacion');
     if (i < st.paso - 1) cls.push('hecho');
     if (i === st.paso - 1) cls.push('actual');
     if (cls.length) li.className = cls.join(' ');
@@ -696,6 +835,7 @@ function pintarSolucion() {
   $('r-play').textContent = repSol.reproduciendo ? '❚❚' : '▶';
   $('r-play').setAttribute('aria-label', repSol.reproduciendo ? 'Pausar' : 'Reproducir');
   $('r-velocidad').textContent = `×${st.velocidad}`;
+  pintarExplicacion();
 }
 
 function pararReproduccion() {
@@ -748,6 +888,8 @@ function iniciar() {
     pintarEditor();
   });
   $('resolver').addEventListener('click', resolver);
+  $('sel-metodo').addEventListener('change', cambiarMetodo);
+  try { st.metodos = JSON.parse(localStorage.getItem('cubo-solver:metodos') || '{}') || {}; } catch { /* */ }
   $('r-inicio').addEventListener('click', () => repSol.irA(0));
   $('r-atras').addEventListener('click', () => { repSol.parar(); repSol.atras(); });
   $('r-adelante').addEventListener('click', () => { repSol.parar(); repSol.adelante(); });

@@ -3,13 +3,13 @@
   "longitudMedia": 8.71,
   "longitudMin": 6,
   "longitudMax": 10,
-  "msPorScramble": 3.55,
+  "msPorScramble": 5.09,
   "casos": 100,
-  "fecha": "2026-11-14T23:17:17.974Z",
+  "fecha": "2026-11-15T00:39:40.045Z",
   "resueltos": "100/100 (100.0%)",
   "longitudMediaSolucion": 8.71,
   "longitudMaxSolucion": 10,
-  "msMedioSolucion": 0.9,
-  "msMaxSolucion": 7.6,
-  "msInicializacion": 276
+  "msMedioSolucion": 1.15,
+  "msMaxSolucion": 8.8,
+  "msInicializacion": 398
 }

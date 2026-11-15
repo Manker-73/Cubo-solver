@@ -191,3 +191,29 @@ body { font-family: var(--f-texto); font-size: 15px; line-height: 1.5; }
   color: #111; background: rgba(255, 255, 255, 0.82); border-radius: 5px; padding: 0 4px; line-height: 1.35;
 }
 .scramble.generando { color: var(--tenue); font-style: italic; }
+
+/* Modo aprender */
+.metodo { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; flex-wrap: wrap; }
+.metodo label { color: var(--tenue); }
+.metodo select { font: inherit; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--linea); background: var(--fondo); color: var(--tinta); max-width: 100%; }
+.explicacion { border: 1px solid var(--linea); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; font-size: 0.92rem; }
+.explicacion h3 { margin: 0; font-size: 1rem; }
+.explicacion .objetivo { margin: 0; color: var(--tenue); }
+.explicacion ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; max-height: 260px; overflow-y: auto; }
+.explicacion li { border-radius: 8px; padding: 6px 8px; cursor: pointer; border: 1px solid transparent; }
+.explicacion li:hover { border-color: var(--linea); }
+.explicacion li.hecho { opacity: 0.6; }
+.explicacion li.actual { background: var(--acento-suave); border-color: var(--acento); opacity: 1; }
+.explicacion li code { font: 500 0.84rem var(--f-mono); display: block; margin-top: 2px; word-break: break-word; }
+.explicacion .alg { display: inline-block; font-size: 0.74rem; font-weight: 600; padding: 1px 6px; border-radius: 99px; background: var(--tinta); color: var(--fondo); margin-left: 4px; vertical-align: 1px; }
+.vista svg polygon.resaltada { stroke: var(--acento); stroke-width: 0.09; }
+.vista svg.con-resalte polygon:not(.resaltada) { opacity: 0.45; }
+.fase.f-prep, .fase.f-cara { border-left: 4px solid var(--tenue); }
+.fase.f-cruz, .fase.f-capa1 { border-left: 4px solid var(--acento); }
+.fase.f-capa2 { border-left: 4px solid var(--ok); }
+.fase.f-cruzam, .fase.f-caraam, .fase.f-oll { border-left: 4px solid #e0a800; }
+.fase.f-esqam, .fase.f-ariam, .fase.f-pll, .fase.f-pbl { border-left: 4px solid var(--error); }
+.movs li.f-cruz:not(.actual), .movs li.f-capa1:not(.actual) { background: var(--acento-suave); }
+.movs li.f-capa2:not(.actual) { background: var(--ok-suave); }
+.movs li.f-pll:not(.actual), .movs li.f-pbl:not(.actual), .movs li.f-esqam:not(.actual), .movs li.f-ariam:not(.actual) { background: var(--error-suave); }
+.movs li.rotacion { font-style: italic; }

@@ -1,6 +1,7 @@
 // 3x3: validador, solucionador de dos fases (Kociemba) y scramble de estado aleatorio.
 
 import { definirPuzzle } from '../core/puzzle.js';
+import { aprender3x3, METODOS_3x3 } from '../aprender/metodos-3x3.js';
 import { crearModeloPiezas } from '../core/piezas.js';
 import { reetiquetar, cierreGrupo } from '../core/simetria.js';
 import { aplicarPerm, componer } from '../core/perm.js';
@@ -181,6 +182,9 @@ export default definirPuzzle({
   avisoInicializacion: 'Generando las tablas de Kociemba en el navegador…',
   validar: (e) => { const a = analizar(e); return { valido: a.valido, errores: a.errores }; },
   resolver,
+  // Modo aprender: solución por un método humano, explicada por etapas
+  metodosAprender: METODOS_3x3,
+  aprender: (estado, metodo) => aprender3x3(estado, metodo),
   generarScramble,
   estadoAleatorio: (rng) => cuboAPegatinas(cuboAleatorio(rng)),
 });

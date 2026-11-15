@@ -72,6 +72,10 @@
         <div class="vista editable" id="vista-editor"></div>
         <div class="vista vista-3d editable" id="vista3d-editor" hidden><span class="pista-3d">Arrastra para girarlo · toca para pintar</span></div>
         <div class="acciones acciones-editor" id="acciones-editor" hidden></div>
+        <div class="metodo" id="metodo" hidden>
+          <label for="sel-metodo">Solución</label>
+          <select id="sel-metodo"></select>
+        </div>
         <div class="acciones">
           <button type="button" class="boton" id="deshacer" title="Deshacer el último cambio del editor (Ctrl+Z)" disabled>Deshacer</button>
           <button type="button" class="boton" id="resetear">Resetear</button>
@@ -85,6 +89,7 @@
             <button type="button" class="boton-texto" id="copiar-sol">Copiar</button>
           </div>
           <div class="fases" id="fases" hidden></div>
+          <div class="explicacion" id="explicacion" aria-live="polite" hidden></div>
           <details class="leyenda" id="leyenda" hidden></details>
           <ol class="movs" id="movs"></ol>
           <div class="reproductor">

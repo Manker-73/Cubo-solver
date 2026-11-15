@@ -598,3 +598,64 @@ test('app: una respuesta tardía de un puzzle anterior no cambia la vista (y que
   assert.deepEqual(ctx.errores, []);
   ctx.w.close();
 });
+
+// ---------- Modo aprender ----------
+async function probarAprender(ctx, puzzle, metodo) {
+  const { doc, w, hasta } = ctx;
+  await elegirPuzzle(ctx, puzzle);
+  const sel = doc.getElementById('sel-metodo');
+  assert.equal(doc.getElementById('metodo').hidden, false, `${puzzle}: selector de método visible`);
+  assert.ok([...sel.options].some((o) => o.value === ''), 'opción de solución óptima');
+  sel.value = metodo;
+  sel.dispatchEvent(new w.Event('change'));
+  doc.getElementById('cargar').click();
+  doc.getElementById('resolver').click();
+  await hasta(() => !doc.getElementById('solucion').hidden || doc.querySelector('.mensaje.error'));
+  assert.equal(doc.querySelector('.mensaje.error'), null, `${puzzle}/${metodo}: ${doc.getElementById('mensajes').textContent}`);
+  const exp = doc.getElementById('explicacion');
+  assert.equal(exp.hidden, false, 'explicación visible');
+  assert.match(exp.querySelector('h3').textContent, /^Etapa 1\//);
+  assert.ok(exp.querySelector('.objetivo').textContent.length > 20, 'objetivo de la etapa');
+  assert.match(doc.getElementById('sol-resumen').textContent, /^Método .*: \d+ giros.*solución óptima: \d+ giros/);
+  const n = doc.querySelectorAll('#movs li').length;
+  let conResalte = 0, etapas = new Set(), algoritmos = 0;
+  for (let i = 0; i < n; i++) {
+    if (doc.querySelectorAll('#vista-editor polygon.resaltada').length) conResalte++;
+    etapas.add(exp.querySelector('h3').textContent);
+    if (exp.querySelector('li.actual .alg')) algoritmos++;
+    assert.equal(exp.querySelectorAll('li.actual').length, 1, `un paso actual (paso ${i})`);
+    doc.getElementById('r-adelante').click();
+  }
+  assert.match(doc.getElementById('paso').textContent, /Resuelto/);
+  assert.match(exp.querySelector('h3').textContent, /Resuelto/);
+  const e = w.cuboSolver.editor();
+  const n2 = e.length / 6;
+  for (let f = 0; f < 6; f++) for (let k = 0; k < n2; k++) assert.equal(e[f * n2 + k], e[f * n2], `${puzzle}/${metodo}: resuelto al final`);
+  assert.ok(conResalte > n / 2, `${puzzle}/${metodo}: piezas resaltadas en la mayoría de los pasos (${conResalte}/${n})`);
+  assert.ok(etapas.size >= 3, 'recorre varias etapas');
+  assert.ok(algoritmos > 0, 'muestra el nombre de algún algoritmo');
+  // saltar al final de un paso desde la lista de la explicación
+  doc.getElementById('r-inicio').click();
+  const segundo = exp.querySelectorAll('li')[1] || exp.querySelectorAll('li')[0];
+  segundo.click();
+  assert.ok(!/Inicio/.test(doc.getElementById('paso').textContent), 'clic en un paso de la explicación');
+  // volver a la solución óptima: sin explicación
+  sel.value = '';
+  sel.dispatchEvent(new w.Event('change'));
+  assert.equal(doc.getElementById('solucion').hidden, true);
+  doc.getElementById('resolver').click();
+  await hasta(() => !doc.getElementById('solucion').hidden || doc.querySelector('.mensaje.error'));
+  assert.equal(doc.getElementById('explicacion').hidden, true, 'la solución óptima no lleva explicación');
+}
+
+test('app: modo aprender (sin WebGL, en 2D): 3x3 y 2x2 con sus métodos', async (t) => {
+  const ctx = await abrir(t);
+  if (!ctx) return;
+  for (const [puzzle, metodo] of [['3x3', 'principiantes'], ['3x3', 'cfop'], ['2x2', 'principiantes'], ['2x2', 'ortega']]) {
+    await probarAprender(ctx, puzzle, metodo);
+  }
+  // los puzzles sin modo aprender no muestran el selector
+  await elegirPuzzle(ctx, 'Skewb');
+  assert.equal(ctx.doc.getElementById('metodo').hidden, true);
+  assert.deepEqual(ctx.errores, []);
+});

@@ -1,6 +1,7 @@
 // 2x2: validador, solucionador óptimo (IDA* en <U, R, F>) y scramble de estado aleatorio.
 
 import { definirPuzzle } from '../core/puzzle.js';
+import { aprender2x2, METODOS_2x2 } from '../aprender/metodos-2x2.js';
 import { crearModeloPiezas, crearBuscador } from '../core/piezas.js';
 import { reetiquetar } from '../core/simetria.js';
 import { barajar, entero, rngSeguro } from '../core/rng.js';
@@ -126,6 +127,9 @@ export default definirPuzzle({
   estaInicializado: () => !!buscador,
   validar: (e) => { const a = analizar(e); return { valido: a.valido, errores: a.errores }; },
   resolver,
+  // Modo aprender: solución por un método humano, explicada por etapas
+  metodosAprender: METODOS_2x2,
+  aprender: (estado, metodo) => aprender2x2(estado, metodo),
   generarScramble,
   estadoAleatorio,
 });

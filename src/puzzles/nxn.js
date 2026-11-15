@@ -86,9 +86,15 @@ export function geometriaNxN(N) {
 }
 
 const RE_MOV = /^(\d*)([URFDLB])(w?)(2'|2|')?$/;
+const RE_ROT = /^([xyz])(2'|2|')?$/;
+/** true si el movimiento es una rotación del cubo entero (x, y, z). */
+export const esRotacion = (mov) => RE_ROT.test(mov);
 
 /** Analiza un movimiento NxN. Devuelve { cara, prof, veces } o lanza error. */
 export function analizarMovimiento(mov, N) {
+  // Rotaciones del cubo entero (x como R, y como U, z como F): las usan los métodos humanos (modo aprender)
+  const r = RE_ROT.exec(mov);
+  if (r) return { cara: { x: 'R', y: 'U', z: 'F' }[r[1]], prof: N, veces: r[2] === "'" ? 3 : r[2] ? 2 : 1, rotacion: true };
   const m = RE_MOV.exec(mov);
   if (!m) throw new Error(`Movimiento no válido: "${mov}"`);
   let prof = 1;
