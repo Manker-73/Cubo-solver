@@ -319,6 +319,15 @@ function aristas(g, d) {
     return n;
   };
   const maxPares = 12 * (N - 3);
+  /** Aristas (por sus colores) con todas sus piezas juntas. */
+  const completasEn = (v) => {
+    const r = [];
+    for (const [a, b] of ar) {
+      if (a.every((j) => v[j] === v[a[0]]) && b.every((j) => v[j] === v[b[0]])) r.push(v[a[0]] < v[b[0]] ? v[a[0]] * 8 + v[b[0]] : v[b[0]] * 8 + v[a[0]]);
+    }
+    return r;
+  };
+  const contiene = (x, y) => y.every((k) => x.includes(k));
   const macros = [];
   for (const c of LETRA) for (const s of SUF) macros.push({ movs: [c + s], perm: proy.permDe([c + s]), cara: c, tipo: 'cara' });
   const algs = ALG_EMPAREJAR.concat(N % 2 ? [ALG_PARIDAD_ARISTA_5] : []);
@@ -336,7 +345,10 @@ function aristas(g, d) {
     const v = proy.proyectar(g.estado);
     const n0 = pares(v);
     if (n0 === maxPares) break;
-    const pasos = buscarMacrosProy(v, macros, (w) => pares(w) > n0, 4, 6e5);
+    // como haría una persona: las aristas ya completas no se rompen
+    const hechas = completasEn(v);
+    const pasos = buscarMacrosProy(v, macros, (w) => pares(w) > n0 && contiene(completasEn(w), hechas), 4, 6e5)
+      || buscarMacrosProy(v, macros, (w) => pares(w) > n0, 4, 6e5);
     g.comprobar(!!pasos, 'aristas: no se encontró cómo emparejar otra');
     const movs = pasos.flatMap((p) => p.movs);
     const id = [...Array(d.total).keys()];
@@ -344,7 +356,9 @@ function aristas(g, d) {
     const eFin = movs.reduce((e, m) => d.b.aplicarMovimiento(e, m), g.estado);
     // aristas que quedan emparejadas en este paso
     const completa = (e, k) => { const [a, b] = d.aristas[k]; return a.every((i) => e[i] === e[a[0]]) && b.every((i) => e[i] === e[b[0]]); };
-    const nuevas = d.aristas.map((_, k) => k).filter((k) => completa(eFin, k) && !completa(g.estado, k));
+    const claveDe = (e, k) => { const x = e[d.aristas[k][0][0]], y = e[d.aristas[k][1][0]]; return Math.min(x, y) * 8 + Math.max(x, y); };
+    const antes = new Set(d.aristas.map((_, k) => k).filter((k) => completa(g.estado, k)).map((k) => claveDe(g.estado, k)));
+    const nuevas = d.aristas.map((_, k) => k).filter((k) => completa(eFin, k) && !antes.has(claveDe(eFin, k)));
     const alg = pasos.find((p) => p.tipo === 'alg');
     const nombres = nuevas.map((k) => nombreArista(eFin, k).replace(' y ', '-'));
     const lista = nombres.length > 1 ? `las aristas ${nombres.slice(0, -1).join(', ')} y ${nombres[nombres.length - 1]}` : `la arista ${nombres[0]}`;

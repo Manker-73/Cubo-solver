@@ -40,6 +40,14 @@ src/
     megaminx-ultima.js  Megaminx: última capa con macros buscadas por colisiones
     square1.js      Square-1: estado de colores, validador, editor, dibujo y scramble
     square1-motor.js  Square-1: formas, paridad, tablas, solver en dos fases, estado aleatorio
+  aprender/       modo aprender: soluciones por métodos humanos, explicadas por etapas
+    guion.js          resultado común: etapas con objetivo, bloques con texto, algoritmo y piezas
+    motor-cubo.js     cubos 2x2/3x3: piezas por colores, IDA* con tablas de 1–3 piezas, búsqueda de algoritmos (macros)
+    algoritmos.js     OLL, PLL y los del método de principiantes (notación WCA; se comprueban al cargar)
+    objetivos-cubo.js objetivo de cada etapa comprobado sobre las pegatinas (lo usan los métodos y los tests)
+    metodos-3x3.js    3x3: por capas para principiantes y CFOP (también la etapa 3x3 del 4x4)
+    metodos-2x2.js    2x2: por capas y Ortega
+    metodos-nxn.js    4x4: reducción humana (centros, aristas, 3x3 sobre un cubo virtual y paridades)
   app/            interfaz
     plantilla.html, estilos.css
     main.js         interfaz (solo usa la interfaz común)
@@ -104,6 +112,7 @@ Opcional (según `capacidades`):
 | `vista3D(estado)`, `giro3D(estado, mov)`, `reorientar3D(estado)` | geometría 3D y giros para la vista 3D (ver "Vista 3D" más abajo) |
 | `aplicarSecuencia`, `invertir` | se rellenan automáticamente |
 | `tipoScramble`, `descripcion`, `avisoInicializacion`, `describirLongitud(movs)` | textos para la interfaz |
+| `metodosAprender`, `aprender(estado, metodo)` | modo aprender: `[{id, nombre, descripcion}]` y la solución por ese método humano (ver "Modo aprender") |
 | `costeScramble` | ms aproximados del primer scramble (las tablas que necesita generarScramble; 0 en los de movimientos aleatorios): ordena las precargas |
 
 ## Cómo añadir un puzzle
@@ -172,6 +181,29 @@ Piezas de la app:
 
 Para un puzzle nuevo: si es de cortes planos, `...modelo3DGeo(geo, camara)` y ya está; si no, `vista3D` y `giro3D` a mano, y el test `tests/vista3d.test.mjs` dice si la animación coincide con el modelo.
 
+## Modo aprender
+
+Un puzzle con `metodosAprender` y `aprender(estado, metodo)` tiene, además de la solución por
+ordenador, soluciones por métodos humanos. `aprender` devuelve un **guion** (`src/aprender/guion.js`):
+
+```
+{ ok, metodo, movimientos, giros, fases,
+  etapas: [{ nombre, objetivo, grupo, inicio, fin,
+             bloques: [{ inicio, fin, texto, algoritmo, piezas }] }] }
+```
+- `movimientos` incluye las rotaciones del cubo entero (`x`, `y`, `z`, que el NxN entiende desde la noche 8); `giros` = los que no son rotaciones.
+- Cada etapa tiene un objetivo en texto; cada bloque, lo que consigue, el nombre del algoritmo (si es uno conocido) y `piezas`: las pegatinas de las piezas en las que se trabaja **al empezar el bloque**. La interfaz las sigue movimiento a movimiento aplicando los movimientos a un "estado" con el índice de cada pegatina, y las resalta en la vista 3D (`resaltar`) o en el dibujo 2D (clase `resaltada`). Funciona en cualquier puzzle cuyo estado sea un array de pegatinas.
+- `fases` (las etapas con movimientos) alimenta la barra de fases de siempre.
+
+Cómo se construyen las soluciones:
+- **Tramos de búsqueda** (cruz, parejas de F2L, cara del Ortega): IDA* sobre las piezas que importan (cada pieza se sigue por una pegatina: su casilla dice a la vez posición y orientación), con tablas exactas de 1–3 piezas que se generan la primera vez, y el conjunto de giros que usaría una persona (F2L: primero solo R y U; con F si sale más corto).
+- **Recetas** (método de principiantes): lo que haría una persona, paso a paso (girar el cubo para tener el hueco delante a la derecha, poner la esquina encima, repetir R U R' U' hasta que baje bien…).
+- **Algoritmos** (última capa, PBL, paridades, emparejar aristas): búsqueda de coste uniforme sobre combinaciones de "macros" (ajustes de una capa y algoritmos con nombre) que cumplan el objetivo. Los textos de cada caso (cuántas aristas orientadas, qué intercambia una PLL…) se calculan del estado.
+- **4x4**: centros y aristas de pieza en pieza con macros humanas (giros de cara, Uw/Dw, conmutadores como `Rw U Rw'`, `Uw' R U R' F R' F' R Uw`) sobre una proyección del estado (solo centros o solo aristas, cada macro convertida en permutación); los cuatro últimos centros con dos tablas exactas (2¹⁶ estados) en el subgrupo F, R, B, L, Uw, Dw, que no toca los centros de arriba y abajo. Después, las etapas del 3x3 sobre un **3x3 virtual** (esquinas, una pieza de cada arista y un centro) a través de un guion intermedio que traduce los movimientos (`Rw` del 3x3 → `3Rw`) y las piezas; las paridades OLL y PLL se detectan en el 3x3 virtual (aristas volteadas impares; paridad distinta de esquinas y aristas) y se arreglan con sus algoritmos entre etapas.
+- Cada método comprueba al final de cada etapa su objetivo (`objetivos-cubo.js`); los tests lo comprueban otra vez aplicando la solución movimiento a movimiento.
+
+Para añadir un método: una función que reciba el estado, cree un guion con `crearGuion`, añada etapas y bloques, y devuelva `g.resultado(id)`; en el puzzle, `metodosAprender` y `aprender`. La interfaz y el Worker (`op: 'aprender'`) no necesitan cambios.
+
 ## Interfaz: cambio de puzzle, scrambles precargados y Workers
 - **Al elegir un puzzle, los dos paneles cambian a la vez, en el mismo instante** (`seleccionar` es síncrona hasta ahí): el de resolver, y el del scramble con su etiqueta y, si no hay uno precargado, el puzzle nuevo resuelto y "Generando scramble…" (copiar, cargar y el reproductor del scramble desactivados). Las tablas del solver se piden después y no retrasan el scramble.
 - **Precargas** (`st.precargados`: un scramble listo por puzzle). Al mostrar uno se pide el siguiente de ese puzzle (prioridad media) y los de los demás puzzles (prioridad baja), de menor a mayor `costeScramble`. Sin Worker, solo los que no necesitan tablas. En el móvil (`(max-width: 700px), (pointer: coarse)`), los de más de 500 ms (Square-1 y 3x3) no se precargan hasta que el usuario elige ese puzzle una vez. Las tablas del solver (las grandes del 6x6/7x7, por ejemplo) nunca se precargan: se generan al elegir el puzzle.
@@ -185,5 +217,5 @@ Para un puzzle nuevo: si es de cortes planos, `...modelo3DGeo(geo, camara)` y ya
 `tests/paralelo.mjs` (`resolverEnParalelo`) reparte los casos de un test de solver entre worker_threads con una cola dinámica. El hilo principal genera los estados (con la misma semilla que antes) y comprueba cada solución; cada hilo (`tests/trabajador.mjs`) importa el módulo del puzzle, genera sus tablas y llama a `resolver`. Los ficheros de tests se ejecutan de uno en uno (`--test-concurrency=1`) para no tener más hilos que núcleos: varios solvers tienen límites de tiempo.
 
 ## Plan para las próximas noches
-- Noche 8: modo aprender (usará `resaltarPiezas` de la vista 3D).
+- Modo aprender en más puzzles: 5x5 (la reducción del 4x4 no basta para sus centros: hacen falta macros propias para los centros en X y en cruz), Pyraminx, Skewb, Square-1 y Megaminx.
 - Todos los puzzles tienen ya validador y solver. Lo que más pesa ahora en el 6x6 y el 7x7 son los centros oblicuos (3-ciclos, ~120 y ~125 movimientos); ver ESTADO.md. Otras mejoras posibles: scramble de estado aleatorio en el 4x4 y, para el Megaminx, etapas más grandes o una búsqueda en haz entre etapas.

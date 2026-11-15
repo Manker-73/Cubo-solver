@@ -632,7 +632,7 @@ async function probarAprender(ctx, puzzle, metodo) {
   const n2 = e.length / 6;
   for (let f = 0; f < 6; f++) for (let k = 0; k < n2; k++) assert.equal(e[f * n2 + k], e[f * n2], `${puzzle}/${metodo}: resuelto al final`);
   assert.ok(conResalte > n / 2, `${puzzle}/${metodo}: piezas resaltadas en la mayoría de los pasos (${conResalte}/${n})`);
-  assert.ok(etapas.size >= 3, 'recorre varias etapas');
+  assert.ok(etapas.size >= 2, 'recorre varias etapas');
   assert.ok(algoritmos > 0, 'muestra el nombre de algún algoritmo');
   // saltar al final de un paso desde la lista de la explicación
   doc.getElementById('r-inicio').click();

@@ -1,4 +1,4 @@
-# Estado del proyecto (final de la noche 7 — 15/11/2026)
+# Estado del proyecto (final de la noche 8 — 15/11/2026)
 
 ## Qué funciona
 
@@ -12,7 +12,53 @@
 | **Square-1** | **estado aleatorio (uniforme, ≥ 11 mov.)** | **sí** | **dos fases (~11,4 barras)** | **sí** |
 | **Megaminx** | Pochmann (7×11) | **sí** | **por etapas con búsqueda (IDA*) + última capa con macros (~90 giros de cara)** | **sí** (+ rellenar cara, vistas U/D, deshacer) |
 
-Ya no queda ningún puzzle sin validador ni solver.
+Ya no queda ningún puzzle sin validador ni solver. **Modo aprender** (solución por un método humano, explicada por etapas): 2x2, 3x3 y 4x4.
+
+## Noche 8: modo aprender
+
+Además de la solución por ordenador, una solución por un **método humano**, explicada paso a paso para aprender a resolver el puzzle. Selector **Solución** encima de *Resolver*: *Solución óptima (por ordenador)* o *Aprender (método …)*.
+
+### Qué hay
+| Puzzle | Métodos | Etapas |
+|---|---|---|
+| **3x3** | Principiantes (por capas) | Cruz · Primera capa (R U R' U' repetido) · Segunda capa (algoritmos de la derecha y la izquierda) · Cruz amarilla (F R U R' U' F') · Cara amarilla (Sune) · Esquinas amarillas (A-perm) · Aristas amarillas (U-perm) |
+| | CFOP | Cruz (planificada entera) · F2L (4 parejas) · OLL (un algoritmo) · PLL (un algoritmo) |
+| **2x2** | Principiantes (por capas) | Preparación (esquina de referencia) · Primera capa · Cara amarilla (Sune) · Esquinas amarillas (T-perm) |
+| | Ortega | Cara · OLL (7 casos) · PBL |
+| **4x4** | Reducción (3x3 por capas) y Reducción (3x3 con CFOP) | Centro blanco · Centro amarillo · Últimos cuatro centros · Aristas · las del 3x3 elegido, con **Paridad OLL** y **Paridad PLL** cuando aparecen |
+
+- Cada etapa tiene nombre y una explicación de su objetivo; cada bloque de movimientos dice qué consigue ("Lleva la arista blanca y roja abajo…", "Pareja 2: junta la esquina blanca, roja y verde con la arista roja y verde…", "Añade otra pieza amarilla al centro de arriba (3/4) con el conmutador Fw U Fw'…") y el nombre del algoritmo cuando es uno conocido (Sexy move, Sune, PLL T-perm, OLL 27 (Sune), Paridad OLL…). Tocar un paso de la lista salta a su final.
+- **Piezas resaltadas** en cada paso, en 3D (las demás atenuadas) y en 2D.
+- **Longitud total** frente a la óptima, p. ej. "Método CFOP: 56 giros (+ 5 giros del cubo entero) · solución óptima: 20 giros".
+- Rotaciones del cubo entero (`x`, `y`, `z`) en los NxN: el método sujeta el cubo con el blanco abajo y gira el cubo para trabajar delante a la derecha, como una persona; se animan en 3D y no cuentan como giros.
+- Textos en español; F2L, OLL, PLL, T-perm, Sune… en inglés. Algoritmos estándar escritos a mano y comprobados al cargar; los casos se describen a partir del estado (no de una tabla), así que no pueden contradecir lo que se ve.
+- **No hecho**: 5x5 (los centros con dos órbitas no salen con el método de pieza en pieza del 4x4; ver DECISIONES.md), Pyraminx, Skewb, Square-1 y Megaminx. En esos puzzles el selector no aparece.
+
+### Resultados (`tests/aprender.test.mjs`, 500 casos por método, estado al azar y cubo en cualquier orientación)
+Cada solución se aplica movimiento a movimiento con el modelo de pegatinas; **tras cada etapa se comprueba su objetivo** (cruz hecha, primera capa, dos capas, cruz/cara amarilla, esquinas en su sitio salvo un giro de U, centros, aristas emparejadas, paridades arregladas…), y que etapas y bloques sean contiguos, cubran la solución y tengan texto.
+
+| Puzzle / método | Resueltos | Giros (media / máx.) | Rotaciones (media) | Óptima (ref.) | Tiempo medio |
+|---|---|---|---|---|---|
+| 3x3 principiantes | **500/500** | 145,4 / 208 | 7,4 | ~20 | 2 ms |
+| 3x3 CFOP | **500/500** | 56,0 / 70 | 4,6 | ~20 | 20 ms |
+| 2x2 principiantes | **500/500** | 69,9 / 115 | 3,0 | ~9 | 1 ms |
+| 2x2 Ortega | **500/500** | 23,0 / 32 | 0,1 | ~9 | 11 ms |
+| 4x4 reducción + capas | **500/500** | 269,9 / 329 | 7,6 | ~55 | 1,4 s |
+| 4x4 reducción + CFOP | **500/500** | 182,6 / 215 | 5,0 | ~55 | 1,5 s |
+
+Por etapa (media de giros): 3x3 CFOP: cruz 5,8 · F2L 28,4 · OLL 10,6 · PLL 15,0. 3x3 principiantes: cruz 8,5 · primera capa 53,2 · segunda capa 38,7 · cruz amarilla 10,3 · cara amarilla 17,3 · esquinas 9,3 · aristas 14,6. 4x4 (CFOP): centros 5,7 + 10,5 + 12,3 · aristas 84,1 · paridad OLL 9,9 (18 giros, la mitad de las veces) · paridad PLL 4,5 (9 giros, la mitad de las veces) · el resto como el 3x3.
+
+Además:
+- Las 21 PLL respetan las dos capas y son de su familia; 60 de las 61 OLL escritas pasan la comprobación (la que no, se descarta). Resuelven en un solo algoritmo los **216** casos de orientación y los **288** de permutación de la última capa.
+- Un cubo ya resuelto no da ningún giro.
+- Prueba de humo (jsdom, sin WebGL, en 2D): 3x3 por los dos métodos, 2x2 por los dos y 4x4 con CFOP: selector, explicación, resumen con la longitud óptima, piezas resaltadas en la mayoría de los pasos, nombres de algoritmos, saltar a un paso, hasta "Resuelto" con el cubo resuelto; volver a la solución óptima quita la explicación; el Skewb no muestra el selector.
+- **Chromium real** (`scripts/comprobar-aprender.py`, escritorio 1280 px y móvil 390 px): los cinco casos anteriores en 3D, paso a paso (en cada paso, la explicación del bloque actual y piezas resaltadas en la vista 3D en todos menos el último), entera a ×8 y en 2D; sin errores en consola ni scroll horizontal. Capturas en `docs/capturas/aprender-*.jpg`.
+- `npm run test:rapido`: 137 tests, 137 pasan (~17 min con 2 núcleos; el modo aprender con 100 casos por método). Los tests anteriores siguen pasando.
+
+### Ideas / pendiente
+- 5x5 (centros en X y en cruz por separado), Pyraminx y Skewb (sus métodos de principiantes son cortos), Square-1 y Megaminx.
+- 4x4: las aristas (~84 giros) son lo más largo; con el método "3-2-3" o eligiendo mejor qué arista emparejar se podrían acortar.
+- Elegir el color de la cruz (ahora siempre blanca) y mostrar el "caso" de F2L con su dibujo.
 
 ## Corrección (noche 7): cambio de puzzle y scrambles precargados
 
