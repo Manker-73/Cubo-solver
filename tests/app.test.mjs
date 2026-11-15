@@ -699,12 +699,11 @@ async function probarAprender(ctx, puzzle, metodo) {
   }
   assert.match(doc.getElementById('paso').textContent, /Resuelto/);
   assert.match(exp.querySelector('h3').textContent, /Resuelto/);
-  const e = w.cuboSolver.editor();
-  const n2 = e.length / 6;
-  for (let f = 0; f < 6; f++) for (let k = 0; k < n2; k++) assert.equal(e[f * n2 + k], e[f * n2], `${puzzle}/${metodo}: resuelto al final`);
-  assert.ok(conResalte > n / 2, `${puzzle}/${metodo}: piezas resaltadas en la mayoría de los pasos (${conResalte}/${n})`);
+  assert.equal(w.cuboSolver.resuelto(), true, `${puzzle}/${metodo}: resuelto al final`);
+  // el Square-1 no resalta piezas (su estado no es una lista de pegatinas)
+  if (puzzle !== 'Square-1') assert.ok(conResalte > n / 2, `${puzzle}/${metodo}: piezas resaltadas en la mayoría de los pasos (${conResalte}/${n})`);
   assert.ok(etapas.size >= 2, 'recorre varias etapas');
-  assert.ok(algoritmos > 0, 'muestra el nombre de algún algoritmo');
+  if (puzzle !== 'Square-1') assert.ok(algoritmos > 0, 'muestra el nombre de algún algoritmo');
   // saltar al final de un paso desde la lista de la explicación
   doc.getElementById('r-inicio').click();
   const segundo = exp.querySelectorAll('li')[1] || exp.querySelectorAll('li')[0];
@@ -719,14 +718,15 @@ async function probarAprender(ctx, puzzle, metodo) {
   assert.equal(doc.getElementById('explicacion').hidden, true, 'la solución óptima no lleva explicación');
 }
 
-test('app: modo aprender (sin WebGL, en 2D): 3x3, 2x2 y 4x4 con sus métodos', async (t) => {
+test('app: modo aprender (sin WebGL, en 2D): 3x3, 2x2, 4x4, 5x5, Pyraminx, Skewb y Square-1 con sus métodos', async (t) => {
   const ctx = await abrir(t);
   if (!ctx) return;
-  for (const [puzzle, metodo] of [['3x3', 'principiantes'], ['3x3', 'cfop'], ['2x2', 'principiantes'], ['2x2', 'ortega'], ['4x4', 'cfop']]) {
+  for (const [puzzle, metodo] of [['3x3', 'principiantes'], ['3x3', 'cfop'], ['2x2', 'principiantes'], ['2x2', 'ortega'], ['4x4', 'cfop'],
+    ['5x5', 'cfop'], ['Pyraminx', 'principiantes'], ['Skewb', 'principiantes'], ['Square-1', 'principiantes']]) {
     await probarAprender(ctx, puzzle, metodo);
   }
   // los puzzles sin modo aprender no muestran el selector
-  await elegirPuzzle(ctx, 'Skewb');
+  await elegirPuzzle(ctx, '6x6');
   assert.equal(ctx.doc.getElementById('metodo').hidden, true);
   assert.deepEqual(ctx.errores, []);
 });

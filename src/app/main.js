@@ -959,6 +959,7 @@ function iniciar() {
     resaltarPiezas: (cual, piezas, modo) => { const v = st.v3d[cual]; if (v) v.resaltarPiezas(piezas, modo); },
     estado: () => ({ puzzle: st.p && st.p.id, paso: st.paso, pasoScramble: st.pasoScramble, modo: { ...st.modo }, webgl: st.webgl }),
     editor: () => st.p.clonar(estadoMostrado()),
+    resuelto: () => st.p.estaResuelto(estadoMostrado()),
   };
   $('copiar').addEventListener('click', (e) => copiar(st.p.formatear(st.scramble), e.currentTarget));
   $('copiar-sol').addEventListener('click', (e) => st.sol && copiar(st.p.formatear(st.sol.movimientos), e.currentTarget));
