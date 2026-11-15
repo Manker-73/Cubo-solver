@@ -18,22 +18,22 @@
       "Preparación": 0.87
     }
   },
-  "casos": 100,
-  "fecha": "2026-11-15T02:32:47.765Z",
+  "casos": 20,
+  "fecha": "2026-11-15T02:37:50.088Z",
   "3x3/cfop": {
-    "casos": 100,
-    "resueltos": 100,
-    "girosMedia": 56.03,
-    "girosMax": 65,
-    "rotacionesMedia": 4.56,
-    "msMedia": 21.8,
-    "msMax": 68,
+    "casos": 20,
+    "resueltos": 20,
+    "girosMedia": 56.15,
+    "girosMax": 64,
+    "rotacionesMedia": 4.6,
+    "msMedia": 27.6,
+    "msMax": 121,
     "porEtapa": {
-      "Preparación": 0.79,
-      "Cruz": 5.87,
-      "F2L": 28.53,
-      "OLL": 10.66,
-      "PLL": 14.74
+      "Preparación": 0.75,
+      "Cruz": 5.85,
+      "F2L": 27.9,
+      "OLL": 10.65,
+      "PLL": 15.6
     }
   },
   "2x2/principiantes": {

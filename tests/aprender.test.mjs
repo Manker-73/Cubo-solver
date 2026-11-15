@@ -246,7 +246,11 @@ test('aprender: los algoritmos de OLL y PLL se comprueban y cubren todos los cas
   assert.equal(orient.size, 216, 'casos de orientación');
   assert.equal(perm.size, 288, 'casos de permutación');
   const mOLL = a.ollOk.map((o) => ({ nombre: o.alg, movs: o.movs }));
-  for (const est of orient.values()) assert.ok(M.buscarMacros(est, [...AJUSTES_U, ...mOLL], OBJETIVOS_3x3.caraAmarilla, 2), 'OLL en un algoritmo');
+  // un ajuste de U (o ninguno) y UNA sola OLL: cada uno de los 216 casos tiene su algoritmo
+  const ajustes = [[], ['U'], ["U'"], ['U2']];
+  for (const est of orient.values()) {
+    assert.ok(OBJETIVOS_3x3.caraAmarilla(est) || ajustes.some((a) => mOLL.some((o) => OBJETIVOS_3x3.caraAmarilla(M.aplicarSec(M.aplicarSec(est, a), o.movs)))), `OLL en un algoritmo: ${[0, 1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 18, 19, 20, 36, 37, 38, 45, 46, 47].map((f) => (est[f] === 3 ? 1 : 0)).join('')}`);
+  }
   const mPLL = a.pllOk.map((o) => ({ nombre: o.nombre, movs: o.movs }));
   for (const est of perm.values()) assert.ok(M.buscarMacros(est, [...AJUSTES_U, ...mPLL], OBJETIVOS_3x3.resuelto, 3), 'PLL en un algoritmo');
 });
