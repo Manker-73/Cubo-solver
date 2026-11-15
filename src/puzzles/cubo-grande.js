@@ -20,7 +20,7 @@
 // Las soluciones se simplifican uniendo los tramos del mismo eje.
 
 import { definirPuzzle } from '../core/puzzle.js';
-import { aprenderReduccion, METODOS_NxN } from '../aprender/metodos-nxn.js';
+import { aprenderReduccion, METODOS_NxN, METODOS_5x5 } from '../aprender/metodos-nxn.js';
 import { crearModeloPiezas } from '../core/piezas.js';
 import { reetiquetar } from '../core/simetria.js';
 import { componer, invertir, paridad, identidad } from '../core/perm.js';
@@ -998,8 +998,8 @@ export function crearCuboGrande(N) {
     resolver,
     buscarRedundanciaSolucion: (movs) => redundanciaSolucionNxN(movs, N),
     nombresFase: NOMBRES_FASE,
-    // Modo aprender (de momento, el 4x4): reducción humana explicada por etapas
-    ...(N === 4 ? { metodosAprender: METODOS_NxN, aprender: (estado, metodo) => aprenderReduccion(N, estado, metodo) } : {}),
+    // Modo aprender (4x4 y 5x5): reducción humana explicada por etapas
+    ...(N === 4 || N === 5 ? { metodosAprender: N === 4 ? METODOS_NxN : METODOS_5x5, aprender: (estado, metodo) => aprenderReduccion(N, estado, metodo) } : {}),
     _interno: () => ({ tablas, orbitas, analizar }),
   });
 }

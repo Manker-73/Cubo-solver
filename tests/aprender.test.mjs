@@ -23,7 +23,7 @@ const ROT = ['', 'x', "x'", 'x2', 'y', "y'", 'y2', 'z', "z'", 'z2'];
 /** Estado al azar: 40 giros de cara y una orientación del cubo al azar. */
 function estadoAlAzar(p, rng) {
   let e = p.estadoResuelto();
-  if (p.id === '4x4') { for (let i = 0; i < 40; i++) e = p.aplicarMovimiento(e, ['', '', 'w'].map((w) => 'URFDLB'[Math.floor(rng() * 6)] + w)[Math.floor(rng() * 3)] + ['', "'", '2'][Math.floor(rng() * 3)]); }
+  if (p.id === '4x4' || p.id === '5x5') { for (let i = 0; i < 40; i++) e = p.aplicarMovimiento(e, ['', '', 'w'].map((w) => 'URFDLB'[Math.floor(rng() * 6)] + w)[Math.floor(rng() * 3)] + ['', "'", '2'][Math.floor(rng() * 3)]); }
   for (let i = 0; i < 40; i++) e = p.aplicarMovimiento(e, 'URFDLB'[Math.floor(rng() * 6)] + ['', "'", '2'][Math.floor(rng() * 3)]);
   for (let i = 0; i < 3; i++) { const r = ROT[Math.floor(rng() * ROT.length)]; if (r) e = p.aplicarMovimiento(e, r); }
   return e;
@@ -71,6 +71,29 @@ OBJ['4x4'] = {
 };
 for (const [k, f] of Object.entries(OBJ['3x3'])) if (k !== 'prep') OBJ['4x4'][k] = V(f);
 
+// 5x5: cada centro en dos partes (X y cruz); aristas de tres piezas; el resto, sobre el 3x3 virtual
+const D5 = datosNxN(5);
+const X5 = [0, 1, 2, 3, 4, 5].map((f) => [[1, 1], [1, 3], [3, 1], [3, 3]].map(([r, c]) => D5.idx(f, r, c)));
+const medio5 = (e, f) => e[D5.idx(f, 2, 2)];
+const x5 = (e, f) => X5[f].every((i) => e[i] === medio5(e, f));
+const centro5 = (e, f) => D5.centros[f].every((i) => e[i] === medio5(e, f));
+const aristas5 = (e) => D5.aristas.every(([a, b]) => a.every((i) => e[i] === e[a[0]]) && b.every((i) => e[i] === e[b[0]]));
+const reducido5 = (e) => [0, 1, 2, 3, 4, 5].every((f) => centro5(e, f)) && aristas5(e);
+const V5 = (f) => (e) => reducido5(e) && f(D5.virtual(e));
+const lados5 = [1, 2, 4, 5];
+OBJ['5x5'] = {
+  prep: (e) => medio5(e, 3) === 0,
+  'Centro blanco: X': (e) => medio5(e, 3) === 0 && x5(e, 3),
+  'Centro blanco: cruz': (e) => medio5(e, 3) === 0 && centro5(e, 3),
+  'Centro amarillo: X': (e) => medio5(e, 3) === 0 && centro5(e, 3) && x5(e, 0),
+  'Centro amarillo: cruz': (e) => medio5(e, 3) === 0 && centro5(e, 3) && centro5(e, 0),
+  'Últimos cuatro centros: X': (e) => centro5(e, 3) && centro5(e, 0) && lados5.every((f) => x5(e, f)),
+  'Últimos cuatro centros: cruz': (e) => [0, 1, 2, 3, 4, 5].every((f) => centro5(e, f)),
+  aristas: reducido5,
+};
+for (const [k, f] of Object.entries(OBJ['3x3'])) if (k !== 'prep') OBJ['5x5'][k] = V5(f);
+OBJ['5x5'].Preparación = (e) => medio5(e, 3) === 0;
+
 // Etapas que tiene que tener cada método (en orden)
 const ETAPAS = {
   '3x3/principiantes': ['cruz', 'capa1', 'capa2', 'cruzam', 'caraam', 'esqam', 'ariam'],
@@ -79,6 +102,8 @@ const ETAPAS = {
   '2x2/ortega': ['cara', 'oll', 'pbl'],
   '4x4/principiantes': ['centros', 'aristas', 'cruz', 'capa1', 'capa2', 'paridad', 'cruzam', 'caraam', 'paridad', 'esqam', 'ariam'],
   '4x4/cfop': ['centros', 'aristas', 'cruz', 'f2l', 'paridad', 'oll', 'paridad', 'pll'],
+  '5x5/principiantes': ['centros', 'aristas', 'cruz', 'capa1', 'capa2', 'cruzam', 'caraam', 'esqam', 'ariam'],
+  '5x5/cfop': ['centros', 'aristas', 'cruz', 'f2l', 'oll', 'pll'],
 };
 
 async function probarMetodo(p, metodo, semilla, paralelo = null) {
@@ -150,6 +175,10 @@ const PARALELO_4 = { modulo: new URL('../src/puzzles/cubo-grande.js', import.met
 const cubo4 = crearCuboGrande(4);
 test('aprender: 4x4 por reducción (3x3 por capas)', () => probarMetodo(cubo4, 'principiantes', 15, PARALELO_4));
 test('aprender: 4x4 por reducción (3x3 con CFOP)', () => probarMetodo(cubo4, 'cfop', 16, PARALELO_4));
+const PARALELO_5 = { modulo: new URL('../src/puzzles/cubo-grande.js', import.meta.url).href, exportar: 'crearCuboGrande', args: [5] };
+const cubo5 = crearCuboGrande(5);
+test('aprender: 5x5 por reducción (3x3 por capas)', () => probarMetodo(cubo5, 'principiantes', 17, PARALELO_5));
+test('aprender: 5x5 por reducción (3x3 con CFOP)', () => probarMetodo(cubo5, 'cfop', 18, PARALELO_5));
 test('aprender: 3x3 por el método de principiantes', () => probarMetodo(cubo3, 'principiantes', 11));
 test('aprender: 3x3 por CFOP', () => probarMetodo(cubo3, 'cfop', 12));
 test('aprender: 2x2 por el método de principiantes', () => probarMetodo(cubo2, 'principiantes', 13));

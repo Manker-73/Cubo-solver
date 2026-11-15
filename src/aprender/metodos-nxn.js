@@ -8,7 +8,7 @@
 // La búsqueda trabaja solo con las pegatinas de los centros (o de las aristas),
 // con cada macro convertida en una permutación.
 
-import { baseNxN, esRotacion } from '../puzzles/nxn.js';
+import { baseNxN, esRotacion, geometriaNxN } from '../puzzles/nxn.js';
 import { crearGuion } from './guion.js';
 import { etapas3x3, rotacionInicial } from './metodos-3x3.js';
 import { motorCubo, parsear, NOMBRE_COLOR, coloresPieza } from './motor-cubo.js';
@@ -56,8 +56,15 @@ export function datosNxN(N) {
     }
     return v;
   };
-  // aristas: por cada arista del 3x3, las pegatinas de cada lado (en orden a lo largo de la arista)
-  const aristas = M3.aristas.map(([p, q]) => [deVirtual(p), deVirtual(q)]);
+  // aristas: por cada arista del 3x3, las pegatinas de cada lado, en el mismo orden a lo largo
+  // de la arista (a[j] y b[j] son de la misma pieza; en el 5x5 importa: tres piezas)
+  const geo = geometriaNxN(N);
+  const cubie = (i) => geo.pos[i].map((x) => (Math.abs(x) === N ? Math.sign(x) * (N - 1) : x)).join(',');
+  const aristas = M3.aristas.map(([p, q]) => {
+    const a = deVirtual(p), b0 = deVirtual(q);
+    const b = a.map((i) => b0.find((j) => cubie(j) === cubie(i)));
+    return [a, b];
+  });
   const d = { N, b, n2, total, idx, centros, esCentro, esArista, deVirtual, virtual, aristas, mid };
   cache.set(N, d);
   return d;
@@ -87,7 +94,7 @@ function crearProyeccion(d, esta) {
  * Coste uniforme: la combinación de macros más barata (en movimientos) desde v0
  * (proyección) que cumple objetivo(v). Devuelve la lista de macros o null.
  */
-function buscarMacrosProy(v0, macros, objetivo, maxMacros, maxNodos = 4e5) {
+function buscarMacrosProy(v0, macros, objetivo, maxMacros, maxNodos = 4e5, maxGenerados = Infinity) {
   const n = v0.length;
   const cubos = [];
   const meter = (x) => { (cubos[x.coste] = cubos[x.coste] || []).push(x); };
@@ -111,8 +118,9 @@ function buscarMacrosProy(v0, macros, objetivo, maxMacros, maxNodos = 4e5) {
         for (let k = 0; k < n; k++) v[k] = nodo.v[p[k]];
         const k = clave(v);
         if (vistos.has(k)) continue;
+        if (vistos.size >= maxGenerados) break;
         vistos.add(k);
-        meter({ v, padre: nodo, mac, coste: nodo.coste + mac.movs.length, prof: nodo.prof + 1 });
+        meter({ v, padre: nodo, mac, coste: nodo.coste + (mac.coste ?? mac.movs.length), prof: nodo.prof + 1 });
       }
     }
   }
@@ -139,22 +147,42 @@ function macrosCentros(d, proy, { libres }) {
   return lista;
 }
 
-function etapaCentros(g, d, nombre, objetivo, caras, hechas, macros, proy) {
-  g.etapa(nombre, objetivo, 'centros');
-  const { centros } = d;
-  const caraDePos = new Map();
-  for (const f of [...caras, ...hechas].map((x) => x.f)) for (const i of centros[f]) caraDePos.set(proy.pos.indexOf(i), f);
-  const color = new Map([...caras, ...hechas].map((x) => [x.f, x.c]));
+function etapaCentros(g, d, nombre, objetivo, caras, hechas, macros, proy, { sub = null, deQue = 'al centro', maxMacros = 3, nueva = true } = {}) {
+  if (nueva) g.etapa(nombre, objetivo, 'centros');
+  const lim = d.N === 5 ? [4e5, 1.5e6] : [4e5, Infinity];
+  // sub: las pegatinas de cada cara que cuentan en esta etapa (5x5: solo la X o solo la cruz);
+  // las caras ya hechas (hechas) se comprueban enteras
+  const centros = sub || d.centros;
+  const enteros = d.centros;
+  const color = new Map([...hechas, ...caras].map((x) => [x.f, x.c]));
   const bienEn = (v, f) => centros[f].reduce((a, i) => a + (v[proy.pos.indexOf(i)] === color.get(f) ? 1 : 0), 0);
   const posDe = centros.map((l) => l.map((i) => proy.pos.indexOf(i)));
+  const posEnteros = enteros.map((l) => l.map((i) => proy.pos.indexOf(i)));
   const cuenta = (v, fs) => fs.reduce((a, { f }) => a + posDe[f].reduce((s, j) => s + (v[j] === color.get(f) ? 1 : 0), 0), 0);
-  const completas = (v, fs) => fs.every(({ f }) => posDe[f].every((j) => v[j] === color.get(f)));
+  // hechas: lista de { f, c, sub? } (sub = solo esas pegatinas de la cara)
+  const posHecha = (x) => (x.sub ? x.sub[x.f] : enteros[x.f]).map((i) => proy.pos.indexOf(i));
+  const completas = (v, fs) => fs.every((x) => posHecha(x).every((j) => v[j] === x.c));
+  const completasSub = (v, fs) => fs.every(({ f }) => posDe[f].every((j) => v[j] === color.get(f)));
+  void posEnteros;
   const totalObj = caras.length * centros[0].length;
+  // 5x5: primero solo con las macros que no sacan ninguna pieza de lo ya hecho (girarlo dentro de su
+  // cara vale: es de un color); si así no sale, con todas
+  let preferidas = macros;
+  if (d.N === 5 && hechas.length) {
+    const id = [...Array(d.total).keys()];
+    const fijas = hechas.flatMap((x) => (x.sub ? x.sub[x.f] : enteros[x.f]).map((i) => [i, x.f]));
+    preferidas = macros.filter((mac) => {
+      const t = mac.movs.reduce((e, m) => d.b.aplicarMovimiento(e, m), id);
+      return fijas.every(([i, f]) => Math.floor(t[i] / d.n2) === f && (!hechas.some((x) => x.sub && x.f === f) || fijas.some(([j]) => j === t[i])));
+    });
+  }
   for (let vueltas = 0; vueltas < 80; vueltas++) {
     const v = proy.proyectar(g.estado);
     const n0 = cuenta(v, caras);
     if (n0 === totalObj) break;
-    const pasos = buscarMacrosProy(v, macros, (w) => completas(w, hechas) && cuenta(w, caras) > n0, 3);
+    const pasos = (preferidas !== macros ? buscarMacrosProy(v, preferidas, (w) => completas(w, hechas) && cuenta(w, caras) > n0, maxMacros, 4e5, lim[1]) : null)
+      || buscarMacrosProy(v, macros, (w) => completas(w, hechas) && cuenta(w, caras) > n0, maxMacros, 4e5, lim[1])
+      || (d.N === 5 ? buscarMacrosProy(v, macros, (w) => completas(w, hechas) && cuenta(w, caras) > n0, maxMacros + 1, 4e5, 2 * lim[1]) : null);
     g.comprobar(!!pasos, `${nombre}: no se encontró cómo añadir otra pieza`);
     const movs = pasos.flatMap((p) => p.movs);
     // piezas que acaban bien colocadas en este paso (dónde estaban al empezar)
@@ -175,11 +203,11 @@ function etapaCentros(g, d, nombre, objetivo, caras, hechas, macros, proy) {
     const usa = pasos.filter((p) => p.tipo === 'conmutador').map((p) => p.movs.join(' '));
     const ganadas = n1 - n0;
     const col = COLOR_F[color.get(cara)][ganadas > 1 ? 1 : 0];
-    const texto = `${ganadas > 1 ? `Añade ${ganadas} piezas ${col}` : `Añade otra pieza ${col}`} al centro ${NOMBRE_LADO[cara]} (${k}/${centros[cara].length})`
+    const texto = `${ganadas > 1 ? `Añade ${ganadas} piezas ${col}` : `Añade otra pieza ${col}`} ${deQue} ${NOMBRE_LADO[cara]} (${k}/${centros[cara].length})`
       + (usa.length ? ` con ${usa.length > 1 ? 'los conmutadores' : 'el conmutador'} ${usa.join(' y ')}: ${ganadas > 1 ? 'las mete' : 'la mete'} sin deshacer lo que ya estaba hecho.` : '.');
     g.bloque(movs, texto, { algoritmo: usa.length ? 'Conmutador' : null, piezas: nuevas });
   }
-  g.comprobar(completas(proy.proyectar(g.estado), [...hechas, ...caras]), nombre);
+  g.comprobar(completas(proy.proyectar(g.estado), hechas) && completasSub(proy.proyectar(g.estado), caras), nombre);
 }
 
 function centros(g, d) {
@@ -199,6 +227,12 @@ function centros(g, d) {
       const n = blancos(r.reduce((e, m) => d.b.aplicarMovimiento(e, m), g.estado), 3);
       if (n > mejor) { mejor = n; rot = r; }
     }
+  }
+  if (N === 5) {
+    g.etapa('Preparación', 'Sujetar el cubo con el centro blanco abajo. En el 5x5 la pieza del medio de cada centro no se mueve (con los giros que se usan aquí): marca el color de esa cara.', 'prep');
+    g.bloque(rot, `Gira el cubo entero (${rot.join(' ')}) para tener el centro blanco abajo.`);
+    centros5(g, d, proy);
+    return;
   }
   g.etapa('Preparación', N % 2 ? 'Sujetar el cubo con el centro blanco abajo (en el 5x5 la pieza del medio de cada centro no se mueve: marca el color de esa cara).' : 'Sujetar el cubo con abajo la cara que ya tiene más piezas blancas en el centro: ahí se hará el centro blanco.', 'prep');
   g.bloque(rot, `Gira el cubo entero (${rot.join(' ')}) para trabajar el centro blanco abajo.`);
@@ -226,68 +260,346 @@ function centros(g, d) {
  * de arriba ni de abajo (F, R, B, L, Uw, Dw): separar los colores por parejas de
  * caras opuestas, y después cada color a su cara. Tablas exactas (2^16 estados).
  */
+// ---------- Centros del 5x5: la X y la cruz por separado ----------
+// En el 5x5 cada centro tiene 4 piezas en X (las esquinas del centro), 4 en cruz (las
+// de los lados) y la del medio, fija. Las piezas en X se mueven con las capas anchas de
+// dos capas (Rw, Uw…), como los centros del 4x4; las de la cruz, además, con la capa
+// del medio. Se hace cada centro en dos partes: primero su X y después su cruz.
+const cacheSub5 = new Map();
+function subCentros5(d) {
+  if (cacheSub5.has(d.N)) return cacheSub5.get(d.N);
+  const X = [], C = [];
+  for (let f = 0; f < 6; f++) {
+    X.push([d.idx(f, 1, 1), d.idx(f, 1, 3), d.idx(f, 3, 1), d.idx(f, 3, 3)]);
+    C.push([d.idx(f, 1, 2), d.idx(f, 2, 1), d.idx(f, 2, 3), d.idx(f, 3, 2)]);
+  }
+  const r = { X, C };
+  cacheSub5.set(d.N, r);
+  return r;
+}
+// capas del medio (sin mover la pieza fija, se usan siempre en conmutadores que la devuelven)
+const MEDIO = { M: ['3Rw', "Rw'"], Mi: ['Rw', "3Rw'"], S: ['3Fw', "Fw'"], Si: ['Fw', "3Fw'"], E: ['3Uw', "Uw'"], Ei: ['Uw', "3Uw'"] };
+const invSec = (sec) => sec.slice().reverse().map(inv);
+
+function macros5(d, proy, tipo) {
+  const lista = [];
+  const add = (movs, t, cara = null) => lista.push({ movs, perm: proy.permDe(movs), tipo: t, cara });
+  for (const c of LETRA) for (const s of SUF) add([c + s], 'cara', c);
+  const anchas = ['Rw', 'Lw', 'Fw', 'Bw'];
+  if (tipo === 'libre') for (const c of anchas.concat(['Uw', 'Dw'])) for (const s of SUF) add([c + s], 'ancha', c);
+  else for (const c of ['Uw', 'Dw']) for (const s of SUF) add([c + s], 'ancha', c);
+  // conmutadores de capa ancha (X y cruz de esa columna): sube una columna, gira U o D y la devuelve
+  for (const c of anchas) for (const t of ['U', 'D']) for (const s of SUF) {
+    add([c, t + s, inv(c)], 'conmutador');
+    add([inv(c), t + s, c], 'conmutador');
+  }
+  if (tipo === 'medio') {
+    // solo lo que no mueve la X: caras y conmutadores de las capas del medio
+    lista.length = 0;
+    for (const c of LETRA) for (const s of SUF) add([c + s], 'cara', c);
+    const PERP = { M: 'UDFB', S: 'UDRL', E: 'FRBL' };
+    for (const k of ['M', 'Mi', 'S', 'Si', 'E', 'Ei']) for (const t of PERP[k[0]]) for (const s of SUF) add([...MEDIO[k], t + s, ...invSec(MEDIO[k])], 'medio');
+    return lista;
+  }
+  if (tipo !== 'x') {
+    // conmutadores de la capa del medio (solo la cruz): la capa sale, se gira una cara y vuelve
+    const PERP = { M: 'UDFB', S: 'UDRL', E: 'FRBL' };
+    for (const k of ['M', 'Mi', 'S', 'Si', 'E', 'Ei']) for (const t of PERP[k[0]]) for (const s of SUF) {
+      add([...MEDIO[k], t + s, ...invSec(MEDIO[k])], 'medio');
+    }
+  }
+  return lista;
+}
+
+/**
+ * Una parte de un centro del 5x5 (la X o la cruz de una cara) de forma exacta: el estado es
+ * solo en qué casillas (de `posiciones`) están las cuatro piezas de ese color, y con las
+ * macros que no sacan nada de lo ya hecho se busca la secuencia más corta (Dijkstra, por
+ * movimientos). Pocos miles de estados. Devuelve la lista de macros o null.
+ */
+function rutaSubconjunto(d, estado, posiciones, color, objetivo, macros) {
+  const P = posiciones.length;
+  const enLista = new Map(posiciones.map((i, j) => [i, j]));
+  const id = [...Array(d.total).keys()];
+  // para cada macro: casilla j -> casilla a la que va la pieza que está en j
+  const mapas = [];
+  for (const mac of macros) {
+    const t = mac.movs.reduce((e, m) => d.b.aplicarMovimiento(e, m), id);
+    const a = new Int8Array(P).fill(-1);
+    let ok = true;
+    posiciones.forEach((q, jq) => { const src = enLista.get(t[q]); if (src === undefined) ok = false; else a[src] = jq; });
+    if (ok) mapas.push({ mac, a });
+  }
+  const mover = (mask, a) => { let r = 0; for (let j = 0; j < P; j++) if (mask & (1 << j)) r |= 1 << a[j]; return r; };
+  let inicio = 0;
+  posiciones.forEach((q, j) => { if (estado[q] === color) inicio |= 1 << j; });
+  let meta = 0;
+  for (const q of objetivo) meta |= 1 << enLista.get(q);
+  if ((inicio & meta) === meta) return [];
+  const dist = new Map([[inicio, 0]]);
+  const padre = new Map();
+  const cubos = [[inicio]];
+  for (let c = 0; c < cubos.length; c++) {
+    for (const m of cubos[c] || []) {
+      if (dist.get(m) !== c) continue;
+      if ((m & meta) === meta) {
+        const ruta = [];
+        for (let x = m; padre.has(x); x = padre.get(x)[0]) ruta.push(padre.get(x)[1]);
+        return ruta.reverse();
+      }
+      for (const { mac, a } of mapas) {
+        const y = mover(m, a);
+        const nc = c + mac.movs.length;
+        if (!dist.has(y) || dist.get(y) > nc) { dist.set(y, nc); padre.set(y, [m, mac]); (cubos[nc] = cubos[nc] || []).push(y); }
+      }
+    }
+  }
+  return null;
+}
+
+/** Etapa exacta de una parte de un centro (5x5), explicada pieza a pieza. */
+function etapaSubcentro(g, d, nombre, objetivo, { f, c }, sub, posiciones, macros, hechas, deQue, proy) {
+  g.etapa(nombre, objetivo, 'centros');
+  // solo macros que no sacan nada de lo ya hecho (girarlo dentro de su cara vale: es de un color)
+  const id = [...Array(d.total).keys()];
+  const fijas = hechas.flatMap((x) => (x.sub ? x.sub[x.f] : d.centros[x.f]));
+  const fijasSet = new Set(fijas);
+  const caraDe = (i) => Math.floor(i / d.n2);
+  const validas = macros.filter((mac) => {
+    const t = mac.movs.reduce((e, m) => d.b.aplicarMovimiento(e, m), id);
+    return fijas.every((i) => fijasSet.has(t[i]) && caraDe(t[i]) === caraDe(i));
+  });
+  const ruta = rutaSubconjunto(d, g.estado, posiciones, c, sub[f], validas);
+  if (!ruta) { etapaCentros(g, d, nombre, objetivo, [{ f, c }], hechas, macros, proy, { sub, deQue, nueva: false }); return; }
+  const cuenta = (e) => sub[f].filter((i) => e[i] === c).length;
+  let pend = [];
+  let e = g.estado;
+  for (const mac of ruta) {
+    const antes = cuenta(e);
+    const tras = mac.movs.reduce((x, m) => d.b.aplicarMovimiento(x, m), e);
+    pend.push(mac);
+    if (cuenta(tras) > antes || mac === ruta[ruta.length - 1]) {
+      const movs = pend.flatMap((p) => p.movs);
+      const k0 = cuenta(g.estado);
+      const idm = movs.reduce((x, m) => d.b.aplicarMovimiento(x, m), id);
+      const eFin = movs.reduce((x, m) => d.b.aplicarMovimiento(x, m), g.estado);
+      const nuevas = sub[f].filter((i) => eFin[i] === c && g.estado[i] !== c).map((i) => idm[i]);
+      const k1 = cuenta(eFin);
+      const usa = pend.filter((p) => p.tipo !== 'cara' && p.tipo !== 'ancha').map((p) => p.movs.join(' '));
+      const ganadas = k1 - k0;
+      const col = COLOR_F[c][ganadas > 1 ? 1 : 0];
+      const texto = `${ganadas > 1 ? `Añade ${ganadas} piezas ${col}` : `Añade otra pieza ${col}`} ${deQue} ${NOMBRE_LADO[f]} (${k1}/4)`
+        + (usa.length ? ` con ${usa.length > 1 ? 'los conmutadores' : 'el conmutador'} ${usa.join(' y ')}: ${ganadas > 1 ? 'las mete' : 'la mete'} sin deshacer lo que ya estaba hecho.` : '.');
+      g.bloque(movs, texto, { algoritmo: usa.length ? 'Conmutador' : null, piezas: nuevas });
+      pend = [];
+    }
+    e = tras;
+  }
+  g.comprobar(cuenta(g.estado) === 4 && hechas.every((x) => (x.sub ? x.sub[x.f] : d.centros[x.f]).every((i) => g.estado[i] === x.c)), nombre);
+}
+
+function centros5(g, d, proy) {
+  const { X, C } = subCentros5(d);
+  const libre = macros5(d, proy, 'libre');
+  const conX = macros5(d, proy, 'x');
+  const soloCruz = macros5(d, proy, 'medio');
+  // con la X hecha, para separar piezas en cruz de su opuesta: conmutadores [capa interior, capa del medio]
+  for (const movs of conmutadoresXFija5(d)) soloCruz.push({ movs, perm: proy.permDe(movs), tipo: 'conmutador' });
+  const conCruz = soloCruz;
+  const B = { f: 3, c: BLANCO }, A = { f: 0, c: AMARILLO };
+  const todasX = X.flat(), todasC = C.flat();
+  const sinD = (l) => l.filter((i) => Math.floor(i / d.n2) !== 3);
+  etapaSubcentro(g, d, 'Centro blanco: X', 'Juntar abajo las cuatro piezas blancas en X (las esquinas del centro) alrededor de la pieza blanca del medio. Al principio vale casi cualquier movimiento: aún no hay nada que respetar; las capas anchas (Rw, Uw…) mueven las piezas en X igual que los centros del 4x4.', B, X, todasX, libre, [], 'a la X del centro', proy);
+  etapaSubcentro(g, d, 'Centro blanco: cruz', 'Completar el centro blanco con las cuatro piezas en cruz (las de los lados de la pieza del medio) sin romper la X, con conmutadores de la capa del medio como 3Rw Rw\' U Rw 3Rw\' (la capa del medio sube, U la aparta y vuelve a bajar) y, para separar dos piezas opuestas, de una capa interior y la del medio.', B, C, todasC, conCruz, [{ ...B, sub: X }], 'a la cruz del centro', proy);
+  etapaSubcentro(g, d, 'Centro amarillo: X', 'Juntar arriba las piezas amarillas en X sin romper el centro blanco: se suben desde los lados con conmutadores como Rw U Rw\'.', A, X, sinD(todasX), conX, [B], 'a la X del centro', proy);
+  etapaSubcentro(g, d, 'Centro amarillo: cruz', 'Completar el centro amarillo con las piezas en cruz sin romper el blanco ni la X amarilla, con conmutadores de la capa del medio (3Rw Rw\' U Rw 3Rw\' y parecidos) y, para separar dos piezas opuestas, de una capa interior y la del medio.', A, C, sinD(todasC), conCruz, [B, { ...A, sub: X }], 'a la cruz del centro', proy);
+  // los cuatro de los lados: cada uno donde marca su pieza del medio
+  const lados = [2, 1, 5, 4].map((f) => ({ f, c: g.estado[d.idx(f, d.mid, d.mid)] }));
+  const orden = lados.map((x) => NOMBRE_COLOR[x.c]).join(', ');
+  ultimosCuatro(g, d, lados, {
+    sub: X,
+    etapa: ['Últimos cuatro centros: X', `Las piezas en X de los cuatro centros de los lados (delante, derecha, detrás, izquierda: ${orden}, lo que marcan sus piezas del medio), sin romper los centros de arriba y abajo: como en el 4x4, solo con giros de las caras de los lados y de las capas anchas Uw y Dw.`],
+    macrosA: MOV_UNO(['F', 'R', 'B', 'L', 'Uw', 'Dw']),
+    macrosB: MOV_UNO(['F', 'R', 'B', 'L']).concat([['Uw2'], ['Dw2']]),
+    textoA: (Fc, Rc, Bc, Lc) => `Separa los colores de la X: las piezas ${COLOR_F[Fc][1]} y ${COLOR_F[Bc][1]} a delante y detrás, y las ${COLOR_F[Rc][1]} y ${COLOR_F[Lc][1]} a los lados (con Uw y Dw las filas pasan de una cara a otra, y girando una cara sus piezas cambian de fila).`,
+    textoB: (Fc, Rc, Bc, Lc) => `Cada color de la X a su cara: ${COLOR_F[Fc][1]} delante, ${COLOR_F[Rc][1]} a la derecha, ${COLOR_F[Bc][1]} detrás y ${COLOR_F[Lc][1]} a la izquierda (Uw2 y Dw2 cambian filas entre caras opuestas sin deshacer el paso anterior).`,
+    hechas: [B, A],
+  });
+  // La cruz de los lados: con la X hecha, las caras y las capas del medio mueven las piezas
+  // en cruz de dos en dos (las opuestas de una cara viajan juntas), así que hacen falta
+  // conmutadores de una capa interior y una del medio, como Uw U' 3Rw Rw' 3Rw Rw' U Uw' Rw 3Rw' Rw 3Rw'
+  // ([u, M2]: u = la capa de debajo de U): la X se va y vuelve, y solo cambian piezas en cruz.
+  const { opsA, opsB } = conmutadoresCruz5(d, C);
+  ultimosCuatro(g, d, lados, {
+    sub: C,
+    etapa: ['Últimos cuatro centros: cruz', 'Las piezas en cruz de los lados sin romper nada de lo anterior. Con la X ya hecha, girar caras o la capa del medio mueve las piezas en cruz de dos en dos (las de lados opuestos de una cara van juntas), así que se usan conmutadores de una capa interior (u = Uw U\') y una del medio (M = 3Rw Rw\'), como u M2 u\' M2: la X sale y vuelve a su sitio, y solo cambian de cara unas pocas piezas en cruz.'],
+    macrosA: opsA,
+    macrosB: opsB,
+    textoA: (Fc, Rc, Bc, Lc) => `Separa los colores de la cruz: las piezas ${COLOR_F[Fc][1]} y ${COLOR_F[Bc][1]} a delante y detrás, y las ${COLOR_F[Rc][1]} y ${COLOR_F[Lc][1]} a los lados, con conmutadores (y giros de caras para colocar las piezas).`,
+    textoB: (Fc, Rc, Bc, Lc) => `Cada color de la cruz a su cara: ${COLOR_F[Fc][1]} delante, ${COLOR_F[Rc][1]} a la derecha, ${COLOR_F[Bc][1]} detrás y ${COLOR_F[Lc][1]} a la izquierda, con conmutadores que solo cambian piezas entre caras opuestas.`,
+    algA: 'Conmutador', algB: 'Conmutador',
+    hechas: [B, A, ...lados.map((x) => ({ ...x, sub: X }))],
+  });
+}
+
+/**
+ * Operaciones para la cruz de los cuatro lados del 5x5 (sin mover la X, las piezas del
+ * medio ni los centros de arriba y abajo): giros de F R B L, conjugados de la capa del
+ * medio horizontal (E) y conmutadores [capa interior, capa del medio]. Se comprueban sobre
+ * el cubo: solo se quedan las que no cambian ninguna otra pieza de centro.
+ * opsB: las que no mezclan delante/detrás con derecha/izquierda.
+ */
+/** Conmutadores [capa interior, capa del medio] que no mueven ninguna pieza en X ni las del medio (5x5). */
+let cacheXFija5 = null;
+function conmutadoresXFija5(d) {
+  if (cacheXFija5) return cacheXFija5;
+  const id = [...Array(d.total).keys()];
+  const ap = (movs) => movs.reduce((e, m) => d.b.aplicarMovimiento(e, m), id);
+  const { X } = subCentros5(d);
+  const fijas = new Set([...X.flat(), ...[0, 1, 2, 3, 4, 5].map((f) => d.idx(f, d.mid, d.mid))]);
+  const res = [];
+  const vistos = new Set();
+  for (const f of LETRA) for (const s of SUF) {
+    const a = [f + 'w' + s, f + (s === "'" ? '' : s === '' ? "'" : '2')];
+    for (const k of ['M', 'S', 'E']) for (const m of [MEDIO[k], MEDIO[k + 'i'], [...MEDIO[k], ...MEDIO[k]]]) {
+      const movs = [...a, ...m, ...invSec(a), ...invSec(m)];
+      const x = ap(movs);
+      let ok = true, cambia = false;
+      for (let i = 0; i < d.total && ok; i++) { if (!d.esCentro[i] || x[i] === i) continue; if (fijas.has(i)) ok = false; cambia = true; }
+      if (!ok || !cambia) continue;
+      const clave = id.filter((i) => d.esCentro[i]).map((i) => x[i]).join(',');
+      if (vistos.has(clave)) continue;
+      vistos.add(clave);
+      res.push(movs);
+    }
+  }
+  cacheXFija5 = res;
+  return res;
+}
+
+const cacheCruz5 = new Map();
+function conmutadoresCruz5(d, C) {
+  if (cacheCruz5.has(d.N)) return cacheCruz5.get(d.N);
+  const id = [...Array(d.total).keys()];
+  const ap = (movs) => movs.reduce((e, m) => d.b.aplicarMovimiento(e, m), id);
+  const lados = new Set([2, 1, 5, 4].flatMap((f) => C[f]));
+  const FB = new Set([2, 5].flatMap((f) => C[f]));
+  const candidatas = MOV_UNO(['F', 'R', 'B', 'L']);
+  for (const [p, q] of [[MEDIO.E, MEDIO.Ei], [MEDIO.Ei, MEDIO.E]]) for (const t of ['F', 'R', 'B', 'L']) for (const s of SUF) candidatas.push([...p, t + s, ...q]);
+  const interiores = [];
+  for (const f of ['U', 'D', 'R', 'L', 'F', 'B']) for (const s of SUF) {
+    const ancha = f + 'w' + s;
+    const cara = f + (s === "'" ? '' : s === '' ? "'" : '2');
+    interiores.push([ancha, cara]); // capa interior suelta (p. ej. u = Uw U')
+  }
+  const medios = [];
+  for (const k of ['M', 'S', 'E']) { medios.push(MEDIO[k], MEDIO[k + 'i'], [...MEDIO[k], ...MEDIO[k]]); }
+  for (const a of interiores) for (const m of medios) candidatas.push([...a, ...m, ...invSec(a), ...invSec(m)]);
+  const vistos = new Map();
+  const opsA = [], opsB = [];
+  for (const movs of candidatas) {
+    const x = ap(movs);
+    let ok = true, cambia = false, mezcla = false;
+    for (let i = 0; i < d.total && ok; i++) {
+      if (!d.esCentro[i] || x[i] === i) continue;
+      // fuera de la cruz de los lados solo vale girar una cara (sus centros ya son de un color)
+      if (!lados.has(i) && Math.floor(i / d.n2) !== Math.floor(x[i] / d.n2)) ok = false;
+      if (!lados.has(i) && lados.has(x[i])) ok = false;
+      cambia = true;
+      if (FB.has(i) !== FB.has(x[i])) mezcla = true;
+    }
+    if (!ok || !cambia) continue;
+    if (lados.size && [...lados].every((i) => x[i] === i)) continue;
+    const clave = [...lados].map((i) => x[i]).join(',');
+    if (vistos.has(clave)) continue;
+    vistos.set(clave, true);
+    opsA.push(movs);
+    if (!mezcla) opsB.push(movs);
+  }
+  const r = { opsA, opsB };
+  cacheCruz5.set(d.N, r);
+  return r;
+}
+
 const tablasL4C = new Map();
-function ultimosCuatro4(g, d, lados, orden) {
+/**
+ * Últimos cuatro centros en dos pasos exactos (tablas de 2^16 estados): separar los
+ * colores por parejas de caras opuestas y después cada color a su cara.
+ * 4x4: con F, R, B, L, Uw, Dw (no tocan los centros de arriba ni de abajo).
+ * 5x5: igual para la X (Uw y Dw mueven la fila de la X), y para la cruz con
+ * conmutadores de la capa del medio que no tocan la X.
+ * opciones: { sub (pegatinas de cada cara), macrosA, macrosB (listas de movimientos),
+ *             textoA, textoB, etapa: [nombre, objetivo] | null, hechas (lo que no se puede romper) }
+ */
+function ultimosCuatro(g, d, lados, op) {
   const [Fc, Rc, Bc, Lc] = lados.map((x) => x.c);
   const caras = [2, 1, 5, 4]; // F R B L
-  const pos = caras.flatMap((f) => d.centros[f]); // 16 pegatinas: 4 por cara, en ese orden
+  const sub = op.sub || d.centros;
+  const pos = caras.flatMap((f) => sub[f]); // 16 pegatinas: 4 por cara, en ese orden
   const proy = crearProyeccion(d, (() => { const m = new Array(d.total).fill(false); pos.forEach((i) => { m[i] = true; }); return m; })());
   const orden16 = pos.map((i) => proy.pos.indexOf(i));
-  const movsA = [], movsB = [];
-  for (const c of ['F', 'R', 'B', 'L', 'Uw', 'Dw']) for (const s of SUF) movsA.push(c + s);
-  for (const c of ['F', 'R', 'B', 'L']) for (const s of SUF) movsB.push(c + s);
-  movsB.push('Uw2', 'Dw2');
-  const tabla = (movs, objetivo) => {
-    const clave = movs.join(' ') + objetivo;
+  const tabla = (macros, objetivo) => {
+    const clave = d.N + '|' + macros.map((m) => m.join(' ')).join(',') + '|' + objetivo;
     if (tablasL4C.has(clave)) return tablasL4C.get(clave);
-    const perms = movs.map((m) => { const pm = proy.permDe([m]); return orden16.map((j) => orden16.indexOf(pm[j])); });
-    const dist = new Int8Array(1 << 16).fill(-1);
+    const perms = macros.map((m) => { const pm = proy.permDe(m); return orden16.map((j) => orden16.indexOf(pm[j])); });
+    // distancia HASTA el objetivo: se expande desde él con las inversas de las macros
+    const invs = perms.map((p) => { const q = new Array(16); p.forEach((src, j) => { q[src] = j; }); return q; });
+    // coste uniforme en movimientos (las macros tienen longitudes distintas)
+    const dist = new Int16Array(1 << 16).fill(-1);
+    const cubos = [[objetivo]];
     dist[objetivo] = 0;
-    let fr = [objetivo];
-    for (let k = 0; fr.length; k++) {
-      const sig = [];
-      for (const x of fr) for (const p of perms) {
-        let y = 0;
-        for (let j = 0; j < 16; j++) if (x & (1 << p[j])) y |= 1 << j;
-        if (dist[y] < 0) { dist[y] = k + 1; sig.push(y); }
+    for (let c = 0; c < cubos.length; c++) {
+      for (const x of cubos[c] || []) {
+        if (dist[x] !== c) continue;
+        invs.forEach((p, k) => {
+          let y = 0;
+          for (let j = 0; j < 16; j++) if (x & (1 << p[j])) y |= 1 << j;
+          const nc = c + macros[k].length;
+          if (dist[y] < 0 || dist[y] > nc) { dist[y] = nc; (cubos[nc] = cubos[nc] || []).push(y); }
+        });
       }
-      fr = sig;
     }
     const t = { dist, perms };
     tablasL4C.set(clave, t);
     return t;
   };
-  const resolverTabla = (t, x, movs) => {
+  const aplicarBits = (p, x) => { let y = 0; for (let j = 0; j < 16; j++) if (x & (1 << p[j])) y |= 1 << j; return y; };
+  const resolverTabla = (t, x, macros) => {
     const sol = [];
+    g.comprobar(t.dist[x] >= 0, `${op.etapa ? op.etapa[0] : 'últimos cuatro centros'}: estado no alcanzable`);
     while (t.dist[x] > 0) {
-      const k = t.perms.findIndex((p) => { let y = 0; for (let j = 0; j < 16; j++) if (x & (1 << p[j])) y |= 1 << j; return t.dist[y] === t.dist[x] - 1; });
-      const p = t.perms[k];
-      let y = 0; for (let j = 0; j < 16; j++) if (x & (1 << p[j])) y |= 1 << j;
-      x = y; sol.push(movs[k]);
+      const k = t.perms.findIndex((p, k2) => { const y = aplicarBits(p, x); return t.dist[y] >= 0 && t.dist[y] === t.dist[x] - macros[k2].length; });
+      g.comprobar(k >= 0, 'últimos cuatro centros: tabla');
+      x = aplicarBits(t.perms[k], x);
+      sol.push(macros[k]);
     }
     return sol;
   };
-  const bits = (e, f) => pos.reduce((a, i, j) => a | (f(e[i], Math.floor(j / 4)) ? 1 << j : 0), 0);
-  g.etapa('Últimos cuatro centros', `Completar los centros de los lados sin romper el blanco ni el amarillo: solo con giros de las caras de los lados y de las capas anchas Uw y Dw, que no tocan los centros de arriba y abajo. Van en este orden (delante, derecha, detrás, izquierda): ${orden}, el que corresponde a los colores de las esquinas.`, 'centros');
-  // paso 1: colores de delante/detrás en F y B (bits a 1 en F y B)
-
-
-  const objA = (1 << 0 | 1 << 1 | 1 << 2 | 1 << 3) | (1 << 8 | 1 << 9 | 1 << 10 | 1 << 11);
-  const TA = tabla(movsA, objA);
-  const xA = bits(g.estado, (c) => c === Fc || c === Bc);
-  const solA = resolverTabla(TA, xA, movsA);
-  const id = [...Array(d.total).keys()];
+  const bits = (e, fn) => pos.reduce((a, i, j) => a | (fn(e[i], Math.floor(j / 4)) ? 1 << j : 0), 0);
+  if (op.etapa) g.etapa(op.etapa[0], op.etapa[1], 'centros');
+  const objA = 0b1111 | (0b1111 << 8);
+  const TA = tabla(op.macrosA, objA);
+  const solA = resolverTabla(TA, bits(g.estado, (c) => c === Fc || c === Bc), op.macrosA);
   const piezasDe = (cols) => pos.filter((i) => cols.includes(g.estado[i]));
-  g.bloque(solA, `Separa los colores: las piezas ${COLOR_F[Fc][1]} y ${COLOR_F[Bc][1]} a delante y detrás, y las ${COLOR_F[Rc][1]} y ${COLOR_F[Lc][1]} a los lados (con Uw y Dw las filas pasan de una cara a otra, y girando una cara sus piezas cambian de fila).`, { piezas: piezasDe([Fc, Bc]) });
-  // paso 2: cada color a su cara, sin deshacer la separación (F, R, B, L, Uw2, Dw2)
-  const objB = (0b1111) | (0b1111 << 4);
-  const TB = tabla(movsB, objB);
-  const xB = bits(g.estado, (c, k) => (k === 0 || k === 2 ? c === Fc : c === Rc));
-  const solB = resolverTabla(TB, xB, movsB);
-  g.bloque(solB, `Cada color a su cara: ${COLOR_F[Fc][1]} delante, ${COLOR_F[Rc][1]} a la derecha, ${COLOR_F[Bc][1]} detrás y ${COLOR_F[Lc][1]} a la izquierda (con Uw2 y Dw2 se cambian filas entre caras opuestas sin deshacer el paso anterior).`, { piezas: pos.slice() });
-  void id;
+  g.bloque(solA.flat(), op.textoA(Fc, Rc, Bc, Lc), { piezas: piezasDe([Fc, Bc]), algoritmo: op.algA || null });
+  const objB = 0b1111 | (0b1111 << 4);
+  const TB = tabla(op.macrosB, objB);
+  const solB = resolverTabla(TB, bits(g.estado, (c, k) => (k === 0 || k === 2 ? c === Fc : c === Rc)), op.macrosB);
+  g.bloque(solB.flat(), op.textoB(Fc, Rc, Bc, Lc), { piezas: pos.slice(), algoritmo: op.algB || null });
   const e = g.estado;
-  g.comprobar(lados.every(({ f, c }) => d.centros[f].every((i) => e[i] === c)) && d.centros[0].every((i) => e[i] === AMARILLO) && d.centros[3].every((i) => e[i] === BLANCO), 'últimos cuatro centros');
+  g.comprobar(lados.every(({ f, c }) => sub[f].every((i) => e[i] === c)) && (op.hechas || []).every(({ f, c, sub: s2 }) => (s2 ? s2[f] : d.centros[f]).every((i) => e[i] === c)), 'últimos cuatro centros');
+}
+
+const MOV_UNO = (lista) => lista.flatMap((c) => SUF.map((s) => [c + s]));
+function ultimosCuatro4(g, d, lados, orden) {
+  ultimosCuatro(g, d, lados, {
+    etapa: ['Últimos cuatro centros', `Completar los centros de los lados sin romper el blanco ni el amarillo: solo con giros de las caras de los lados y de las capas anchas Uw y Dw, que no tocan los centros de arriba y abajo. Van en este orden (delante, derecha, detrás, izquierda): ${orden}, el que corresponde a los colores de las esquinas.`],
+    macrosA: MOV_UNO(['F', 'R', 'B', 'L', 'Uw', 'Dw']),
+    macrosB: MOV_UNO(['F', 'R', 'B', 'L']).concat([['Uw2'], ['Dw2']]),
+    textoA: (Fc, Rc, Bc, Lc) => `Separa los colores: las piezas ${COLOR_F[Fc][1]} y ${COLOR_F[Bc][1]} a delante y detrás, y las ${COLOR_F[Rc][1]} y ${COLOR_F[Lc][1]} a los lados (con Uw y Dw las filas pasan de una cara a otra, y girando una cara sus piezas cambian de fila).`,
+    textoB: (Fc, Rc, Bc, Lc) => `Cada color a su cara: ${COLOR_F[Fc][1]} delante, ${COLOR_F[Rc][1]} a la derecha, ${COLOR_F[Bc][1]} detrás y ${COLOR_F[Lc][1]} a la izquierda (con Uw2 y Dw2 se cambian filas entre caras opuestas sin deshacer el paso anterior).`,
+    hechas: [{ f: 3, c: BLANCO }, { f: 0, c: AMARILLO }],
+  });
 }
 
 // ---------- Aristas ----------
@@ -302,10 +614,12 @@ const ALG_EMPAREJAR = [
   { nombre: 'Emparejar dos', alg: "Uw' R F' U R' F Uw" },
 ];
 // 5x5: paridad de las aristas (dos piezas de una arista al revés)
-const ALG_PARIDAD_ARISTA_5 = { nombre: 'Paridad de aristas', alg: "Rw U2 x Rw U2 Rw U2 Rw' U2 Lw U2 Rw' U2 Rw U2 Rw' U2 Rw'" };
+// r2 B2 U2 l U2 r' U2 r U2 F2 r F2 l' B2 r2 con r y l = solo la segunda capa (en WCA, r = Rw R')
+const ALG_PARIDAD_ARISTA_5 = { nombre: 'Paridad de aristas', alg: "Rw2 R2 B2 U2 Lw L' U2 Rw' R U2 Rw R' U2 F2 Rw R' F2 Lw' L B2 Rw2 R2" };
 
 function aristas(g, d) {
   const N = d.N;
+  if (N === 5) { aristas5(g, d); return; }
   const proy = crearProyeccion(d, d.esArista);
   const P = (i) => proy.pos.indexOf(i);
   const ar = d.aristas.map(([a, b]) => [a.map(P), b.map(P)]);
@@ -349,7 +663,7 @@ function aristas(g, d) {
     const hechas = completasEn(v);
     const pasos = buscarMacrosProy(v, macros, (w) => pares(w) > n0 && contiene(completasEn(w), hechas), 4, 6e5)
       || buscarMacrosProy(v, macros, (w) => pares(w) > n0, 4, 6e5);
-    g.comprobar(!!pasos, 'aristas: no se encontró cómo emparejar otra');
+    g.comprobar(!!pasos, `aristas: no se encontró cómo emparejar otra (pares ${n0}/${maxPares}, completas ${hechas.length})`);
     const movs = pasos.flatMap((p) => p.movs);
     const id = [...Array(d.total).keys()];
     const tras = movs.reduce((e, m) => d.b.aplicarMovimiento(e, m), id);
@@ -368,6 +682,120 @@ function aristas(g, d) {
     g.bloque(movs, texto, { algoritmo: alg ? alg.nombre : null, piezas });
   }
   g.comprobar(pares(proy.proyectar(g.estado)) === maxPares, 'aristas');
+}
+
+// ---------- Aristas del 5x5 (tredges) ----------
+// Como lo haría una persona: se gira el cubo para tener a la izquierda (FL) una arista
+// incompleta; con giros de R, U, B y D (que no tocan esa arista) se lleva a la derecha (FR)
+// la pieza que le falta, a la altura buena; se baja o se sube su fila (Uw o Dw) para
+// juntarla, se cambia la arista de la derecha por otra con R U R' F R' F' R y se deshace el
+// giro de la fila. Si al final queda una arista con las dos piezas de los lados cambiadas,
+// la paridad de aristas del 5x5.
+const ROT_FL = ['', 'y', 'y2', "y'", 'x', "x'", 'x2', 'z', "z'", 'z2', 'x y', 'x y2', "x y'", "x' y", "x' y2", "x' y'", 'z y', 'z y2', "z y'", "z' y", "z' y2", "z' y'", 'x2 y', "x2 y'"];
+function aristas5(g, d) {
+  const proy = crearProyeccion(d, d.esArista);
+  const P = (i) => proy.pos.indexOf(i);
+  const ar = d.aristas.map(([a, b]) => [a.map(P), b.map(P)]);
+  const paresDe = (v, k) => { const [a, b] = ar[k]; let n = 0; for (let j = 0; j + 1 < a.length; j++) if (v[a[j]] === v[a[j + 1]] && v[b[j]] === v[b[j + 1]]) n++; return n; };
+  const pares = (v) => ar.reduce((t, _, k) => t + paresDe(v, k), 0);
+  const completa = (v, k) => { const [a, b] = ar[k]; return a.every((j) => v[j] === v[a[0]]) && b.every((j) => v[j] === v[b[0]]); };
+  const claveDe = (v, k) => { const x = v[ar[k][0][1]], y = v[ar[k][1][1]]; return Math.min(x, y) * 8 + Math.max(x, y); }; // por la pieza del medio
+  const completas = (v) => new Set(ar.map((_, k) => k).filter((k) => completa(v, k)).map((k) => claveDe(v, k)));
+  const aplicarP = (v, p) => { const w = new Uint8Array(v.length); for (let k = 0; k < v.length; k++) w[k] = v[p[k]]; return w; };
+  const centrosBien = (movs) => { const e = movs.reduce((x, m) => d.b.aplicarMovimiento(x, m), d.b.estadoResuelto()); return d.centros.every((l, f) => l.every((i) => e[i] === f)); };
+  const algs = ALG_EMPAREJAR.map((a) => ({ ...a, movs: parsear(a.alg) })).filter((a) => centrosBien(a.movs)).map((a) => ({ ...a, perm: proy.permDe(a.movs) }));
+  const paridad = { ...ALG_PARIDAD_ARISTA_5, movs: parsear(ALG_PARIDAD_ARISTA_5.alg) };
+  g.comprobar(centrosBien(paridad.movs) && algs.length === ALG_EMPAREJAR.length, 'algoritmos de aristas del 5x5');
+  paridad.perm = proy.permDe(paridad.movs);
+  const setupMovs = [];
+  for (const c of ['R', 'U', 'B', 'D']) for (const s2 of SUF) setupMovs.push({ m: c + s2, cara: c, perm: proy.permDe([c + s2]) });
+  const rots = ROT_FL.map((r) => { const movs = r ? r.split(' ') : []; return { movs, perm: proy.permDe(movs) }; });
+  const FL = M3.aristas.findIndex(([p, q]) => [Math.floor(p / 9), Math.floor(q / 9)].sort().join() === '2,4');
+  const UF = M3.aristas.findIndex(([p, q]) => [Math.floor(p / 9), Math.floor(q / 9)].sort().join() === '0,2');
+  const nombreArista = (e, k) => coloresPieza([e[d.aristas[k][0][1]], e[d.aristas[k][1][1]]].sort((x, y) => x - y)).replace(' y ', '-');
+  g.etapa('Aristas', 'Juntar las tres piezas de cada arista (la del medio y las dos de los lados) sin romper los centros. Con la arista incompleta a la izquierda (FL), se lleva a la derecha (FR) la pieza que le falta con giros de R, U, B o D, se mueve su fila (Uw o Dw) para juntarla, se cambia la arista de la derecha con R U R\' F R\' F\' R y se devuelve la fila.', 'aristas');
+  let enCurso = null; // pieza del medio (colores) de la arista en la que se trabaja: se sigue con ella hasta completarla
+  for (let vueltas = 0; vueltas < 60; vueltas++) {
+    const v = proy.proyectar(g.estado);
+    const n0 = pares(v);
+    if (n0 === ar.length * 2) break;
+    if (enCurso != null && completas(v).has(enCurso)) enCurso = null;
+    const hechas = completas(v);
+    const vale = (w) => { if (pares(w) <= n0) return false; const c = completas(w); for (const x of hechas) if (!c.has(x)) return false; return true; };
+    let mejor = null;
+    // por longitud de la preparación (0..3 giros), la primera que funcione con menos giros
+    for (let prof = 0; prof <= 3 && !mejor; prof++) {
+      for (const rot of rots) {
+        const v1 = aplicarP(v, rot.perm);
+        if (completa(v1, FL)) continue; // la arista de la izquierda tiene que estar incompleta
+        if (enCurso != null && claveDe(v1, FL) !== enCurso) continue;
+        // se trabaja en la arista de la izquierda: tiene que ganar una pieza, sin romper las completas
+        const p0 = paresDe(v1, FL);
+        const valeFL = (w) => { if (paresDe(w, FL) <= p0) return false; const c = completas(w); for (const x of hechas) if (!c.has(x)) return false; return true; };
+        const dfs = (w, camino, ult) => {
+          if (camino.length === prof) {
+            for (const a of algs) {
+              const x = aplicarP(w, a.perm);
+              if (valeFL(x)) {
+                const n = camino.length + a.movs.length;
+                const t = pares(x);
+                if (!mejor || n < mejor.n || (n === mejor.n && t > mejor.t)) mejor = { n, t, rot, camino: camino.slice(), alg: a };
+              }
+            }
+            return;
+          }
+          for (const sm of setupMovs) {
+            if (sm.cara === ult) continue;
+            camino.push(sm.m);
+            dfs(aplicarP(w, sm.perm), camino, sm.cara);
+            camino.pop();
+          }
+        };
+        dfs(v1, [], null);
+      }
+    }
+    if (!mejor && enCurso != null) { enCurso = null; vueltas--; continue; } // probar con otra arista
+    let movs, texto, algNombre, rotMovs = [];
+    if (mejor) {
+      enCurso = claveDe(aplicarP(v, mejor.rot.perm), FL);
+      rotMovs = mejor.rot.movs;
+      movs = [...mejor.camino, ...mejor.alg.movs];
+      algNombre = mejor.alg.nombre;
+    } else {
+      // paridad: una arista con las dos piezas de los lados cambiadas; se pone delante arriba (UF)
+      let par = null;
+      for (const rot of rots) {
+        const x = aplicarP(aplicarP(v, rot.perm), paridad.perm);
+        if (vale(x) && (!par || pares(x) > par.n)) par = { rot, n: pares(x) };
+      }
+      g.comprobar(!!par, `aristas: no se encontró cómo emparejar otra (pares ${n0}/${ar.length * 2})`);
+      rotMovs = par.rot.movs;
+      movs = paridad.movs;
+      algNombre = paridad.nombre;
+    }
+    // texto: qué arista se completa (o qué piezas se juntan)
+    const eRot = rotMovs.reduce((e, m) => d.b.aplicarMovimiento(e, m), g.estado);
+    const id = [...Array(d.total).keys()];
+    const tras = movs.reduce((e, m) => d.b.aplicarMovimiento(e, m), id);
+    const eFin = movs.reduce((e, m) => d.b.aplicarMovimiento(e, m), eRot);
+    const vRot = proy.proyectar(eRot), vFin = proy.proyectar(eFin);
+    const antes = completas(vRot);
+    const nuevas = ar.map((_, k) => k).filter((k) => completa(vFin, k) && !antes.has(claveDe(vFin, k)));
+    const objetivo = nuevas.length ? nuevas : ar.map((_, k) => k).filter((k) => paresDe(vFin, k) > paresDe(vRot, k));
+    const piezas = objetivo.flatMap((k) => d.aristas[k].flat()).map((i) => tras[i]);
+    const nombres = nuevas.map((k) => nombreArista(eFin, k));
+    const lista = nombres.length > 1 ? `las aristas ${nombres.slice(0, -1).join(', ')} y ${nombres[nombres.length - 1]}` : `la arista ${nombres[0]}`;
+    if (algNombre === paridad.nombre) {
+      texto = `Paridad de aristas del 5x5: en la arista de delante arriba (UF) las dos piezas de los lados están cambiadas entre sí, algo que no se arregla con el método de siempre. El algoritmo r2 B2 U2 l U2 r' U2 r U2 F2 r F2 l' B2 r2 (r y l, solo la segunda capa) las intercambia${nuevas.length ? ` y completa ${lista}` : ''}.`;
+    } else {
+      const fila = /^U/.test(mejor.alg.movs[0]) ? 'de arriba (Uw)' : 'de abajo (Dw)';
+      const prep = mejor.camino.length ? `lleva a la derecha la pieza que falta (${mejor.camino.join(' ')}), ` : 'con la pieza que falta ya a la derecha, ';
+      texto = (nuevas.length ? `Completa ${lista}: ` : `Junta otra pieza a la arista ${nombreArista(eRot, FL)} (a la izquierda): `) + `${prep}mueve la fila ${fila} para juntarla, cambia la arista de la derecha y devuelve la fila (${mejor.alg.movs.join(' ')}).`;
+    }
+    if (rotMovs.length) g.bloque(rotMovs, `Gira el cubo (${rotMovs.join(' ')}) para tener delante la arista en la que vas a trabajar.`);
+    g.bloque(movs, texto, { algoritmo: algNombre, piezas });
+  }
+  g.comprobar(pares(proy.proyectar(g.estado)) === ar.length * 2, 'aristas');
 }
 
 // ---------- 3x3 con paridades ----------
@@ -408,6 +836,10 @@ function proxy3(g, d) {
 export const METODOS_NxN = [
   { id: 'principiantes', nombre: 'Reducción (3x3 por capas)', descripcion: 'Reducción: centros (blanco, amarillo y los cuatro de los lados), emparejar aristas, y después como un 3x3 por capas, con las paridades del cubo grande.' },
   { id: 'cfop', nombre: 'Reducción (3x3 con CFOP)', descripcion: 'Reducción: centros, emparejar aristas, y después como un 3x3 con CFOP (cruz, F2L, OLL y PLL), con las paridades del cubo grande.' },
+];
+export const METODOS_5x5 = [
+  { id: 'principiantes', nombre: 'Reducción (3x3 por capas)', descripcion: 'Reducción: cada centro en dos partes (X y cruz), aristas de tres piezas (tredges) con su paridad, y después como un 3x3 por capas.' },
+  { id: 'cfop', nombre: 'Reducción (3x3 con CFOP)', descripcion: 'Reducción: cada centro en dos partes (X y cruz), aristas de tres piezas (tredges) con su paridad, y después como un 3x3 con CFOP (cruz, F2L, OLL y PLL).' },
 ];
 
 export function aprenderReduccion(N, estado, metodo = 'principiantes') {
