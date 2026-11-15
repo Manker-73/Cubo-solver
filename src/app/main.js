@@ -588,11 +588,14 @@ function pintarMetodo() {
     sel.appendChild(op);
   }
   sel.value = metodoActual(p);
+  const m = p.metodosAprender.find((x) => x.id === sel.value);
+  $('desc-solver').textContent = m ? m.descripcion : (p.descripcion || '');
 }
 function cambiarMetodo() {
   st.metodos[st.p.id] = $('sel-metodo').value;
   try { localStorage.setItem('cubo-solver:metodos', JSON.stringify(st.metodos)); } catch { /* sin almacenamiento */ }
   if (st.sol) { st.editor = st.sol.base; quitarSolucion(); }
+  pintarMetodo();
   limpiarMensajes();
   pintarEditor();
 }

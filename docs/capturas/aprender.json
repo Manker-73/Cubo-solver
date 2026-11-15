@@ -1,0 +1,75 @@
+{
+  "escritorio/3x3/principiantes": {
+    "pasos": 149,
+    "pasosConResalte3D": 148,
+    "resaltadas2D": 2,
+    "resumen": "Método Principiantes (por capas): 142 giros (+ 7 giros del cubo entero) · solución óptima: 20 giros",
+    "fallos": [
+      "no llega a \"Resuelto\""
+    ]
+  },
+  "escritorio/3x3/cfop": {
+    "pasos": 69,
+    "pasosConResalte3D": 68,
+    "resaltadas2D": 8,
+    "resumen": "Método CFOP: 63 giros (+ 6 giros del cubo entero) · solución óptima: 20 giros",
+    "fallos": [
+      "no llega a \"Resuelto\""
+    ]
+  },
+  "escritorio/2x2/principiantes": {
+    "pasos": 62,
+    "pasosConResalte3D": 62,
+    "resaltadas2D": 3,
+    "resumen": "Método Principiantes (por capas): 59 giros (+ 3 giros del cubo entero) · solución óptima: 9 giros",
+    "fallos": [
+      "no llega a \"Resuelto\""
+    ]
+  },
+  "escritorio/2x2/ortega": {
+    "pasos": 22,
+    "pasosConResalte3D": 22,
+    "resaltadas2D": 12,
+    "resumen": "Método Ortega: 22 giros · solución óptima: 8 giros",
+    "fallos": [
+      "no llega a \"Resuelto\""
+    ]
+  },
+  "movil/3x3/principiantes": {
+    "pasos": 155,
+    "pasosConResalte3D": 154,
+    "resaltadas2D": 2,
+    "resumen": "Método Principiantes (por capas): 149 giros (+ 6 giros del cubo entero) · solución óptima: 19 giros",
+    "fallos": [
+      "no llega a \"Resuelto\""
+    ]
+  },
+  "movil/3x3/cfop": {
+    "pasos": 59,
+    "pasosConResalte3D": 58,
+    "resaltadas2D": 8,
+    "resumen": "Método CFOP: 54 giros (+ 5 giros del cubo entero) · solución óptima: 20 giros",
+    "fallos": [
+      "no llega a \"Resuelto\""
+    ]
+  },
+  "movil/2x2/principiantes": {
+    "pasos": 81,
+    "pasosConResalte3D": 81,
+    "resaltadas2D": 3,
+    "resumen": "Método Principiantes (por capas): 78 giros (+ 3 giros del cubo entero) · solución óptima: 8 giros",
+    "fallos": [
+      "no llega a \"Resuelto\""
+    ]
+  },
+  "movil/2x2/ortega": {
+    "pasos": 28,
+    "pasosConResalte3D": 28,
+    "resaltadas2D": 12,
+    "resumen": "Método Ortega: 28 giros · solución óptima: 9 giros",
+    "fallos": [
+      "no llega a \"Resuelto\""
+    ]
+  },
+  "erroresConsola": []
+}

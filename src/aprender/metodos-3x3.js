@@ -326,8 +326,7 @@ function piezasU() {
 }
 const textoAjuste = (que) => ({ texto: `Gira la capa de arriba (U) para ${que}.` });
 
-function ultimaCapaPrincipiantes(g) {
-  const { pllOk } = preparar();
+function orientarPrincipiantes(g) {
   const cruz = { nombre: PRINCIPIANTES.cruz.nombre, movs: parsear(PRINCIPIANTES.cruz.alg) };
   const sune = { nombre: 'Sune', movs: parsear(PRINCIPIANTES.sune.alg) };
   const amarillas = (e) => [5, 7, 3, 1].filter((f) => e[f] === AMARILLO).length;
@@ -359,10 +358,13 @@ function ultimaCapaPrincipiantes(g) {
     return { texto: `${n} esquina${n === 1 ? '' : 's'} con el amarillo arriba: haz Sune (R U R' U R U2 R').`, algoritmo: 'Sune' };
   });
   g.comprobar(OB.caraAmarilla(g.estado), 'cara amarilla');
+}
 
+function permutarPrincipiantes(g) {
+  const { pllOk } = preparar();
   const macrosDe = (nombres) => nombres.map((n) => pllOk.find((p) => p.nombre === n)).filter(Boolean).map((p) => ({ nombre: p.nombre, movs: p.movs }));
   g.etapa('Esquinas amarillas', 'Llevar cada esquina de arriba a su sitio (entre sus colores) con la A-perm. Si dos esquinas de un lado ya tienen el mismo color ("faros"), ese lado va detrás.', 'esqam');
-  pasos = M.buscarMacros(g.estado, [...AJUSTES_U, ...macrosDe(PRINCIPIANTES.esquinas)], OB.esquinasUltimaCapa, 5);
+  let pasos = M.buscarMacros(g.estado, [...AJUSTES_U, ...macrosDe(PRINCIPIANTES.esquinas)], OB.esquinasUltimaCapa, 5);
   bloquesMacros(g, pasos, (mac, e) => {
     if (mac.ajuste) {
       const d = M.aplicarSec(e, mac.movs);
@@ -384,8 +386,8 @@ function ultimaCapaPrincipiantes(g) {
   g.comprobar(OB.resuelto(g.estado), 'resuelto');
 }
 
-function ollPll(g) {
-  const { ollOk, pllOk } = preparar();
+function oll(g) {
+  const { ollOk } = preparar();
   g.etapa('OLL', 'Orientation of the last layer: dejar toda la cara de arriba amarilla con un solo algoritmo (eligiendo el caso tras ajustar la capa de arriba).', 'oll');
   const mOLL = ollOk.map((o) => ({ nombre: o.n ? `OLL ${o.n}${o.apodo ? ` (${o.apodo})` : ''}` : 'OLL', movs: o.movs }));
   let pasos = M.buscarMacros(g.estado, [...AJUSTES_U, ...mOLL], OB.caraAmarilla, 2);
@@ -403,7 +405,11 @@ function ollPll(g) {
     return { texto: `${dosPasos ? 'OLL en dos pasos. Caso' : 'Caso'}: ${describirOLL(e)}. Algoritmo: ${mac.nombre === 'OLL' ? 'el de OLL para este caso' : mac.nombre}.`, algoritmo: mac.nombre };
   });
   g.comprobar(OB.caraAmarilla(g.estado), 'OLL');
+}
 
+function pll(g) {
+  const { pllOk } = preparar();
+  let pasos;
   g.etapa('PLL', 'Permutation of the last layer: llevar las piezas de arriba a su sitio con un solo algoritmo y ajustar la capa de arriba.', 'pll');
   const mPLL = pllOk.map((p) => ({ nombre: p.nombre, movs: p.movs }));
   pasos = M.buscarMacros(g.estado, [...AJUSTES_U, ...mPLL], OB.resuelto, 3);
@@ -415,25 +421,40 @@ function ollPll(g) {
 }
 
 export const METODOS_3x3 = [
-  { id: 'principiantes', nombre: 'Principiantes (por capas)' },
-  { id: 'cfop', nombre: 'CFOP' },
+  { id: 'principiantes', nombre: 'Principiantes (por capas)', descripcion: "Por capas: cruz blanca, esquinas blancas con R U R' U', segunda capa con dos algoritmos y la última capa en cuatro pasos (F R U R' U' F', Sune, A-perm y U-perm)." },
+  { id: 'cfop', nombre: 'CFOP', descripcion: 'CFOP (Fridrich): cruz planificada entera, F2L por parejas esquina-arista, y la última capa con una OLL (57 casos) y una PLL (21 casos).' },
 ];
 
-/** Resuelve un 3x3 por un método humano. Devuelve el guion (ver guion.js). */
-export function aprender3x3(estado, metodo = 'principiantes', { aplicar = M.aplicar } = {}) {
-  const t0 = Date.now();
-  const g = crearGuion(aplicar, estado, { esRotacion });
-  rotacionInicial(g);
+/**
+ * Etapas del 3x3 (tras sujetar el cubo con el blanco abajo) sobre un guion.
+ * `ganchos.trasDosCapas` y `ganchos.trasOrientar`: para las paridades de los cubos grandes.
+ */
+export function etapas3x3(g, metodo, ganchos = {}) {
   if (metodo === 'cfop') {
     cruzOptima(g);
     f2l(g);
-    ollPll(g);
+    if (ganchos.trasDosCapas) ganchos.trasDosCapas();
+    oll(g);
+    if (ganchos.trasOrientar) ganchos.trasOrientar();
+    pll(g);
   } else {
     cruzPorAristas(g);
     esquinasPrimeraCapa(g);
     segundaCapa(g);
-    ultimaCapaPrincipiantes(g);
+    if (ganchos.trasDosCapas) ganchos.trasDosCapas();
+    orientarPrincipiantes(g);
+    if (ganchos.trasOrientar) ganchos.trasOrientar();
+    permutarPrincipiantes(g);
   }
+}
+export { rotacionInicial };
+
+/** Resuelve un 3x3 por un método humano. Devuelve el guion (ver guion.js). */
+export function aprender3x3(estado, metodo = 'principiantes') {
+  const t0 = Date.now();
+  const g = crearGuion(M.aplicar, estado, { esRotacion });
+  rotacionInicial(g);
+  etapas3x3(g, metodo);
   const r = g.resultado(metodo);
   r.ms = Date.now() - t0;
   return r;

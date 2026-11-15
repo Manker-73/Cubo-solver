@@ -164,8 +164,15 @@ function distanciaCara() {
 function caraBlanca(g) {
   g.etapa('Cara', 'Poner las cuatro esquinas blancas abajo con el blanco hacia abajo (la cara blanca). Sus lados todavía no tienen que coincidir.', 'cara');
   const { dist, movs, ds, cod } = distanciaCara();
-  let v = [];
-  g.estado.forEach((c, f) => { if (c === BLANCO) v.push(f); });
+  // primero, girar el cubo para tener abajo la cara en la que la cara blanca está más cerca
+  const blancas = (e) => { const v = []; e.forEach((c, f) => { if (c === BLANCO) v.push(f); }); return v; };
+  let mejor = null;
+  for (const rot of [[], ['z2'], ['z'], ["z'"], ['x'], ["x'"]]) {
+    const d = dist.get(cod(blancas(M.aplicarSec(g.estado, rot))));
+    if (!mejor || d < mejor.d) mejor = { rot, d };
+  }
+  g.bloque(mejor.rot, `Gira el cubo entero (${mejor.rot.join(' ')}) para tener abajo el lado en el que la cara blanca se hace con menos giros.`);
+  let v = blancas(g.estado);
   const sol = [];
   while (dist.get(cod(v)) > 0) {
     const d = dist.get(cod(v));
@@ -234,8 +241,8 @@ function pbl(g) {
 }
 
 export const METODOS_2x2 = [
-  { id: 'principiantes', nombre: 'Principiantes (por capas)' },
-  { id: 'ortega', nombre: 'Ortega' },
+  { id: 'principiantes', nombre: 'Principiantes (por capas)', descripcion: "Por capas: una esquina blanca de referencia, la primera capa con R U R' U', la cara amarilla con Sune y las esquinas con la T-perm." },
+  { id: 'ortega', nombre: 'Ortega', descripcion: 'Ortega: la cara blanca (sin importar los lados), la cara amarilla con una OLL (7 casos) y las dos capas a la vez con una PBL.' },
 ];
 
 export function aprender2x2(estado, metodo = 'principiantes') {

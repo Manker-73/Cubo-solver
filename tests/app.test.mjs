@@ -648,10 +648,10 @@ async function probarAprender(ctx, puzzle, metodo) {
   assert.equal(doc.getElementById('explicacion').hidden, true, 'la solución óptima no lleva explicación');
 }
 
-test('app: modo aprender (sin WebGL, en 2D): 3x3 y 2x2 con sus métodos', async (t) => {
+test('app: modo aprender (sin WebGL, en 2D): 3x3, 2x2 y 4x4 con sus métodos', async (t) => {
   const ctx = await abrir(t);
   if (!ctx) return;
-  for (const [puzzle, metodo] of [['3x3', 'principiantes'], ['3x3', 'cfop'], ['2x2', 'principiantes'], ['2x2', 'ortega']]) {
+  for (const [puzzle, metodo] of [['3x3', 'principiantes'], ['3x3', 'cfop'], ['2x2', 'principiantes'], ['2x2', 'ortega'], ['4x4', 'cfop']]) {
     await probarAprender(ctx, puzzle, metodo);
   }
   // los puzzles sin modo aprender no muestran el selector

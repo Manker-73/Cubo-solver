@@ -1,0 +1,115 @@
+{
+  "3x3/principiantes": {
+    "casos": 40,
+    "resueltos": 40,
+    "girosMedia": 144.78,
+    "girosMax": 192,
+    "rotacionesMedia": 7.47,
+    "msMedia": 3.8,
+    "msMax": 24,
+    "porEtapa": {
+      "Cruz": 8.47,
+      "Primera capa": 52.27,
+      "Segunda capa": 38.85,
+      "Cruz amarilla": 10.38,
+      "Cara amarilla": 17.88,
+      "Esquinas amarillas": 9.3,
+      "Aristas amarillas": 14.22,
+      "Preparación": 0.88
+    }
+  },
+  "casos": 40,
+  "fecha": "2026-11-15T01:03:03.375Z",
+  "3x3/cfop": {
+    "casos": 40,
+    "resueltos": 40,
+    "girosMedia": 56.02,
+    "girosMax": 64,
+    "rotacionesMedia": 4.55,
+    "msMedia": 19.7,
+    "msMax": 64,
+    "porEtapa": {
+      "Preparación": 0.78,
+      "Cruz": 5.83,
+      "F2L": 28.25,
+      "OLL": 10.6,
+      "PLL": 15.13
+    }
+  },
+  "2x2/principiantes": {
+    "casos": 40,
+    "resueltos": 40,
+    "girosMedia": 73.08,
+    "girosMax": 109,
+    "rotacionesMedia": 3.05,
+    "msMedia": 1.2,
+    "msMax": 5,
+    "porEtapa": {
+      "Preparación": 0.47,
+      "Primera capa": 41.02,
+      "Cara amarilla": 17.3,
+      "Esquinas amarillas": 17.32
+    }
+  },
+  "2x2/ortega": {
+    "casos": 40,
+    "resueltos": 40,
+    "girosMedia": 22.85,
+    "girosMax": 32,
+    "rotacionesMedia": 0.07,
+    "msMedia": 11,
+    "msMax": 35,
+    "porEtapa": {
+      "Cara": 4.15,
+      "OLL": 8.68,
+      "PBL": 10.1
+    }
+  },
+  "4x4/principiantes": {
+    "casos": 40,
+    "resueltos": 40,
+    "girosMedia": 269.3,
+    "girosMax": 313,
+    "rotacionesMedia": 7.58,
+    "msMedia": 1762.9,
+    "msMax": 2361.244511,
+    "porEtapa": {
+      "Preparación": 0.7,
+      "Centro blanco": 6.1,
+      "Centro amarillo": 9.9,
+      "Últimos cuatro centros": 12.13,
+      "Aristas": 85.13,
+      "Cruz": 8.43,
+      "Primera capa": 49.27,
+      "Segunda capa": 38.83,
+      "Cruz amarilla": 11.18,
+      "Cara amarilla": 19.27,
+      "Paridad PLL": 5.17,
+      "Esquinas amarillas": 9.53,
+      "Paridad OLL": 8.1,
+      "Aristas amarillas": 13.15
+    }
+  },
+  "4x4/cfop": {
+    "casos": 40,
+    "resueltos": 40,
+    "girosMedia": 185.53,
+    "girosMax": 212,
+    "rotacionesMedia": 5.03,
+    "msMedia": 1659.1,
+    "msMax": 2203.6037050000014,
+    "porEtapa": {
+      "Preparación": 0.55,
+      "Centro blanco": 5.78,
+      "Centro amarillo": 10.6,
+      "Últimos cuatro centros": 12.07,
+      "Aristas": 84.22,
+      "Cruz": 5.47,
+      "F2L": 28.4,
+      "Paridad OLL": 13.05,
+      "OLL": 10.55,
+      "Paridad PLL": 3.83,
+      "PLL": 16.02
+    }
+  }
+}

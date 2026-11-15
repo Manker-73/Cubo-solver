@@ -18,7 +18,8 @@ parentPort.on('message', (msg) => {
   }
   try {
     const t0 = performance.now();
-    const r = puzzle.resolver(msg.estado, msg.opciones);
+    // modo aprender: opciones.aprender = método humano
+    const r = msg.opciones && msg.opciones.aprender ? puzzle.aprender(msg.estado, msg.opciones.aprender) : puzzle.resolver(msg.estado, msg.opciones);
     const ms = performance.now() - t0;
     parentPort.postMessage({ i: msg.i, r, ms });
   } catch (err) {
