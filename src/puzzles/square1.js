@@ -14,6 +14,7 @@
 // Las casillas y el corte siguen el convenio de square1-motor.js.
 
 import { definirPuzzle } from '../core/puzzle.js';
+import { crearAprenderSquare1, METODOS_SQUARE1 } from '../aprender/metodos-square1.js';
 import { rngSeguro } from '../core/rng.js';
 import {
   RESUELTO_ARRIBA, RESUELTO_ABAJO, esEsquina, mod12, normalizarGiro, mascara, MASCARA_RESUELTO,
@@ -568,6 +569,8 @@ function renderizar(e, opts = {}) {
   return s;
 }
 
+const aprenderSquare1 = crearAprenderSquare1({ aplicarMovimiento, analizar });
+
 export default definirPuzzle({
   id: 'square1',
   nombre: 'Square-1',
@@ -608,6 +611,9 @@ export default definirPuzzle({
   generarScramble,
   validar,
   resolver,
+  // Modo aprender: método de principiantes, explicado por etapas
+  metodosAprender: METODOS_SQUARE1,
+  aprender: (estado) => aprenderSquare1(estado),
   inicializar: () => inicializarMotor(),
   estaInicializado: motorInicializado,
   // Los índices dependen de la forma: se calculan para el estado dado (por defecto, el resuelto)

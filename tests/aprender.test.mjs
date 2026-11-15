@@ -11,6 +11,7 @@ import cubo2 from '../src/puzzles/cubo2.js';
 import cubo3 from '../src/puzzles/cubo3.js';
 import pyraminx from '../src/puzzles/pyraminx.js';
 import skewb from '../src/puzzles/skewb.js';
+import square1 from '../src/puzzles/square1.js';
 import { OBJETIVOS_3x3, OBJETIVOS_2x2 } from '../src/aprender/objetivos-cubo.js';
 import { algoritmosComprobados } from '../src/aprender/metodos-3x3.js';
 import { OLL, PLL } from '../src/aprender/algoritmos.js';
@@ -24,6 +25,7 @@ const ROT = ['', 'x', "x'", 'x2', 'y', "y'", 'y2', 'z', "z'", 'z2'];
 
 /** Estado al azar: 40 giros de cara y una orientación del cubo al azar. */
 function estadoAlAzar(p, rng) {
+  if (p.id === 'square1') return p.generarScramble(rng).reduce((x, m) => p.aplicarMovimiento(x, m), p.estadoResuelto());
   if (p.geo) {
     // Pyraminx, Skewb…: estado aleatorio de su scramble y el puzzle girado entero al azar
     let e = p.generarScramble(rng).reduce((x, m) => p.aplicarMovimiento(x, m), p.estadoResuelto());
@@ -128,6 +130,21 @@ OBJ['5x5'].Preparación = (e) => medio5(e, 3) === 0;
   OBJ.skewb = { capa1, esquinas: (e) => capa1(e) && [...A, ...B].every((pz) => piezaOk(e, pz)), centros: (e) => skewb.estaResuelto(e) };
 }
 
+// Square-1 (estado de colores: cada capa, sus piezas en orden; esquina = 3 colores, arista = 2)
+{
+  const R = square1.estadoResuelto();
+  const ARRIBA = R.arriba.piezas[0][0], ABAJO = R.abajo.piezas[0][0];
+  const cubo = (capa) => capa.piezas.length === 8 && capa.piezas.every((p, i) => p.length !== capa.piezas[(i + 1) % 8].length);
+  const forma = (e) => cubo(e.arriba) && cubo(e.abajo);
+  const orient = (e, n) => forma(e) && e.arriba.piezas.every((p) => p.length !== n || p[0] === ARRIBA) && e.abajo.piezas.every((p) => p.length !== n || p[0] === ABAJO);
+  const co = (e) => orient(e, 3);
+  const eo = (e) => co(e) && orient(e, 2);
+  const ciclo = (capa) => capa.piezas.filter((p) => p.length === 3).map((p) => p.join(''));
+  const mismoCiclo = (a, b) => [0, 1, 2, 3].some((k) => a.every((x, i) => x === b[(i + k) % 4]));
+  const cp = (e) => eo(e) && e.medio === 0 && mismoCiclo(ciclo(e.arriba), ciclo(R.arriba)) && mismoCiclo(ciclo(e.abajo), ciclo(R.abajo));
+  OBJ.square1 = { forma, co, eo, cp, paridad: cp, ep: (e) => square1.estaResuelto(e) };
+}
+
 // Etapas que tiene que tener cada método (en orden)
 const ETAPAS = {
   '3x3/principiantes': ['cruz', 'capa1', 'capa2', 'cruzam', 'caraam', 'esqam', 'ariam'],
@@ -140,6 +157,7 @@ const ETAPAS = {
   '5x5/cfop': ['centros', 'aristas', 'cruz', 'f2l', 'oll', 'pll'],
   'pyraminx/principiantes': ['puntas', 'centros', 'capa1', 'ultima'],
   'skewb/principiantes': ['capa1', 'esquinas', 'centros'],
+  'square1/principiantes': ['forma', 'co', 'eo', 'cp', 'paridad', 'ep'],
 };
 
 async function probarMetodo(p, metodo, semilla, paralelo = null) {
@@ -217,6 +235,7 @@ test('aprender: 5x5 por reducción (3x3 por capas)', () => probarMetodo(cubo5, '
 test('aprender: 5x5 por reducción (3x3 con CFOP)', () => probarMetodo(cubo5, 'cfop', 18, PARALELO_5));
 test('aprender: Pyraminx por el método de principiantes', () => probarMetodo(pyraminx, 'principiantes', 19));
 test('aprender: Skewb por el método de principiantes', () => probarMetodo(skewb, 'principiantes', 20));
+test('aprender: Square-1 por el método de principiantes', () => probarMetodo(square1, 'principiantes', 21));
 test('aprender: 3x3 por el método de principiantes', () => probarMetodo(cubo3, 'principiantes', 11));
 test('aprender: 3x3 por CFOP', () => probarMetodo(cubo3, 'cfop', 12));
 test('aprender: 2x2 por el método de principiantes', () => probarMetodo(cubo2, 'principiantes', 13));

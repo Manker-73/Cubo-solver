@@ -18,8 +18,8 @@
       "Preparación": 0.87
     }
   },
-  "casos": 20,
-  "fecha": "2026-11-15T02:37:50.088Z",
+  "casos": 100,
+  "fecha": "2026-11-15T02:48:08.601Z",
   "3x3/cfop": {
     "casos": 20,
     "resueltos": 20,
@@ -188,6 +188,23 @@
       "Primera capa": 7.71,
       "Esquinas de abajo": 5.44,
       "Centros": 8.84
+    }
+  },
+  "square1/principiantes": {
+    "casos": 100,
+    "resueltos": 100,
+    "girosMedia": 61.49,
+    "girosMax": 85,
+    "rotacionesMedia": 0,
+    "msMedia": 98.5,
+    "msMax": 3120,
+    "porEtapa": {
+      "Forma de cubo": 9.14,
+      "Orientar esquinas": 3.91,
+      "Orientar aristas": 8.62,
+      "Permutar esquinas": 10.07,
+      "Paridad": 14.28,
+      "Permutar aristas": 15.47
     }
   }
 }
