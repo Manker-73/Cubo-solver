@@ -18,8 +18,8 @@
       "Preparación": 0.87
     }
   },
-  "casos": 20,
-  "fecha": "2026-11-15T02:23:28.242Z",
+  "casos": 100,
+  "fecha": "2026-11-15T02:32:47.765Z",
   "3x3/cfop": {
     "casos": 100,
     "resueltos": 100,
@@ -159,6 +159,35 @@
       "F2L": 28.4,
       "OLL": 11.35,
       "PLL": 16.45
+    }
+  },
+  "pyraminx/principiantes": {
+    "casos": 100,
+    "resueltos": 100,
+    "girosMedia": 25.73,
+    "girosMax": 35,
+    "rotacionesMedia": 0,
+    "msMedia": 7,
+    "msMax": 38,
+    "porEtapa": {
+      "Puntas": 2.84,
+      "Centros": 2.03,
+      "Primera capa": 9.83,
+      "Última capa": 11.03
+    }
+  },
+  "skewb/principiantes": {
+    "casos": 100,
+    "resueltos": 100,
+    "girosMedia": 21.99,
+    "girosMax": 28,
+    "rotacionesMedia": 0,
+    "msMedia": 14.6,
+    "msMax": 43,
+    "porEtapa": {
+      "Primera capa": 7.71,
+      "Esquinas de abajo": 5.44,
+      "Centros": 8.84
     }
   }
 }

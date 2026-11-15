@@ -18,6 +18,7 @@ import { entero, rngSeguro } from '../core/rng.js';
 import { paridad, permDeIndice } from '../core/perm.js';
 import { PALETA_CUBO } from './nxn.js';
 import { CAMARA_CUBO } from '../core/modelo3d.js';
+import { crearAprenderSkewb, METODOS_SKEWB } from '../aprender/metodos-skewb.js';
 
 const VERTICES = [];
 for (const x of [-1, 1]) for (const y of [-1, 1]) for (const z of [-1, 1]) VERTICES.push([x, y, z]);
@@ -158,7 +159,7 @@ function analizar(estado) {
     }
   }
   if (errores.length) return { valido: false, errores };
-  return { valido: true, errores: [], piezas: id.orbitas };
+  return { valido: true, errores: [], piezas: id.orbitas, sigma };
 }
 
 function resolver(estado) {
@@ -195,6 +196,7 @@ function generarScramble(rng = rngSeguro()) {
 }
 
 const caraDe = geo.pegatinas.map((p) => p.cara);
+const aprenderSkewb = crearAprenderSkewb({ geo, modelo, analizar, centros, esqA, esqB, coordsDe, buscadorDe: () => { inicializar(); return buscador; } });
 
 export default definirPuzzle({
   id: 'skewb',
@@ -233,6 +235,9 @@ export default definirPuzzle({
   validar: (e) => { const a = analizar(e); return { valido: a.valido, errores: a.errores }; },
   resolver,
   generarScramble,
+  // Modo aprender: método de principiantes, explicado por etapas
+  metodosAprender: METODOS_SKEWB,
+  aprender: (estado) => aprenderSkewb(estado),
   geo,
   ...modelo3DGeo(geo, CAMARA_CUBO),
   modelo,

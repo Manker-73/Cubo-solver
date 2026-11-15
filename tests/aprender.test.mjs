@@ -9,6 +9,8 @@ import { CASOS, guardarResultado } from './util.mjs';
 import { rngConSemilla } from '../src/core/rng.js';
 import cubo2 from '../src/puzzles/cubo2.js';
 import cubo3 from '../src/puzzles/cubo3.js';
+import pyraminx from '../src/puzzles/pyraminx.js';
+import skewb from '../src/puzzles/skewb.js';
 import { OBJETIVOS_3x3, OBJETIVOS_2x2 } from '../src/aprender/objetivos-cubo.js';
 import { algoritmosComprobados } from '../src/aprender/metodos-3x3.js';
 import { OLL, PLL } from '../src/aprender/algoritmos.js';
@@ -22,6 +24,12 @@ const ROT = ['', 'x', "x'", 'x2', 'y', "y'", 'y2', 'z', "z'", 'z2'];
 
 /** Estado al azar: 40 giros de cara y una orientación del cubo al azar. */
 function estadoAlAzar(p, rng) {
+  if (p.geo) {
+    // Pyraminx, Skewb…: estado aleatorio de su scramble y el puzzle girado entero al azar
+    let e = p.generarScramble(rng).reduce((x, m) => p.aplicarMovimiento(x, m), p.estadoResuelto());
+    const R = p.geo.rotaciones[Math.floor(rng() * p.geo.rotaciones.length)];
+    return e.map((_, i) => e[R[i]]);
+  }
   let e = p.estadoResuelto();
   if (p.id === '4x4' || p.id === '5x5') { for (let i = 0; i < 40; i++) e = p.aplicarMovimiento(e, ['', '', 'w'].map((w) => 'URFDLB'[Math.floor(rng() * 6)] + w)[Math.floor(rng() * 3)] + ['', "'", '2'][Math.floor(rng() * 3)]); }
   for (let i = 0; i < 40; i++) e = p.aplicarMovimiento(e, 'URFDLB'[Math.floor(rng() * 6)] + ['', "'", '2'][Math.floor(rng() * 3)]);
@@ -94,6 +102,32 @@ OBJ['5x5'] = {
 for (const [k, f] of Object.entries(OBJ['3x3'])) if (k !== 'prep') OBJ['5x5'][k] = V5(f);
 OBJ['5x5'].Preparación = (e) => medio5(e, 3) === 0;
 
+// Pyraminx: comprobaciones que no dependen de cómo esté girado el puzzle
+{
+  const { geo, modelo } = pyraminx;
+  const [PUNTAS, CENTROS, ARISTAS] = modelo.orbitas.map((o) => o.piezas);
+  const cara = (i) => geo.pegatinas[i].cara;
+  const puntaOk = (e, v) => PUNTAS[v].every((i) => e[i] === e[CENTROS[v].find((j) => cara(j) === cara(i))]);
+  const puntas = (e) => [0, 1, 2, 3].every((v) => puntaOk(e, v));
+  const D = 3; // la cara de abajo (la opuesta al vértice U)
+  const colorCara = (e, f) => { const v = [1, 2, 3].find((x) => CENTROS[x].some((j) => cara(j) === f)); return e[CENTROS[v].find((j) => cara(j) === f)]; };
+  const centrosAbajo = (e) => new Set([1, 2, 3].map((v) => e[CENTROS[v].find((j) => cara(j) === D)])).size === 1;
+  const piezaOk = (e, pz) => pz.every((i) => e[i] === colorCara(e, cara(i)));
+  const capa1 = (e) => puntas(e) && centrosAbajo(e) && [1, 2, 3].every((v) => piezaOk(e, CENTROS[v]) && piezaOk(e, PUNTAS[v])) && [3, 4, 5].every((k) => piezaOk(e, ARISTAS[k]));
+  OBJ.pyraminx = { puntas, centros: (e) => puntas(e) && centrosAbajo(e), capa1, ultima: (e) => pyraminx.estaResuelto(e) };
+}
+// Skewb: la esquina URF no se mueve; sus colores dan los de U, R y F (y los opuestos, los de D, L y B)
+{
+  const { geo, modelo } = skewb;
+  const [CEN, A, B] = modelo.orbitas.map((o) => o.piezas);
+  const cara = (i) => geo.pegatinas[i].cara;
+  const colorCara = (e, f) => { const c = e[A[0].find((i) => cara(i) === f % 3)]; return f < 3 ? c : (c + 3) % 6; };
+  const piezaOk = (e, pz) => pz.every((i) => e[i] === colorCara(e, cara(i)));
+  const esquinasU = [...A, ...B].filter((pz) => pz.some((i) => cara(i) === 0));
+  const capa1 = (e) => piezaOk(e, CEN[0]) && esquinasU.every((pz) => piezaOk(e, pz));
+  OBJ.skewb = { capa1, esquinas: (e) => capa1(e) && [...A, ...B].every((pz) => piezaOk(e, pz)), centros: (e) => skewb.estaResuelto(e) };
+}
+
 // Etapas que tiene que tener cada método (en orden)
 const ETAPAS = {
   '3x3/principiantes': ['cruz', 'capa1', 'capa2', 'cruzam', 'caraam', 'esqam', 'ariam'],
@@ -104,6 +138,8 @@ const ETAPAS = {
   '4x4/cfop': ['centros', 'aristas', 'cruz', 'f2l', 'paridad', 'oll', 'paridad', 'pll'],
   '5x5/principiantes': ['centros', 'aristas', 'cruz', 'capa1', 'capa2', 'cruzam', 'caraam', 'esqam', 'ariam'],
   '5x5/cfop': ['centros', 'aristas', 'cruz', 'f2l', 'oll', 'pll'],
+  'pyraminx/principiantes': ['puntas', 'centros', 'capa1', 'ultima'],
+  'skewb/principiantes': ['capa1', 'esquinas', 'centros'],
 };
 
 async function probarMetodo(p, metodo, semilla, paralelo = null) {
@@ -179,6 +215,8 @@ const PARALELO_5 = { modulo: new URL('../src/puzzles/cubo-grande.js', import.met
 const cubo5 = crearCuboGrande(5);
 test('aprender: 5x5 por reducción (3x3 por capas)', () => probarMetodo(cubo5, 'principiantes', 17, PARALELO_5));
 test('aprender: 5x5 por reducción (3x3 con CFOP)', () => probarMetodo(cubo5, 'cfop', 18, PARALELO_5));
+test('aprender: Pyraminx por el método de principiantes', () => probarMetodo(pyraminx, 'principiantes', 19));
+test('aprender: Skewb por el método de principiantes', () => probarMetodo(skewb, 'principiantes', 20));
 test('aprender: 3x3 por el método de principiantes', () => probarMetodo(cubo3, 'principiantes', 11));
 test('aprender: 3x3 por CFOP', () => probarMetodo(cubo3, 'cfop', 12));
 test('aprender: 2x2 por el método de principiantes', () => probarMetodo(cubo2, 'principiantes', 13));

@@ -13,6 +13,7 @@ import { permutacionesDeColor, reetiquetar } from '../core/simetria.js';
 import { svgDePegatinas } from '../core/render.js';
 import { barajar, entero, rngSeguro } from '../core/rng.js';
 import { paridad } from '../core/perm.js';
+import { crearAprenderPyraminx, METODOS_PYRAMINX } from '../aprender/metodos-pyraminx.js';
 
 const S6 = Math.sqrt(6), S2 = Math.sqrt(2);
 const VERT = { U: [0, 3, 0], L: [-S6, -1, S2], R: [S6, -1, S2], B: [0, -1, -2 * S2] };
@@ -137,7 +138,7 @@ function analizar(estado) {
   if (paridad(A.perm) !== 0) errores.push('Dos aristas están intercambiadas: en un Pyraminx la permutación de las aristas siempre es par.');
   if (A.ori.reduce((a, x) => a + x, 0) % 2 !== 0) errores.push('Una arista está volteada: el número de aristas volteadas siempre es par.');
   if (errores.length) return { valido: false, errores };
-  return { valido: true, errores: [], norm, piezas: id.orbitas };
+  return { valido: true, errores: [], norm, piezas: id.orbitas, sigma };
 }
 
 const coordsDe = (piezas) => [modelo.coordOri(1).codificar(piezas), modelo.coordPerm(2).codificar(piezas), modelo.coordOri(2).codificar(piezas)];
@@ -209,6 +210,7 @@ function invertirMovimiento(m) {
 }
 
 const pegatinas2D = geo.pegatinas2D;
+const aprenderPyraminx = crearAprenderPyraminx({ geo, modelo, analizar, puntas, centros });
 
 export default definirPuzzle({
   id: 'pyraminx',
@@ -246,6 +248,9 @@ export default definirPuzzle({
   validar: (e) => { const a = analizar(e); return { valido: a.valido, errores: a.errores }; },
   resolver,
   generarScramble,
+  // Modo aprender: método de principiantes por capas, explicado por etapas
+  metodosAprender: METODOS_PYRAMINX,
+  aprender: (estado) => aprenderPyraminx(estado),
   geo,
   ...modelo3DGeo(geo, { desde: [0.75, 0.32, 1], arriba: [0, 1, 0] }),
   modelo,
