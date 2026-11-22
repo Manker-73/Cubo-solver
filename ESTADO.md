@@ -1,10 +1,45 @@
-# Estado del proyecto (final de la noche 10 — 22/11/2026)
+# Estado del proyecto (fase 0 tras la noche 10 — 23/11/2026)
 
-> Sesión en curso (fase 0, tests más rápidos): medición de partida en marcha.
+> Progreso de la fase 0 (tests más rápidos, sin cambios en `src/`): diagnóstico ✔ · `test:humo` < 2 min ✔ · `test:rapido` ✔ (8 min 20 s; objetivo < 8 min ✘ por ~20 s: la app sola son ~3,6 min) · `npm test` sin cambios en lo que comprueba ✔ (completo lanzado en GitHub; en local solo los ficheros baratos) · `test:solo` ✔ · GitHub Action ✔ (pasa en GitHub) · sabotajes ✔ · caché de tablas en disco ✘ (descartada con números, ver DECISIONES.md) · documentación ✔ · push ✔ · GitHub Pages ✔.
 
 > Progreso de la noche 10 (3x3 vendado): capa genérica de bloqueos ✔ · M/E/S y rotaciones ✔ · validación de la configuración (imposible, bloqueado, muy limitado, geometrías y estados) ✔ · scramble (uniforme o paseo al azar medido) ✔ · estrategias A y B con elección automática ✔ · firmas de la comunidad (importar/exportar) ✔ · interfaz (2D/3D, ejemplos, guardar, URL) ✔ · tests de 500 casos ✔ · Chromium real ✔ · documentación ✔ · push ✔ (hecho al reanudar la sesión; el workflow de GitHub Pages terminó bien) · artifact republicado ✔.
 
 > Progreso de la noche 9: corrección del primer "Resolver" ✔ · 5x5 ✔ · Pyraminx ✔ · Skewb ✔ · Square-1 ✔ · números de las OLL ✔ · Megaminx ✘ · 6x6/7x7 ✘ · tests y Chromium ✔ · documentación ✔ · push, GitHub Pages (despliegue del último commit comprobado en la web: un clic en *Resolver* nada más cargar → "Generando tablas…" → solución) y artifact republicado ✔.
+
+## Fase 0: tests más rápidos
+
+**Antes de empezar cada noche: `npm run test:humo`** (~1 min 40 s). Mientras se trabaja: `npm run test:solo -- <áreas>`. Antes de subir: `npm run test:rapido` (también lo ejecuta la Action en cada push). La suite completa (`npm test`) se puede lanzar en GitHub: Actions → *Tests (rápido)* → *Run workflow* → nivel `completo`.
+
+### Tiempos (2 núcleos, local)
+| Nivel | Antes | Después | Tests |
+|---|---|---|---|
+| `test:humo` | — | 1 min 39 s | 33 (20 del humo de puzzles, 11 del registro, 2 de la app) |
+| `test:rapido` | 18 min 24 s | 8 min 20 s | 169 (antes 168; +1: huellas) |
+| `npm test` | ~1 h+ (no medido en esta sesión) | mismos casos y comprobaciones | +1 test (huellas) y una comprobación más en la app |
+
+En GitHub (4 núcleos, más lentos): la primera versión de `test:rapido` tardó 13 min.
+
+### `test:rapido` por fichero (segundos)
+| Fichero | Antes | Después | Por qué tardaba |
+|---|---|---|---|
+| bloqueos | 367 | 86 | ~1,1 s por caso con límite de tiempo (A, B y comparación sin bloqueos); tabla BFS generada 3 veces en los espacios pequeños |
+| app | 221 | 215 | tablas y solvers de cada puzzle en el hilo principal de jsdom, en cada test (no se puede recortar sin cambiar lo que se prueba) |
+| cubo-grande (+ humo) | 207 | 83 | 6x6/7x7 ~3–5 s por caso; respaldo 12 resoluciones |
+| aprender | 178 | 37 | 4x4 ~1,2 s por caso (reducción completa), 100 casos × 2 métodos |
+| square1 | 50 | 17 | scramble de estado aleatorio = búsqueda; solver ~0,3 s |
+| megaminx (+ Pochmann) | 53 | 27 | ~2,6 s por caso |
+| resto | 27 | 33 | (skewb: el BFS de 3.149.280 estados, 6–13 s según la memoria) |
+
+### Sabotajes (deshechos; `src/` y `dist/` idénticos a lo publicado)
+| Sabotaje | `test:humo` | Nivel rápido | Antes de esta sesión |
+|---|---|---|---|
+| R del Skewb invertido | ✔ (solo las huellas) | ✔ (solo las huellas; los 5 tests del Skewb y el modo aprender pasan) | **no lo detectaba ningún nivel** |
+| Modo aprender: se pierden las etapas de un movimiento (`guion.js`) | ✔ (6 de 7 puzzles) | ✔ (`test:solo aprender`: 10 de 11 métodos; el Skewb no tiene etapas de un movimiento) | lo detectaba `aprender.test.mjs` |
+| App: la solución pierde su último giro (`main.js`) | ✔ (los dos tests de la app) | ✔ (mismos tests) | **no lo detectaba** (la prueba de humo solo miraba el texto «Resuelto») |
+
+### Pendiente
+- `test:rapido` está ~20 s por encima del objetivo de 8 min; el suelo es la app (~3,6 min). Bajarlo más exigiría acelerar la generación de tablas de la app (cambio en `src/`) o compartir una ventana de jsdom entre tests (cambia lo que se prueba).
+- Resultado de `npm test` completo: ver la ejecución manual en Actions (lanzada al terminar la sesión).
 
 ## Qué funciona
 

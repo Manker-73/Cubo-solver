@@ -322,7 +322,7 @@ wings) en el estado, en vez de deducirla de los colores: es lo único que no es 
 | Nivel | Qué ejecuta | Tiempo (2 núcleos) |
 |---|---|---|
 | `npm run test:humo` | `humo.test.mjs`, `registro.test.mjs` y dos tests de `app.test.mjs` (sin Worker y con Worker), con `--test-name-pattern` | ~1 min 40 s |
-| `npm run test:rapido` | todos los ficheros con `NIVEL=rapido CASOS=100` | ~8 min |
+| `npm run test:rapido` | todos los ficheros con `NIVEL=rapido CASOS=100` | ~8 min 20 s |
 | `npm test` | todos los ficheros con `CASOS=1000` (el comando de siempre) | ~1 h |
 | `npm run test:solo -- <áreas>` | los ficheros de esas áreas y, en los compartidos, los tests que las nombran (nivel rápido) | según el área |
 

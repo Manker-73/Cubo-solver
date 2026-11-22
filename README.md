@@ -78,7 +78,7 @@ Tres niveles (tiempos con 2 núcleos):
 
 ```
 npm run test:humo     # < 2 min (~1 min 40 s): humo de cada puzzle, registro y humo de la app (sin Worker y con Worker)
-npm run test:rapido   # ~8 min: las mismas comprobaciones que npm test, con menos casos en los tests caros
+npm run test:rapido   # ~8 min 20 s: las mismas comprobaciones que npm test, con menos casos en los tests caros
 npm test              # suite completa (1000 casos por puzzle; 500 en 4x4, 5x5, Megaminx, el modo aprender
                       # y cada configuración vendada; 100 en 6x6 y 7x7); ~1 h
 npm run bench         # benchmark de los solvers (N=200 npm run bench para más casos)
