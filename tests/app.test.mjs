@@ -790,6 +790,18 @@ async function probarBloqueos(ctx) {
   for (let i = 0; i < n; i++) doc.getElementById('r-adelante').click();
   assert.match(doc.getElementById('paso').textContent, /Resuelto/);
   assert.ok(w.cuboSolver.resuelto());
+  // La estrategia B forzada: fases Geometría / Permutación en la barra y en el paso
+  doc.getElementById('bloq-estrategia').value = 'B';
+  doc.getElementById('resolver').click();
+  await hasta(() => /estrategia B/.test(doc.getElementById('sol-resumen').textContent) || doc.querySelector('#mensajes .mensaje.error'), 60000);
+  const fases = [...doc.querySelectorAll('#fases .fase')].map((b) => b.dataset.fase);
+  assert.ok(fases.includes('Permutación'), fases.join());
+  if (fases.includes('Geometría')) {
+    doc.getElementById('r-adelante').click();
+    assert.match(doc.getElementById('paso').textContent, /Geometría/);
+  }
+  comprobarSolucionVendada(doc, [['UFR', 'UF']], ini);
+  doc.getElementById('bloq-estrategia').value = '';
   // Ejemplo predefinido de espacio pequeño (CAB): scramble de estado aleatorio y solución óptima
   const sel = doc.getElementById('bloq-config');
   sel.value = 'ej:cab';

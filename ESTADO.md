@@ -1,4 +1,6 @@
-# Estado del proyecto (final de la noche 9 — 15/11/2026)
+# Estado del proyecto (final de la noche 10 — 22/11/2026)
+
+> Progreso de la noche 10 (3x3 vendado): capa genérica de bloqueos ✔ · M/E/S y rotaciones ✔ · validación de la configuración (imposible, bloqueado, muy limitado, geometrías y estados) ✔ · scramble (uniforme o paseo al azar medido) ✔ · estrategias A y B con elección automática ✔ · firmas de la comunidad (importar/exportar) ✔ · interfaz (2D/3D, ejemplos, guardar, URL) ✔ · tests de 500 casos ✔ · Chromium real ✔ · documentación ✔ · push ✘ (la sesión no tiene permiso de escritura en el repositorio: ver abajo) · artifact republicado ✔.
 
 > Progreso de la noche 9: corrección del primer "Resolver" ✔ · 5x5 ✔ · Pyraminx ✔ · Skewb ✔ · Square-1 ✔ · números de las OLL ✔ · Megaminx ✘ · 6x6/7x7 ✘ · tests y Chromium ✔ · documentación ✔ · push, GitHub Pages (despliegue del último commit comprobado en la web: un clic en *Resolver* nada más cargar → "Generando tablas…" → solución) y artifact republicado ✔.
 
@@ -14,7 +16,46 @@
 | **Square-1** | **estado aleatorio (uniforme, ≥ 11 mov.)** | **sí** | **dos fases (~11,4 barras)** | **sí** |
 | **Megaminx** | Pochmann (7×11) | **sí** | **por etapas con búsqueda (IDA*) + última capa con macros (~90 giros de cara)** | **sí** (+ rellenar cara, vistas U/D, deshacer) |
 
+**3x3 vendado** (sección *Bloqueos*): bloques definidos por el usuario; scramble de estado aleatorio uniforme (espacios ≤ 2 millones de estados) o de giros legales al azar; solución óptima por BFS o la más corta de dos estrategias (búsqueda directa / geometría y luego permutación).
+
 Ya no queda ningún puzzle sin validador ni solver. **Modo aprender** (solución por un método humano, explicada por etapas): 2x2, 3x3, 4x4, **5x5, Pyraminx, Skewb y Square-1** (falta Megaminx, 6x6 y 7x7).
+
+## Noche 10: 3x3 vendado (bloqueos definidos por el usuario)
+
+### Qué hay
+- `src/core/bloqueos.js`: capa **genérica** `puzzleConBloqueos(puzzle, bloques)` sobre la interfaz común (el puzzle aporta un `soporteBloqueos`: piezas, giros y capas). Legalidad con una sola regla, geometrías por BFS, grupo de la fase 2 por Schreier–Sims, número exacto de estados alcanzables, BFS completo de los espacios pequeños, scramble, estrategias A y B. Probada también con el 2x2. Detalles en ARQUITECTURA.md ("Bloqueos") y decisiones en DECISIONES.md ("Noche 10").
+- 3x3: giros de cara, M, E, S y x, y, z; núcleo como pieza (para las firmas); Kociemba con filtro de legalidad como búsqueda directa; comparación con la solución sin bloqueos (óptima si da tiempo, si no Kociemba).
+- Formato de la comunidad: firma hexadecimal de 54 uniones (Bandaged Cube Explorer), importar y exportar. Orden de las uniones comprobado con cifras publicadas: CAB Cube 15.704 formas y 10 permutaciones (exacto).
+- Interfaz: sección *Bloqueos* (crear, editar y borrar bloques tocando piezas en 2D o 3D, cada uno con su color; errores al momento; ejemplos; guardar en el navegador; enlace `#bloqueos=…` o `?firma=…`; elegir estrategia A, B o la más corta), análisis (giros posibles, geometrías, estados, tiempo de las tablas), piezas pegadas dibujadas unidas en 3D y en 2D, resumen de la solución (estrategia, fases, comparación sin bloqueos) y fases *Geometría* / *Permutación* en la reproducción.
+
+### Resultados (`tests/bloqueos.test.mjs`, 500 scrambles y soluciones por configuración)
+Cada scramble y cada solución se aplican giro a giro comprobando que el giro es legal en ese momento y que todos los bloques siguen enteros; estado final resuelto en el 100 % de los casos. Además, en cada caso, la solución de la estrategia B (gane o no): su fase 1 acaba en la geometría resuelta y su fase 2 acaba resuelta (y cada tramo que indica el solver acaba en la geometría resuelta). Límite de tiempo en el test: 700 ms (en la app, 2,5 s); el tiempo de la "elegida" incluye la comparación sin bloqueos (~0,4 s). 2 hilos en 2 núcleos. Longitudes en giros de cara (HTM).
+
+| Configuración | Geometrías | Estados | Espacio | Tablas | Scramble (giros) | Resueltos | A: long. / ms | B: long. (fase 1 + fase 2) / ms | Elegida: long. / ms medio / ms máx. | Gana A / B | Sin bloqueos |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| Sin bloqueos | 1 | 43.252.003.274.489.856.000 | grande | 38 ms | 20,73 | 500/500 (100 %) | — | — | 19,81 / 45 / 702 | (3x3 normal) | — |
+| Una pareja (UFR+UF) | 24 | 1.802.166.803.103.744.000 | grande | 965 ms | 45,85 | 500/500 (100 %) | 20,27 / 398 | 22,02 (1,92 + 20,1) / 323 | 20,24 / 1.123 / 1.695 | 491 / 9 | 19,89 (0 óptimas) |
+| Un bloque 1x2x2 | 4 | 13.652.778.811.392.000 | grande | 1.058 ms | 33,46 | 500/500 (100 %) | 19,78 / 397 | 20,89 (0,75 + 20,14) / 296 | 19,76 / 1.096 / 1.864 | 487 / 13 | 19,46 (0 óptimas) |
+| Varios bloques (pareja, barra 1x1x3, centro+arista) | 1.440 | 108.355.387.392.000 | grande | 1.210 ms | 39,15 | 500/500 (100 %) | 24,14 / 396 | 29,24 (5,17 + 24,07) / 328 | 24,13 / 1.125 / 1.550 | 475 / 25 | 19,32 (0 óptimas) |
+| Casi bloqueada (2x2x2 + centros D y L unidos: solo gira B) | 1 | 4 | pequeño | 10 ms | 1 | 500/500 (100 %) | 1 / 0 | 1 (0 + 1) / 0 | 1 / 3 / 953 | 500 / 0 | 1 (500 óptimas) |
+| Bicube (E0400B43FC5A1) | 121 | 7.260 | pequeño | 32 ms | 18,29 | 500/500 (100 %) | 18,29 / 0 | 20,26 (3,93 + 16,33) / 1 | 18,29 / 223 / 1.048 | 500 / 0 | 11,93 (249 óptimas) |
+| CAB Cube 5-5 (22006F100000C6) | 15.704 | 157.040 | pequeño | 1.011 ms | 33,77 | 500/500 (100 %) | 33,77 / 0 | 54,11 (23,77 + 30,34) / 3 | 33,77 / 382 / 1.110 | 500 / 0 | 16,47 (33 óptimas) |
+| Bandaged Cube de twistypuzzles (33EC01800846) | 440 | 1.108.800 | pequeño | 4.475 ms | 18,53 | 500/500 (100 %) | 18,53 / 0 | 21,33 (5,59 + 15,74) / 1 | 18,53 / 348 / 1.234 | 500 / 0 | 15,21 (77 óptimas) |
+| Most signatures (10840080200C21) | 184.352 | 955.680.768 (aprox.) | grande | 3.620 ms | 74,34 | 500/500 (100 %) | 22,38 / 385 | 30,07 (12,07 + 18) / 354 | 22,63 / 1.128 / 21.390 | 488 / 12 | 17,21 (6 óptimas) |
+
+
+- **Cuándo gana cada estrategia**: en los espacios pequeños, siempre la A (es la óptima por BFS); la B es 2–20 giros más larga (en el CAB, +20: su fase 1 sola ya son ~24). En los grandes, la A (Kociemba con legalidad) gana en ~95–98 % de los casos y la B en el resto (25 de 500 con varios bloques, 13 con el 1x2x2, 12 en el *Most signatures*, 9 con la pareja), cuando su fase 1 deja un estado que Kociemba resuelve más corto. Lo esperado era que la B ganase en los vendados complejos; con estos datos no es así, porque una búsqueda directa que respeta la legalidad no tiene que pagar la fase 1 por separado. Detalles en DECISIONES.md.
+- Unidad: firmas conocidas (CAB, Bicube, Equator, *Most signatures* = 2 · 92.176 geometrías), BFS = |geometrías| · |grupo de la fase 2|, configuraciones imposibles (no vecinas, centros opuestos, pieza repetida o inexistente) y totalmente bloqueadas, giros ilegales con mensaje, bloques rotos e inalcanzables en el validador, capas centrales y rotaciones (20 secuencias de 40 giros legales cualesquiera), sin bloqueos = 3x3 normal (mismo scramble y misma solución), 2x2 vendado con la misma capa.
+- Mezcla de los scrambles de giros al azar: medida con `scripts/mezcla-bloqueos.mjs` (tabla en DECISIONES.md); pasos = max(80, 4·d²) con d el diámetro de las geometrías.
+
+### Prueba de humo y Chromium
+- `tests/app.test.mjs`: tres pruebas nuevas (sin Worker, con los Workers reales y por URL): crear un bloque tocando piezas, error de un bloque imposible, aplicar, análisis, scramble legal, resolver, comprobar la solución en Node, reproducir hasta el final, estrategia B forzada con sus fases, ejemplos, firmas (imposible y válida), guardar y quitar.
+- `scripts/comprobar-bloqueos.py` (Chromium real, escritorio 1280 px claro y móvil 390 px oscuro táctil, con 3D y sin 3D): todo lo anterior también tocando el modelo 3D; pegatinas unidas en 3D (4 en la pareja, 8 en el 1x2x2, 36 en el CAB); sin errores en consola ni scroll horizontal. Capturas en `docs/capturas/bloqueos-*.jpg`.
+
+### Pendiente / para decidir
+- **Push**: la sesión de esta noche no tenía permiso de escritura en `Manker-73/Cubo-solver` (el proxy de git no da credenciales para el repositorio). Todo está en commits locales; falta `git push` y comprobar GitHub Pages.
+- Centros opuestos: la especificación los da por imposibles, pero existen cubos reales así (a través del núcleo; ver DECISIONES.md). Quitar la regla es una línea.
+- Un 4x4 vendado necesitaría seguir la identidad de las piezas iguales en el estado.
 
 ## Noche 9
 

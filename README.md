@@ -6,6 +6,7 @@ Aplicación web en un único HTML, sin servidor.
 - **Scrambles**: 2x2 a 7x7, Square-1, Skewb, Pyraminx y Megaminx (estado aleatorio en 2x2, 3x3, Pyraminx, Skewb y Square-1).
 - **Validador y solucionador en todos los puzzles**: 2x2 (óptimo), 3x3 (dos fases de Kociemba), 4x4 (reducción en tres fases de búsqueda, sin paridades OLL ni PLL, ~55 movimientos) y 5x5 a 7x7 (reducción: búsqueda por etapas en los centros, aristas emparejadas con un voraz de macros que no mueven los centros y conmutadores para lo que quede; ~109, ~256 y ~356 movimientos), Pyraminx (óptimo), Skewb (óptimo), Square-1 (dos fases: forma de cubo y permutación, solo con giros posibles) y Megaminx (por etapas con búsqueda IDA* y la última capa con macros buscadas automáticamente; ~90 giros de cara de media).
 - **Modo aprender** (2x2, 3x3, 4x4, 5x5, Pyraminx, Skewb y Square-1): además de la solución por ordenador, una solución por un **método humano** explicada paso a paso: 3x3 por capas para principiantes o CFOP; 2x2 por capas o Ortega; 4x4 y 5x5 por reducción (con el 3x3 por capas o CFOP y las paridades); Pyraminx, Skewb y Square-1 por sus métodos de principiantes.
+- **3x3 vendado** (bloqueos definidos por el usuario): pega piezas entre sí (parejas, barras, bloques 1x2x2, 2x2x2…) y el 3x3 se comporta como un cubo vendado real: solo giros que no rompen ningún bloque, scramble y solución adaptados a cada configuración, dos estrategias de solución (búsqueda directa, y geometría y luego permutación) y comparación con la solución sin bloqueos.
 - Las tablas se generan en el navegador dentro de un Web Worker (la página no se bloquea); si no hay Worker, en el hilo principal.
 
 **App en línea: https://manker-73.github.io/Cubo-solver/**
@@ -38,6 +39,15 @@ Al resolver en modo aprender:
 
 Longitudes medias (500 casos por método): 3x3 por capas ~145 giros y CFOP ~56; 2x2 por capas ~70 y Ortega ~23; 4x4 por reducción ~270 (por capas) y ~183 (CFOP); 5x5 ~424 y ~337; Pyraminx ~26; Skewb ~22; Square-1 ~60 movimientos. Aún no hay modo aprender en 6x6, 7x7 ni Megaminx.
 
+### 3x3 vendado (sección *Bloqueos*)
+En el 3x3, debajo de los dos paneles, está la sección **Bloqueos**:
+1. *Nuevo bloque* y toca las piezas del cubo (en 2D o en 3D) que quieres pegar; vuelve a tocar una pieza para quitarla. Puedes crear varios bloques (cada uno con su color), editarlos y borrarlos. Los bloques se definen sobre el cubo resuelto y sus piezas tienen que ser vecinas (unidas por caras); un bloque imposible (piezas sueltas o dos centros opuestos) se avisa al momento.
+2. *Aplicar*: la app analiza la configuración en segundo plano y dice qué giros se pueden hacer con el cubo resuelto, cuántas **geometrías** (formas sin mirar los colores) y cuántos **estados** son alcanzables, y avisa si el cubo queda muy limitado o totalmente bloqueado.
+3. Desde ese momento el scramble y la solución solo usan giros legales. Si el espacio es pequeño (hasta 2 millones de estados), el scramble es un estado aleatorio uniforme y la solución, óptima; si es grande, el scramble son giros legales al azar y la solución la mejor de dos estrategias: **A** (búsqueda directa) y **B** (primero la geometría, como la forma del Square-1, y luego las piezas). El resumen dice qué estrategia ganó, cuántos movimientos tiene cada fase y cuántos haría falta sin bloqueos; en la reproducción, la barra de fases marca *Geometría* y *Permutación*.
+- *Cargar* tiene ejemplos (pareja, centro + arista, 1x2x2, 1x2x3, 2x2x2, cubos clásicos como el Bicube, el Bandaged Cube de Meffert o el CAB Cube) y tus configuraciones guardadas. En *Guardar, compartir e importar*: guardar en el navegador, **copiar un enlace** que abre la app con esos bloques, y la **firma** de la comunidad (Bandaged Cube Explorer, hexadecimal) para importar o exportar.
+- En 3D, las piezas pegadas se dibujan unidas, sin la separación negra.
+- La notación es la de la WCA; también se aceptan M, E, S y las rotaciones x, y, z (las soluciones usan solo giros de cara).
+
 ### Vista 3D
 - La vista previa del scramble y la reproducción de la solución se ven en **3D**, con los giros animados: arrastra con el ratón o el dedo para girar el puzzle (*Vista inicial* lo devuelve a su sitio). Los botones **2D / 3D** cambian entre el modelo 3D y la red plana.
 - Bajo la vista previa hay un reproductor del scramble: ⇤ lo deja resuelto, ▶ lo aplica movimiento a movimiento (velocidad ×1…×8, pausa, paso atrás). En el Megaminx, al acabar, el puzzle gira entero hasta la orientación de referencia, como indica la nota.
@@ -65,7 +75,7 @@ npm run build
 ## Tests
 
 ```
-npm test            # 1000 casos por puzzle (500 en 4x4, 5x5, Megaminx y el modo aprender, 100 en 6x6 y 7x7); ~65 min
+npm test            # 1000 casos por puzzle (500 en 4x4, 5x5, Megaminx, el modo aprender y cada configuración vendada, 100 en 6x6 y 7x7)
 npm run test:rapido # 100 casos por puzzle (20 en 4x4–7x7 y Megaminx; 100 en el modo aprender); ~16 min
 npm run bench       # benchmark de los solvers (N=200 npm run bench para más casos)
 ```

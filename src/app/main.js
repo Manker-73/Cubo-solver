@@ -797,7 +797,7 @@ async function resolver() {
     if (metodo) { await resolverAprendiendo(p, metodo, vigente); return; }
     mensaje('info', 'Buscando solución…');
     await esperarPintado();
-    const r = await motor.pedir('resolver', p.id, datosDe(p, { estado: st.editor }));
+    const r = await motor.pedir('resolver', p.id, datosDe(p, p.bloqueos ? { estado: st.editor, opciones: { estrategia: panelBloqueos.estrategia() } } : { estado: st.editor }));
     if (!vigente()) return;
     limpiarMensajes();
     if (!r.ok) {
@@ -938,6 +938,7 @@ function resumenVendado(largo) {
   const v = st.sol.vendado, d = v.detalle || {};
   let t = `${largo} · ${Math.max(1, Math.round(st.sol.ms))} ms`;
   if (v.estrategia === 'A') t += ` · estrategia A (búsqueda directa: ${d.A ? d.A.metodo + (d.A.optima ? ', óptima' : '') : ''})`;
+  else if (v.estrategia === 'B' && !d.B.fase2) t += ` · estrategia B (solo geometría: ${d.B.fase1})`;
   else if (v.estrategia === 'B') t += ` · estrategia B (geometría ${d.B.fase1} + permutación ${d.B.fase2})`;
   const otra = v.estrategia === 'A' ? d.B : d.A;
   if (otra) t += ` · la otra: ${otra.longitud}`;

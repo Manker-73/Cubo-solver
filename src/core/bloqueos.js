@@ -533,6 +533,7 @@ export function crearAnalisisBloqueos(soporte, definicion, opciones = {}) {
   info.geometriasExacto = geo.completo;
   info.diametroGeometria = geo.diametro;
   info.msGeometrias = Math.round(ahora() - tg);
+  info.pasosScramble = longitudScramble({ info });
   const distGeo = new Map();
   for (const [k, i] of geo.indice) distGeo.set(k, geo.nodos[i].d);
 
@@ -680,7 +681,7 @@ function idaGenerico(A, S, { msMax = 1000, maxProf = 30, conGeo = true, ultima =
 
 /**
  * Resuelve un estado S (normalizado) con las dos estrategias y devuelve la más
- * corta, con los datos de cada una. opciones: { msMax (límite de tiempo; se
+ * corta (o la de opciones.estrategia, 'A' o 'B'), con los datos de cada una. opciones: { msMax (límite de tiempo; se
  * devuelve la mejor encontrada), msDuro (si en msMax no hay ninguna solución, se
  * sigue buscando con más tiempo hasta este límite), solucionesFase1, sinIDA }.
  */
@@ -759,6 +760,8 @@ export function resolverBloqueos(A, S, opciones = {}) {
   for (const e of ['A', 'B']) {
     if (res[e] && (!mejor || res[e].movs.length < mejor.movs.length)) { mejor = res[e]; estrategia = e; }
   }
+  // opciones.estrategia = 'A' | 'B': esa, si la hay (para ver la otra en la interfaz)
+  if (opciones.estrategia && res[opciones.estrategia]) { mejor = res[opciones.estrategia]; estrategia = opciones.estrategia; }
   if (!mejor) return null;
   let fases = [];
   if (estrategia === 'B') {
@@ -796,13 +799,24 @@ export function scrambleBloqueos(A, rng, opciones = {}) {
       return invertirSecuencia(mod, sol);
     }
   }
-  const L = opciones.longitud ?? longitudScramble(A);
-  return paseoAleatorio(A, rng, L);
+  const T = opciones.pasos ?? longitudScramble(A);
+  for (let intento = 0; ; intento++) {
+    const w = paseoAleatorio(A, rng, 0, T, { pasosFijos: true });
+    let S = mod.resuelto;
+    for (const m of w) S = mod.aplicar(S, m);
+    if (!mod.esResuelto(S) || intento >= 20) return w;
+  }
 }
 
-/** Longitud de los scrambles de movimientos al azar (ver DECISIONES.md: criterio medido). */
+/**
+ * Pasos del paseo al azar de los scrambles de los espacios grandes: max(80, 4·d²),
+ * con d el diámetro del grafo de geometrías (un paseo al azar tarda del orden de d²
+ * en recorrerlo). Medido con scripts/mezcla-bloqueos.mjs (ver DECISIONES.md): hacen
+ * falta 50, 50, 100 y 1.600 pasos con d = 1, 3, 7 y 24; esto da 80, 80, 196 y 2.304.
+ */
 export function longitudScramble(A) {
-  return Math.max(25, 30 + 3 * (A.info.diametroGeometria || 0));
+  const d = A.info.diametroGeometria || 0;
+  return Math.max(80, 4 * d * d);
 }
 
 /**
@@ -815,7 +829,7 @@ export function longitudScramble(A) {
  * al que se llega no cambia por escribirlo así; la legalidad de la palabra
  * reducida se comprueba de nuevo.
  */
-export function paseoAleatorio(A, rng, L, maxPasos = 200 * L) {
+export function paseoAleatorio(A, rng, L, maxPasos = 200 * L, { pasosFijos = false } = {}) {
   const { mod } = A;
   const veces = mod.movs.map((n) => (n.endsWith("'") ? 3 : n.endsWith('2') ? 2 : 1));
   const deFamilia = new Map();
@@ -835,7 +849,9 @@ export function paseoAleatorio(A, rng, L, maxPasos = 200 * L) {
     }
     return { est, T };
   };
-  for (let paso = 0; paso < maxPasos && res.length < L; paso++) {
+  // pasosFijos: exactamente maxPasos pasos (la palabra sale de la longitud que salga);
+  // si no, hasta que la palabra reducida tenga L giros
+  for (let paso = 0; paso < maxPasos && (pasosFijos || res.length < L); paso++) {
     const m = Math.floor(rng() * mod.nM);
     if (!mod.legal(S, m)) continue;
     const n = res.length;
@@ -848,7 +864,13 @@ export function paseoAleatorio(A, rng, L, maxPasos = 200 * L) {
     };
     if (n && mod.caraDe[res[n - 1]] === mod.caraDe[m]) unir(n - 1);
     else if (n >= 2 && eje(res[n - 1]) === eje(m) && mod.caraDe[res[n - 2]] === mod.caraDe[m]) unir(n - 2);
-    else nueva = res.concat([m]);
+    else {
+      // lo normal: un giro más al final (ya se sabe que es legal)
+      S = mod.aplicar(S, m);
+      res.push(m);
+      estados.push(S);
+      continue;
+    }
     const r = rehacer(Math.min(desde, n), nueva);
     if (!r) continue; // no debería pasar (ver arriba); por si acaso, se descarta el paso
     res = nueva; estados = r.est; S = r.T;

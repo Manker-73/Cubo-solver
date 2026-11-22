@@ -227,7 +227,7 @@ export function crearPanelBloqueos(ctx) {
     fila(`Alcanzables: ${formatearNumero(a.geometrias)} geometrías${a.geometriasExacto ? '' : ' (o más)'} y ${formatearNumero(a.estados)} estados${a.estadosExacto ? '' : ' (aprox.)'}.`);
     if (a.sinBloques) fila('Es el 3x3 normal.');
     else if (a.espacio === 'pequeño') fila(`Espacio pequeño: scramble de estado aleatorio uniforme y solución óptima (BFS completo, diámetro ${a.diametro}).`);
-    else fila(`Espacio grande: scramble de movimientos legales al azar; solución por búsqueda directa y por dos fases (geometría y permutación), la más corta.`);
+    else fila(`Espacio grande: scramble de giros legales al azar (${formatearNumero(a.pasosScramble || 0)} pasos de un paseo al azar, suficientes para mezclar geometría y piezas); solución por búsqueda directa y por dos fases (geometría y permutación), la más corta.`);
     if (a.msTablas != null) fila(`Tablas generadas en ${formatearNumero(a.msTablas)} ms${a.mbBFS ? ` (${a.mbBFS} MB)` : ''}.`, 'tenue');
     for (const e of a.avisos || []) fila(e, 'mensaje info');
   }
@@ -330,5 +330,7 @@ export function crearPanelBloqueos(ctx) {
       pintar();
     },
     fijarAnalisis(a) { analisis = a || null; pintar(); },
+    /** Estrategia elegida para resolver ('' = la más corta, 'A' o 'B'). */
+    estrategia: () => $('bloq-estrategia').value,
   };
 }

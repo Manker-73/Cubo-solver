@@ -17,6 +17,9 @@ src/
     render.js       SVG a partir de polígonos 2D
     modelo3d.js     vista 3D sin dibujar: modelo de pegatinas 3D, piezas, comprobación de giros
     grupo.js        orden de un grupo de permutaciones (Schreier–Sims), para demostrar invariantes
+    bloqueos.js     BLOQUEOS (puzzles vendados), genérico: legalidad, geometrías, grupo de la fase 2, BFS, scramble, estrategias A y B, envoltorio puzzleConBloqueos
+    schreier.js     cadena de estabilizadores con arrays tipados (orden, pertenencia, elemento al azar)
+    tabla-estados.js  tabla hash de estados empaquetados (BFS completo de los espacios pequeños)
   puzzles/        un módulo por puzzle
     index.js        REGISTRO: la única lista de puzzles
     nxn.js          cubos NxN (modelo de pegatinas, notación, dibujo, scramble aleatorio, simplificación de capas)
@@ -28,7 +31,10 @@ src/
     cubo-comun.js   piezas y mensajes compartidos por 2x2/3x3
     cubo2.js        2x2 (validador, IDA* óptimo, estado aleatorio)
     cubo3.js        3x3 (validador, Kociemba, estado aleatorio)
-    kociemba.js     algoritmo de dos fases (cubies, coordenadas, tablas, búsqueda)
+    kociemba.js     algoritmo de dos fases (cubies, coordenadas, tablas, búsqueda; filtro de legalidad opcional; óptima por IDA* para comparar)
+    nxn-bloqueos.js soporte de bloqueos de los NxN (piezas y núcleo, M/E/S, capas, identificar por colores) y firmas de la comunidad
+    cubo3-bloqueos.js  3x3 vendado: Kociemba con legalidad (búsqueda directa), comparación sin bloqueos y ejemplos
+    vendado.js      fábrica crear3x3Vendado(bloques | firma) para tests y scripts
     pyraminx.js     Pyraminx
     skewb.js        Skewb
     megaminx.js     Megaminx: scramble Pochmann, validador, editor, dibujo, notación
@@ -60,6 +66,7 @@ src/
     escena3d.js     escena 3D sin WebGL: triángulos, colores, giro en curso, resaltado, selección por rayo
     vista3d.js      dibujo con WebGL (sin librerías), girar con ratón/dedo, animaciones, tocar para pintar
     reproductor.js  reproductor de una secuencia (scramble o solución): pasos animados, atrás, play/pausa
+    bloqueos-ui.js  sección "Bloqueos": grupos tocando piezas (2D/3D), ejemplos, guardar, URL, firmas
 tests/            node --test (npm test)
   paralelo.mjs    reparte los casos de los tests largos entre worker_threads
   trabajador.mjs  hilo de trabajo (importa el puzzle, genera sus tablas, resuelve)
@@ -70,6 +77,8 @@ scripts/
   comprobar-3d.py comprobación en Chromium real de la vista 3D (Playwright; capturas y FPS en docs/capturas/)
   comprobar-aprender.py  modo aprender en Chromium real (escritorio y móvil)
   comprobar-primer-resolver.py  un solo clic en "Resolver" nada más cargar la página (caché vacía; móvil con la CPU a ×4)
+  comprobar-bloqueos.py  cubo vendado en Chromium real (escritorio y móvil, con y sin 3D)
+  mezcla-bloqueos.mjs    cuánto hay que mezclar un cubo vendado con giros al azar (criterio de la longitud del scramble)
 ```
 
 ## Interfaz común de un puzzle
@@ -211,6 +220,83 @@ Cómo se construyen las soluciones:
 - **Números de las OLL**: `tests/oll-numeros.test.mjs` contiene dos referencias de la comunidad y comprueba que cada algoritmo con número resuelve el caso de ese número (el caso se calcula sobre el cubo).
 
 Para añadir un método: una función que reciba el estado, cree un guion con `crearGuion`, añada etapas y bloques, y devuelva `g.resultado(id)`; en el puzzle, `metodosAprender` y `aprender`. La interfaz y el Worker (`op: 'aprender'`) no necesitan cambios.
+
+## Bloqueos (puzzles vendados)
+
+El usuario agrupa piezas que quedan pegadas; un giro es **legal** solo si, para cada bloque, mueve
+todas sus piezas o ninguna. Es una capa genérica sobre la interfaz común:
+
+```js
+import { puzzleConBloqueos } from './core/bloqueos.js';
+const vendado = puzzleConBloqueos(cubo3, [['UFR', 'UF'], ['U', 'UL']]); // un puzzle más (definirPuzzle)
+```
+
+`puzzleConBloqueos(puzzle, bloques)` devuelve otro puzzle con la misma interfaz: `aplicarMovimiento`
+lanza un error con los giros ilegales, `generarScramble` y `resolver` solo usan giros legales,
+`validar` comprueba además que los bloques estén enteros y que el estado sea alcanzable, y `vista3D` /
+`renderizar` dibujan unidas las pegatinas vecinas de un mismo bloque. Extra: `analisis()` (geometrías,
+estados, avisos), `movimientoLegal(estado, mov)`, `bloquesIntactos(estado)`, `geometriaResuelta(estado)`.
+Sin bloques, delega todo en el puzzle original (mismo scramble y misma solución).
+
+### Qué necesita del puzzle: `soporteBloqueos`
+Nada de la capa sabe de cubos. El puzzle describe sus piezas y sus giros con **puntos** (las pegatinas y,
+si hace falta, puntos sin pegatina como el núcleo del 3x3):
+
+| Campo | Qué es |
+|---|---|
+| `puntos`, `nPegatinas` | número de puntos (los primeros `nPegatinas` son las pegatinas del estado) |
+| `piezas` | `[{ clave, tipo, puntos }]`: puntos de cada pieza en el puzzle resuelto (el primero, de referencia) |
+| `busqueda` | giros de los scrambles y las búsquedas (en el 3x3, los 18 de cara) |
+| `mapa(mov)`, `enCapa(mov)` | a dónde va cada punto; qué posiciones mueve el giro (también M/E/S y rotaciones) |
+| `rotaciones` | mapas de las rotaciones del puzzle entero (son libres: la solución sirve en cualquier orientación) |
+| `adyacentes(a, b)`, `opuestas(a, b)` | reglas de validación de los bloques |
+| `identificar(estado)`, `estadoDesde(donde)` | posiciones de los puntos a partir de los colores (piezas distinguibles) y al revés |
+| `ejeDe(familia)`, `pegatinas2D` | (opcionales) redundancias U D U; polígonos de la red para dibujar unidos los bloques |
+| `busquedaRapida(mod, S, opciones)` | (opcional) búsqueda directa propia del puzzle; en el 3x3, Kociemba con legalidad |
+
+`soporteBloqueosNxN(N)` (en `nxn-bloqueos.js`) lo da para cualquier N; con N = 2 y 3 las piezas se
+distinguen por sus colores. Para un 4x4 haría falta seguir la identidad de las piezas iguales (centros,
+wings) en el estado, en vez de deducirla de los colores: es lo único que no es genérico hoy.
+
+### Modelo (`crearModeloBloqueos`)
+- Estado interno `S`: posición del punto seguido de cada pieza que se mueve con los giros de búsqueda
+  (en el 3x3, 20: esquinas y aristas; los centros y el núcleo quedan fijos porque se normaliza la
+  orientación). La legalidad mira la capa de las posiciones de las piezas de cada bloque.
+- **Geometría**: posiciones de las piezas de los bloques, bloque a bloque (orientación incluida), con
+  los bloques **congruentes** (misma forma por una rotación) ordenados, porque no se distinguen. Decide
+  la legalidad y se mueve con los giros sin mirar las piezas sueltas.
+- **Grupo de la fase 2**: las secuencias que salen de la geometría resuelta y vuelven a ella forman un
+  grupo (aunque el puzzle entero no lo sea). Se genera con los lazos del árbol del BFS de geometrías y
+  se cuenta con Schreier–Sims (`schreier.js`). Estados alcanzables = |geometrías| · |grupo de la fase 2|
+  (demostración en DECISIONES.md; el BFS completo da la misma cifra en todos los casos probados).
+
+### Análisis, scramble y solver
+1. `crearAnalisisBloqueos`: validación de los bloques, giros legales en el resuelto (si no hay, *totalmente
+   bloqueado*), BFS de geometrías (hasta 400.000), grupo de la fase 2, número de estados, BFS completo si
+   caben (≤ 2 millones: tabla hash con estados empaquetados en bits) y, si no, tablas de poda por
+   proyecciones (grupos de 4 piezas, legalidad relajada a lo que se ve de cada bloque).
+2. Scramble: espacio pequeño → estado uniforme de la tabla del BFS (y su solución óptima, invertida);
+   grande → paseo al azar "perezoso" con giros legales (palabra reducida; longitud medida con
+   `scripts/mezcla-bloqueos.mjs`).
+3. `resolverBloqueos(A, S)` ejecuta las dos estrategias dentro del límite de tiempo y se queda con la
+   más corta (si no hay ninguna, sigue con más tiempo hasta `msDuro`):
+   - **A, búsqueda directa**: BFS (óptima) o, si el espacio es grande, la `busquedaRapida` del puzzle
+     (3x3: Kociemba con cada giro filtrado por la legalidad del estado de su profundidad, con las
+     tablas del 3x3 normal, que siguen siendo cotas inferiores) e IDA* con las tablas de proyecciones.
+   - **B, geometría y luego permutación**: varias soluciones de la fase 1 sobre la tabla exacta de
+     geometrías (las más cortas y hasta 2 más largas, en forma canónica) y, para cada una, la fase 2
+     desde la geometría resuelta (BFS, búsqueda rápida o IDA* con poda max(geometría, proyecciones)).
+4. En el 3x3 la solución se traduce al marco del usuario (si el cubo está girado por M/E/S o x/y/z).
+
+### Interfaz y Worker
+- `servicio.js`: las peticiones pueden llevar `bloqueos`; el Worker crea (y guarda, las 3 últimas) la
+  versión vendada de ese puzzle, con sus tablas. `inicializar` devuelve además el análisis. Los
+  scrambles de un puzzle vendado van al Worker principal (el que tiene las tablas).
+- `main.js`: con bloques aplicados, `st.p` es el puzzle envuelto y las cachés (scrambles precargados,
+  tablas) usan `id#bloques` como clave. `bloqueos-ui.js` lleva la sección "Bloqueos" y, mientras se
+  editan, el editor (2D o 3D) enseña el cubo resuelto con cada bloque de un color.
+- Vista 3D: una pegatina con `expandir: [bool por lado]` llega hasta el borde por esos lados (sin el
+  hueco negro); en 2D, `svgDePegatinas(..., { expandir })` hace lo mismo con la red.
 
 ## Interfaz: arranque
 - El puzzle inicial se elige **al momento** al cargar la página, sin esperar a que los Workers respondan al ping (las peticiones esperan en la cola del motor). Los botones que necesitan un puzzle (*Resetear*, *Cargar*, *Resolver*, *Nuevo scramble*, *Copiar*) empiezan desactivados en el HTML y `seleccionar` los activa.

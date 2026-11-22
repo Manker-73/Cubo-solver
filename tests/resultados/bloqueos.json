@@ -3,7 +3,7 @@
     "cab": "15704 geometrías, 10 permutaciones"
   },
   "casos": 1000,
-  "fecha": "2026-11-22T13:10:49.277Z",
+  "fecha": "2026-11-22T13:58:20.166Z",
   "sin-bloqueos": {
     "nombre": "Sin bloqueos",
     "firma": "0",
@@ -11,16 +11,16 @@
     "estados": "43252003274489856000",
     "estadosExacto": true,
     "espacio": "grande",
-    "msTablas": 27,
+    "msTablas": 38,
     "scramble": {
-      "longitudMedia": 20.8,
-      "msMedio": 17.2
+      "longitudMedia": 20.73,
+      "msMedio": 18.7
     },
-    "resueltos": "40/40 (100.0%)",
+    "resueltos": "500/500 (100.0%)",
     "elegida": {
-      "longitudMedia": 19.98,
-      "msMedio": 47.72,
-      "msMax": 701
+      "longitudMedia": 19.81,
+      "msMedio": 44.52,
+      "msMax": 702
     },
     "A": {
       "n": 0,
@@ -35,7 +35,7 @@
       "fase2": null
     },
     "gana": {
-      "sin bloqueos": 40
+      "sin bloqueos": 500
     },
     "sinBloqueos": {
       "longitudMedia": null,
@@ -50,37 +50,37 @@
     "estados": "1802166803103744000",
     "estadosExacto": true,
     "espacio": "grande",
-    "msTablas": 963,
+    "msTablas": 965,
     "scramble": {
-      "longitudMedia": 39,
-      "msMedio": 1
+      "longitudMedia": 45.85,
+      "msMedio": 1.2
     },
-    "resueltos": "40/40 (100.0%)",
+    "resueltos": "500/500 (100.0%)",
     "elegida": {
-      "longitudMedia": 20.35,
-      "msMedio": 1138.71,
-      "msMax": 1506
+      "longitudMedia": 20.24,
+      "msMedio": 1122.53,
+      "msMax": 1695
     },
     "A": {
-      "n": 40,
-      "longitudMedia": 20.4,
-      "msMedio": 428.56
+      "n": 500,
+      "longitudMedia": 20.27,
+      "msMedio": 397.72
     },
     "B": {
-      "n": 39,
-      "longitudMedia": 22.38,
-      "msMedio": 311.98,
-      "fase1": 1.79,
-      "fase2": 20.59
+      "n": 500,
+      "longitudMedia": 22.02,
+      "msMedio": 322.58,
+      "fase1": 1.92,
+      "fase2": 20.1
     },
     "gana": {
-      "A": 38,
-      "B": 2
+      "A": 491,
+      "B": 9
     },
     "sinBloqueos": {
-      "longitudMedia": 20.05,
+      "longitudMedia": 19.89,
       "optimas": 0,
-      "n": 40
+      "n": 500
     }
   },
   "1x2x2": {
@@ -90,36 +90,37 @@
     "estados": "13652778811392000",
     "estadosExacto": true,
     "espacio": "grande",
-    "msTablas": 807,
+    "msTablas": 1058,
     "scramble": {
-      "longitudMedia": 33,
-      "msMedio": 1.5
+      "longitudMedia": 33.46,
+      "msMedio": 1
     },
-    "resueltos": "40/40 (100.0%)",
+    "resueltos": "500/500 (100.0%)",
     "elegida": {
-      "longitudMedia": 19.63,
-      "msMedio": 1117.79,
-      "msMax": 1424
+      "longitudMedia": 19.76,
+      "msMedio": 1095.74,
+      "msMax": 1864
     },
     "A": {
-      "n": 40,
-      "longitudMedia": 19.63,
-      "msMedio": 347.51
+      "n": 500,
+      "longitudMedia": 19.78,
+      "msMedio": 397.47
     },
     "B": {
-      "n": 38,
-      "longitudMedia": 20.95,
-      "msMedio": 387.17,
-      "fase1": 1.08,
-      "fase2": 19.87
+      "n": 500,
+      "longitudMedia": 20.89,
+      "msMedio": 295.9,
+      "fase1": 0.75,
+      "fase2": 20.14
     },
     "gana": {
-      "A": 40
+      "A": 487,
+      "B": 13
     },
     "sinBloqueos": {
-      "longitudMedia": 19.25,
+      "longitudMedia": 19.46,
       "optimas": 0,
-      "n": 40
+      "n": 500
     }
   },
   "casi-bloqueada": {
@@ -129,36 +130,36 @@
     "estados": "4",
     "estadosExacto": true,
     "espacio": "pequeño",
-    "msTablas": 2,
+    "msTablas": 10,
     "scramble": {
       "longitudMedia": 1,
       "msMedio": 0.1
     },
-    "resueltos": "40/40 (100.0%)",
+    "resueltos": "500/500 (100.0%)",
     "elegida": {
       "longitudMedia": 1,
-      "msMedio": 32.57,
-      "msMax": 666
+      "msMedio": 3.32,
+      "msMax": 953
     },
     "A": {
-      "n": 40,
+      "n": 500,
       "longitudMedia": 1,
-      "msMedio": 0.05
+      "msMedio": 0.01
     },
     "B": {
-      "n": 40,
+      "n": 500,
       "longitudMedia": 1,
-      "msMedio": 0.02,
+      "msMedio": 0.01,
       "fase1": 0,
       "fase2": 1
     },
     "gana": {
-      "A": 40
+      "A": 500
     },
     "sinBloqueos": {
       "longitudMedia": 1,
-      "optimas": 40,
-      "n": 40
+      "optimas": 500,
+      "n": 500
     }
   },
   "bicube": {
@@ -168,36 +169,36 @@
     "estados": "7260",
     "estadosExacto": true,
     "espacio": "pequeño",
-    "msTablas": 24,
+    "msTablas": 32,
     "scramble": {
-      "longitudMedia": 18.85,
+      "longitudMedia": 18.29,
       "msMedio": 0.6
     },
-    "resueltos": "40/40 (100.0%)",
+    "resueltos": "500/500 (100.0%)",
     "elegida": {
-      "longitudMedia": 18.85,
-      "msMedio": 263.69,
-      "msMax": 1106
+      "longitudMedia": 18.29,
+      "msMedio": 222.85,
+      "msMax": 1048
     },
     "A": {
-      "n": 40,
-      "longitudMedia": 18.85,
-      "msMedio": 0.24
+      "n": 500,
+      "longitudMedia": 18.29,
+      "msMedio": 0.06
     },
     "B": {
-      "n": 40,
-      "longitudMedia": 20,
-      "msMedio": 0.98,
-      "fase1": 3.9,
-      "fase2": 16.1
+      "n": 500,
+      "longitudMedia": 20.26,
+      "msMedio": 0.51,
+      "fase1": 3.93,
+      "fase2": 16.33
     },
     "gana": {
-      "A": 40
+      "A": 500
     },
     "sinBloqueos": {
-      "longitudMedia": 11.88,
-      "optimas": 18,
-      "n": 40
+      "longitudMedia": 11.93,
+      "optimas": 249,
+      "n": 500
     }
   },
   "cab": {
@@ -207,75 +208,36 @@
     "estados": "157040",
     "estadosExacto": true,
     "espacio": "pequeño",
-    "msTablas": 932,
+    "msTablas": 1011,
     "scramble": {
-      "longitudMedia": 34.83,
+      "longitudMedia": 33.77,
       "msMedio": 1.2
     },
-    "resueltos": "40/40 (100.0%)",
+    "resueltos": "500/500 (100.0%)",
     "elegida": {
-      "longitudMedia": 34.83,
-      "msMedio": 430.39,
-      "msMax": 1136
+      "longitudMedia": 33.77,
+      "msMedio": 381.57,
+      "msMax": 1110
     },
     "A": {
-      "n": 40,
-      "longitudMedia": 34.83,
-      "msMedio": 0.13
+      "n": 500,
+      "longitudMedia": 33.77,
+      "msMedio": 0.11
     },
     "B": {
-      "n": 40,
-      "longitudMedia": 55.98,
-      "msMedio": 5.88,
-      "fase1": 24.48,
-      "fase2": 31.5
+      "n": 489,
+      "longitudMedia": 54.11,
+      "msMedio": 3.18,
+      "fase1": 23.77,
+      "fase2": 30.34
     },
     "gana": {
-      "A": 40
+      "A": 500
     },
     "sinBloqueos": {
-      "longitudMedia": 16.65,
-      "optimas": 1,
-      "n": 40
-    }
-  },
-  "meffert": {
-    "nombre": "Bandaged Cube de Meffert (33EC01800846)",
-    "firma": "33EC01800846",
-    "geometrias": 440,
-    "estados": "1108800",
-    "estadosExacto": true,
-    "espacio": "pequeño",
-    "msTablas": 4574,
-    "scramble": {
-      "longitudMedia": 18.88,
-      "msMedio": 1.1
-    },
-    "resueltos": "40/40 (100.0%)",
-    "elegida": {
-      "longitudMedia": 18.88,
-      "msMedio": 384.85,
-      "msMax": 1043
-    },
-    "A": {
-      "n": 40,
-      "longitudMedia": 18.88,
-      "msMedio": 0.21
-    },
-    "B": {
-      "n": 40,
-      "longitudMedia": 21.23,
-      "msMedio": 1.53,
-      "fase1": 5.78,
-      "fase2": 15.45
-    },
-    "gana": {
-      "A": 40
-    },
-    "sinBloqueos": {
-      "longitudMedia": 15.15,
-      "optimas": 5,
-      "n": 40
+      "longitudMedia": 16.47,
+      "optimas": 33,
+      "n": 500
     }
   },
   "varios": {
@@ -285,37 +247,37 @@
     "estados": "108355387392000",
     "estadosExacto": true,
     "espacio": "grande",
-    "msTablas": 1059,
+    "msTablas": 1210,
     "scramble": {
-      "longitudMedia": 51,
-      "msMedio": 2.6
+      "longitudMedia": 39.15,
+      "msMedio": 1.1
     },
-    "resueltos": "40/40 (100.0%)",
+    "resueltos": "500/500 (100.0%)",
     "elegida": {
-      "longitudMedia": 25.07,
-      "msMedio": 1174.3,
-      "msMax": 2183
+      "longitudMedia": 24.13,
+      "msMedio": 1125.25,
+      "msMax": 1550
     },
     "A": {
-      "n": 38,
-      "longitudMedia": 25.03,
-      "msMedio": 458.86
+      "n": 493,
+      "longitudMedia": 24.14,
+      "msMedio": 396.3
     },
     "B": {
-      "n": 37,
-      "longitudMedia": 29.97,
-      "msMedio": 322.39,
-      "fase1": 5.05,
-      "fase2": 24.92
+      "n": 495,
+      "longitudMedia": 29.24,
+      "msMedio": 327.76,
+      "fase1": 5.17,
+      "fase2": 24.07
     },
     "gana": {
-      "A": 37,
-      "B": 3
+      "A": 475,
+      "B": 25
     },
     "sinBloqueos": {
-      "longitudMedia": 19.55,
+      "longitudMedia": 19.32,
       "optimas": 0,
-      "n": 40
+      "n": 500
     }
   },
   "most-signatures": {
@@ -325,37 +287,76 @@
     "estados": "955680768",
     "estadosExacto": false,
     "espacio": "grande",
-    "msTablas": 4027,
+    "msTablas": 3620,
     "scramble": {
-      "longitudMedia": 102,
-      "msMedio": 4.8
+      "longitudMedia": 74.34,
+      "msMedio": 2.1
     },
-    "resueltos": "40/40 (100.0%)",
+    "resueltos": "500/500 (100.0%)",
     "elegida": {
-      "longitudMedia": 23.05,
-      "msMedio": 1134.07,
-      "msMax": 1768
+      "longitudMedia": 22.63,
+      "msMedio": 1127.63,
+      "msMax": 21390
     },
     "A": {
-      "n": 37,
-      "longitudMedia": 22.16,
-      "msMedio": 393.44
+      "n": 490,
+      "longitudMedia": 22.38,
+      "msMedio": 384.82
     },
     "B": {
-      "n": 30,
-      "longitudMedia": 31.63,
-      "msMedio": 364.04,
-      "fase1": 12.3,
-      "fase2": 19.33
+      "n": 391,
+      "longitudMedia": 30.07,
+      "msMedio": 353.84,
+      "fase1": 12.07,
+      "fase2": 18
     },
     "gana": {
-      "A": 37,
-      "B": 3
+      "A": 488,
+      "B": 12
     },
     "sinBloqueos": {
-      "longitudMedia": 17.52,
-      "optimas": 1,
-      "n": 40
+      "longitudMedia": 17.21,
+      "optimas": 6,
+      "n": 500
+    }
+  },
+  "bandaged-cube": {
+    "nombre": "Bandaged Cube de twistypuzzles (33EC01800846)",
+    "firma": "33EC01800846",
+    "geometrias": 440,
+    "estados": "1108800",
+    "estadosExacto": true,
+    "espacio": "pequeño",
+    "msTablas": 4475,
+    "scramble": {
+      "longitudMedia": 18.53,
+      "msMedio": 0.6
+    },
+    "resueltos": "500/500 (100.0%)",
+    "elegida": {
+      "longitudMedia": 18.53,
+      "msMedio": 347.94,
+      "msMax": 1234
+    },
+    "A": {
+      "n": 500,
+      "longitudMedia": 18.53,
+      "msMedio": 0.08
+    },
+    "B": {
+      "n": 500,
+      "longitudMedia": 21.33,
+      "msMedio": 1.22,
+      "fase1": 5.59,
+      "fase2": 15.74
+    },
+    "gana": {
+      "A": 500
+    },
+    "sinBloqueos": {
+      "longitudMedia": 15.21,
+      "optimas": 77,
+      "n": 500
     }
   }
 }

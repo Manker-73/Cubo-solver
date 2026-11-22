@@ -22,7 +22,7 @@ const CONFIGS = [
   { id: 'casi-bloqueada', nombre: 'Casi bloqueada (2x2x2 + centros D y L unidos: solo gira B)', def: [['UFR', 'UF', 'UR', 'FR', 'U', 'F', 'R'], ['D', 'DL', 'L']] },
   { id: 'bicube', nombre: 'Bicube (E0400B43FC5A1)', def: 'E0400B43FC5A1' },
   { id: 'cab', nombre: 'CAB Cube 5-5 (22006F100000C6)', def: '22006F100000C6' },
-  { id: 'meffert', nombre: 'Bandaged Cube de Meffert (33EC01800846)', def: '33EC01800846' },
+  { id: 'bandaged-cube', nombre: 'Bandaged Cube de twistypuzzles (33EC01800846)', def: '33EC01800846' },
   { id: 'most-signatures', nombre: 'Most signatures (10840080200C21)', def: '10840080200C21' },
 ];
 

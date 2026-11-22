@@ -420,3 +420,70 @@ En la vista previa del scramble del Megaminx, los centros cambiaban de color de 
 ## No hecho: Megaminx, 6x6 y 7x7
 - Megaminx por capas (estrella, primera capa, segunda… como un 3x3 extendido) necesita búsquedas pieza a pieza con muchas piezas protegidas (el motor de etapas del solver crea tablas por grupos de tres piezas y crece con el número de piezas que hay que respetar) y algoritmos de última capa propios. Empezarlo a estas alturas de la noche era dejarlo a medias; prioricé terminar y comprobar bien los otros cuatro y la corrección.
 - 6x6 y 7x7: además de lo del 5x5 hacen falta los centros oblicuos, que son lo más difícil también para el solver por ordenador. Quedan para otra noche.
+
+# Noche 10: 3x3 vendado (bloqueos definidos por el usuario)
+
+## Modelo genérico: una capa sobre la interfaz común
+- `puzzleConBloqueos(puzzle, bloques)` (en `src/core/bloqueos.js`) devuelve otro puzzle con la misma interfaz. La capa no sabe de cubos: el puzzle aporta un `soporteBloqueos` (piezas como conjuntos de puntos, a dónde va cada punto con cada giro y qué posiciones mueve cada giro). La regla es siempre la misma, sin casos especiales: un giro es legal si, para cada bloque, mueve todas sus piezas o ninguna. Se ha probado con el 2x2 (`soporteBloqueosNxN(2)`) sin tocar la capa.
+- El estado sigue siendo el de colores del 3x3: las piezas se identifican por sus colores (todas son distintas), así que el editor, el validador y el dibujo de siempre sirven. Lo único que no es genérico es esto: en un 4x4 hay piezas iguales (centros, wings) y habría que llevar su identidad en el estado.
+- **Núcleo**: el 3x3 tiene un punto sin pegatina para el núcleo (está en las tres capas centrales y en ninguna de cara). Hace falta para importar las firmas de la comunidad, que unen centros con el núcleo (un centro unido al núcleo es una cara bloqueada). En la interfaz no se puede tocar (no se ve); si un bloque importado lo lleva, aparece como "núcleo" en su lista.
+
+## Giros: M, E, S y rotaciones
+- `aplicarMovimiento` acepta los giros de cara, M/E/S (notación WCA: M como L, E como D, S como F) y x/y/z, y lanza un error con un giro ilegal ("rompería el bloque UFR+UF"). Las rotaciones son libres (mueven todos los bloques enteros).
+- Los scrambles y las soluciones usan solo los 18 giros de cara. No se pierde nada: **M es legal ⇔ R y L son legales** (un bloque que impide M tiene piezas en la capa del medio y en la de R o la de L, así que también impide R o L; y si R y L son legales, ningún bloque cruza las fronteras R|M ni M|L, así que M lo es), y M = R L' x' (salvo rotación, que es libre). En la métrica de la WCA (OBTM), M cuenta 2, igual que R L'.
+- Como las capas centrales mueven los centros, el estado puede estar girado; para buscar se normaliza con la rotación que deja los centros en su sitio y la solución se traduce al marco del usuario (test "capas centrales y rotaciones").
+
+## Validación de la configuración
+- Un bloque tiene que ser **conexo por caras** en el cubo resuelto (cubies que comparten una cara: la esquina UFR y el centro U no lo son, solo se tocan en una arista del cubie).
+- **Centros opuestos**: se rechazan, como pide la especificación. Ojo: en la realidad sí existen bloques así, a través del núcleo; por ejemplo, la firma 1680008C2FB461, que en el foro de twistypuzzles se da como el Bandaged Cube de Meffert, tiene un bloque L + DL + D + DR + R + núcleo, y la app no la acepta. Quitar la regla es una línea (`opuestas` en `comprobarBloqueos`) y el resto ya funcionaría; lo dejo como pregunta para Óscar.
+- Totalmente bloqueado: ningún giro legal en el resuelto. Muy limitado: un tercio de los giros o menos en el resuelto, o menos de 100.000 estados; el aviso dice cuántas geometrías y cuántos estados.
+
+## Geometría y estados alcanzables
+- **Geometría** = dónde está cada bloque y con qué orientación (las posiciones de sus piezas, en orden), sin las piezas sueltas y sin distinguir bloques congruentes (misma forma por una rotación del cubo): las tuplas de los bloques de una misma clase se ordenan. La legalidad depende solo de la geometría.
+- Las firmas de twistypuzzles cuentan "formas" sin orientación: en el *Most signatures* (10840080200C21) salen exactamente el doble (184.352 = 2 · 92.176) porque sus barras 1x1x3 son simétricas por un giro de 180° y aquí cuenta la orientación, como pide la especificación. En el CAB Cube (sin bloques simétricos) coincide: 15.704.
+- **Estados = |geometrías| · |grupo de la fase 2|**. El puzzle entero no es un grupo (no se puede componer cualquier secuencia con cualquier otra), pero las secuencias que salen de la geometría resuelta y vuelven a ella sí lo son (el grupo de vértice del grupoide). Se genera con los lazos camino(u) · m · camino(v)⁻¹ de las aristas del BFS de geometrías que no están en el árbol, y se cuenta con Schreier–Sims (`schreier.js`). Para cada geometría g, el camino del árbol hasta g es una biyección entre los estados de g y los de la resuelta (la legalidad de una secuencia solo depende de las geometrías por las que pasa), así que todas tienen los mismos estados. Comprobado con el BFS completo en todos los espacios pequeños (el CAB: 15.704 · 10 = 157.040, igual que lo publicado: "15.704 formas y solo 10 permutaciones").
+- Con más de 300.000 lazos (configuraciones con muchísimas geometrías) se criban en orden aleatorio hasta que 2.000 seguidos no amplían el grupo, y el número se marca como aproximado.
+
+## Scramble
+- **Espacio pequeño** (BFS completo de hasta 2 millones de estados): estado uniforme (una entrada al azar de la tabla) y el scramble es la inversa de su solución óptima. La tabla guarda los estados empaquetados en bits (5 bits por pieza en el 3x3) en una tabla hash: el Bandaged Cube de twistypuzzles (1.108.800 estados) son ~4,6 s y ~80 MB en Node.
+- **Espacio grande**: paseo al azar "perezoso" de un número **fijo** de pasos: en cada paso se elige uno de los 18 giros y, si es ilegal, no se hace nada. Así la matriz de paso es simétrica y la distribución límite es **uniforme sobre los estados**, aunque el número de giros legales cambie de una geometría a otra (si se eligiera solo entre los legales, los estados con más giros saldrían más). El scramble es la palabra reducida del paseo (U + U = U2, U + U' = nada, U D U = U2 D): el estado no cambia por escribirlo así, y la legalidad de la palabra se vuelve a comprobar.
+- **Lo que no funcionó**: parar cuando la palabra reducida llega a L giros. Ese momento no es independiente del estado (se para justo después de un giro "nuevo", lejos de las geometrías sin salida), y la distribución queda sesgada: en el *Most signatures* la distancia a la geometría resuelta se quedaba a TV ≈ 0,14 de la uniforme con L = 30, 100 o 300. Con pasos fijos converge (TV 0,029 con 3.200 pasos).
+- **Criterio, medido** (`node scripts/mezcla-bloqueos.mjs 2000`): N = 2.000 paseos por longitud; TV de la distancia a la geometría resuelta frente a la exacta de un estado uniforme (todas las geometrías tienen los mismos estados, así que es la del BFS de geometrías), y TV media de la posición de cada pieza frente a paseos de 6.400 pasos (ruido de muestreo ≈ 0,05–0,06). Pasos mínimos con TV(geometría) ≤ 0,05 y TV(piezas) ≤ ruido + 0,02:
+
+  | Configuración | Diámetro geometrías | Pasos mínimos | Giros (palabra reducida) | Pasos usados = max(80, 4·d²) | Giros del scramble |
+  |---|---|---|---|---|---|
+  | Pareja UFR+UF | 3 | 50 | ~29 | 80 | ~46 |
+  | 1x2x2 | 1 | 50 | ~21 | 80 | ~33 |
+  | Varios bloques | 7 | 100 | ~21 | 196 | ~40 |
+  | Most signatures | 24 | 1.600 | ~58 | 2.304 | ~75 |
+
+  Un paseo al azar tarda del orden de d² en recorrer un grafo de diámetro d, de ahí la fórmula, con margen sobre lo medido.
+
+## Solver: dos estrategias y la más corta
+- **A, búsqueda directa**: BFS (óptima) si el espacio es pequeño. Si es grande, IDA* con tablas de poda calculadas para la configuración (proyecciones sobre grupos de 4 esquinas o 4 aristas; en la proyección, un bloque solo impide un giro si separa las piezas que se ven de él, así la tabla sigue siendo una cota inferior), que encuentra la óptima si el estado está cerca, y **Kociemba con legalidad**: el algoritmo de dos fases de siempre con cada giro filtrado por la legalidad del estado de su profundidad. Sus tablas de poda son las del 3x3 sin bloqueos y siguen siendo cotas inferiores (con menos giros nunca se llega antes). Funciona sorprendentemente bien incluso en configuraciones muy restringidas (2x2x2 con solo D, L, B: ~20 giros).
+- **B, geometría y luego permutación** (como el Square-1): fase 1 con la tabla exacta de distancias de las geometrías (BFS completo), enumerando las soluciones más cortas y hasta dos giros más largas (como en Kociemba, porque una fase 1 más larga puede dejar una fase 2 más corta); fase 2 desde la geometría resuelta con BFS, Kociemba con legalidad o IDA* con poda max(distancia a la geometría resuelta, proyecciones).
+- Las búsquedas usan forma canónica (no U U, no D U —se escribe U D—, nunca U D U): U y D conmutan también con bloques, porque la legalidad de uno no depende del otro. En la unión de las dos fases se evita la redundancia; si todos los caminos desde la geometría resuelta empiezan deshaciendo el último giro de la fase 1, esa fase 1 no sirve para la B (pasa en algún estado del CAB, con solo dos caras libres; el test lo cuenta).
+- Límite de tiempo (2,5 s por defecto): se devuelve la mejor encontrada. Si en ese tiempo no hay ninguna (pasa en los estados más difíciles del *Most signatures* con poco tiempo), se sigue con el doble de tiempo cada vez hasta 30 s.
+- **Cuándo gana cada una (datos, 500 casos por configuración; tabla completa en ESTADO.md)**:
+
+  | Configuración | Espacio | A (media) | B (media: fase 1 + fase 2) | Gana A / B |
+  |---|---|---|---|---|
+  | Pareja UFR+UF | grande | 20,27 | 22,02 (1,92 + 20,10) | 491 / 9 |
+  | 1x2x2 | grande | 19,78 | 20,89 (0,75 + 20,14) | 487 / 13 |
+  | Varios bloques | grande | 24,14 | 29,24 (5,17 + 24,07) | 475 / 25 |
+  | Most signatures | grande | 22,38 | 30,07 (12,07 + 18,00) | 488 / 12 |
+  | Bicube | pequeño | 18,29 (óptima) | 20,26 (3,93 + 16,33) | 500 / 0 |
+  | Bandaged Cube (33EC01800846) | pequeño | 18,53 (óptima) | 21,33 (5,59 + 15,74) | 500 / 0 |
+  | CAB Cube | pequeño | 33,77 (óptima) | 54,11 (23,77 + 30,34) | 500 / 0 |
+
+  En espacio pequeño la A es óptima y la B no puede ganar (sirve de comparación). En espacio grande, la B gana en un 2–5 % de los casos. La especificación esperaba que la B ganase en los vendados complejos; no pasa porque la búsqueda directa ya respeta la legalidad en cada giro y no paga la fase 1 por separado: cuanto más larga es la fase 1 (el *Most signatures*: 12 giros), más pierde la B. Se dejan las dos y se elige en cada caso; en la interfaz se puede pedir una en concreto.
+- **Comparación sin bloqueos**: la óptima del mismo estado sin bloqueos por IDA* con la cota de la fase 1 de Kociemba (solo da tiempo en estados cercanos); si no, la de Kociemba, marcada como tal.
+
+## Formato de la comunidad: la firma del Bandaged Cube Explorer
+- La comunidad (twistypuzzles, el Bandaged Cube Explorer de Andreas Nortmann y los programas que lo siguen) describe un 3x3 vendado con **54 uniones** posibles entre cubies vecinos (incluido el núcleo), como un número de 54 bits en hexadecimal. El orden de las uniones no está documentado en ningún sitio; lo tomé del código de `paul_cube_bandaged_graph` (que lo dejó escrito para generar sus dibujos) y lo comprobé con las cifras publicadas: CAB Cube 22006F100000C6 → 15.704 formas y 10 permutaciones (exacto), *Most signatures* 10840080200C21 → 92.176 formas (el doble, por la orientación, ver arriba).
+- Importar: firma → uniones → bloques (componentes conexas). Exportar: todas las uniones entre vecinos de un mismo bloque. Ida y vuelta comprobada en el test.
+
+## Interfaz
+- Sección "Bloqueos" debajo de los dos paneles, solo en los puzzles con soporte (el 3x3). Mientras se editan los bloques, el editor (2D o 3D) enseña el cubo resuelto con las piezas sueltas atenuadas y cada bloque de un color; tocar una pieza la pone o la quita del bloque que se edita (y la quita de cualquier otro). Los errores (piezas no vecinas, centros opuestos) salen al momento; *Aplicar* manda la configuración al Worker, que hace el análisis y las tablas.
+- "No hay interruptores": con bloques aplicados, el 3x3 es el puzzle envuelto y todo (scramble, cargar, resolver, reproducir) va igual que siempre. El modo aprender se oculta (no hay métodos humanos para cubos vendados).
+- Se guardan en `localStorage` (con try/catch) la configuración aplicada y las que el usuario guarda con nombre. Enlace: `#bloqueos=UF.UFR-DB.DBL` (piezas separadas por puntos, bloques por guiones); también se acepta `?firma=...`.

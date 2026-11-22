@@ -71,17 +71,23 @@ export function solucionSinBloqueos(estado, { msMax = 400 } = {}) {
   return k ? { movimientos: k.movimientos, optima: false } : null;
 }
 
-/** Configuraciones de ejemplo (claves de las piezas; ver nxn-bloqueos.js). */
+/**
+ * Configuraciones de ejemplo (claves de las piezas; ver nxn-bloqueos.js) y cubos
+ * clásicos por su firma (Bandaged Cube Explorer; las cifras están comprobadas en
+ * tests/bloqueos.test.mjs).
+ */
 export const EJEMPLOS_BLOQUEOS = [
   { id: 'pareja', nombre: 'Una pareja 1x1x2 (esquina + arista)', bloques: [['UFR', 'UF']] },
   { id: 'centro-arista', nombre: 'Centro + arista (1x1x2)', bloques: [['U', 'UF']] },
   { id: '1x2x2', nombre: 'Un bloque 1x2x2', bloques: [['UFR', 'UF', 'UR', 'U']] },
-  { id: 'barras', nombre: 'Varios bloques: tres barras 1x1x3', bloques: [['UFL', 'UF', 'UFR'], ['DBL', 'DB', 'DBR'], ['DFR', 'FR', 'UBR']].slice(0, 2) },
+  { id: 'barras', nombre: 'Dos barras 1x1x3', bloques: [['UFL', 'UF', 'UFR'], ['DBL', 'DB', 'DBR']] },
+  { id: 'varios', nombre: 'Varios bloques (pareja, barra y centro + arista)', bloques: [['UFR', 'UF'], ['DBL', 'DB', 'DBR'], ['L', 'FL']] },
   { id: '1x2x3', nombre: 'Un bloque 1x2x3', bloques: [['UFL', 'UF', 'UFR', 'UL', 'U', 'UR']] },
-  { id: '2x2x2', nombre: 'Un bloque 2x2x2', bloques: [['UFR', 'UF', 'UR', 'FR', 'U', 'F', 'R']] },
-  { id: 'bandaged-3', nombre: 'Bandaged 3 (tres parejas simétricas)', bloques: [['UFR', 'UF'], ['DBR', 'BR'], ['DFL', 'DL']] },
-  { id: 'quintamese', nombre: 'Quintamese / Equator (cuatro barras, firma 300C0000000C03)', firma: '300C0000000C03' },
-  { id: 'bicube', nombre: 'Bicube (firma E0400B43FC5A1)', firma: 'E0400B43FC5A1' },
-  { id: 'meffert', nombre: 'Bandaged Cube de Meffert (firma 33EC01800846)', firma: '33EC01800846' },
-  { id: 'cab', nombre: 'CAB Cube 5-5 (firma 22006F100000C6)', firma: '22006F100000C6' },
+  { id: '2x2x2', nombre: 'Un bloque 2x2x2 (solo giran D, L y B)', bloques: [['UFR', 'UF', 'UR', 'FR', 'U', 'F', 'R']] },
+  { id: 'casi', nombre: 'Casi bloqueado (solo gira B)', bloques: [['UFR', 'UF', 'UR', 'FR', 'U', 'F', 'R'], ['D', 'DL', 'L']] },
+  { id: 'quintamese', nombre: 'Quintamese / Equator Cube (300C0000000C03)', firma: '300C0000000C03' },
+  { id: 'bicube', nombre: 'Bicube (E0400B43FC5A1)', firma: 'E0400B43FC5A1' },
+  { id: 'bandaged-cube', nombre: 'Bandaged Cube de twistypuzzles (33EC01800846)', firma: '33EC01800846' },
+  { id: 'cab', nombre: 'CAB Cube 5-5 (22006F100000C6)', firma: '22006F100000C6' },
+  { id: 'most-signatures', nombre: 'Most signatures Bandaged Cube (10840080200C21)', firma: '10840080200C21' },
 ];
