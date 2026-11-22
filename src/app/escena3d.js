@@ -32,6 +32,17 @@ export function crearEscena3D(paleta) {
     geo.pegatinas.forEach((p, k) => {
       const c = p.centro || p.puntos.reduce((s, q) => [s[0] + q[0] / p.puntos.length, s[1] + q[1] / p.puntos.length, s[2] + q[2] / p.puntos.length], [0, 0, 0]);
       const peg = p.puntos.map((q) => [0, 1, 2].map((i) => c[i] + (q[i] - c[i]) * ENCOGER + p.normal[i] * elev));
+      // Piezas pegadas (cubos vendados): los lados marcados en p.expandir llegan al
+      // borde, así dos pegatinas vecinas del mismo bloque se tocan (sin hueco negro)
+      if (p.expandir) {
+        const n = p.puntos.length;
+        for (let i = 0; i < n; i++) {
+          if (!p.expandir[i]) continue;
+          const a = p.puntos[i], b = p.puntos[(i + 1) % n];
+          const off = [0, 1, 2].map((j) => ((a[j] + b[j]) / 2 - c[j]) * (1 - ENCOGER));
+          for (const v of [i, (i + 1) % n]) for (let j = 0; j < 3; j++) peg[v][j] += off[j];
+        }
+      }
       for (let i = 1; i + 1 < p.puntos.length; i++) {
         tri.push({ k, cuerpo: true, v: [p.puntos[0], p.puntos[i], p.puntos[i + 1]] });
         tri.push({ k, cuerpo: false, v: [peg[0], peg[i], peg[i + 1]] });

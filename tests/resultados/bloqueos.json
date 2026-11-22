@@ -1,0 +1,361 @@
+{
+  "firmas": {
+    "cab": "15704 geometrías, 10 permutaciones"
+  },
+  "casos": 40,
+  "fecha": "2026-11-22T13:08:28.190Z",
+  "sin-bloqueos": {
+    "nombre": "Sin bloqueos",
+    "firma": "0",
+    "geometrias": 1,
+    "estados": "43252003274489856000",
+    "estadosExacto": true,
+    "espacio": "grande",
+    "msTablas": 27,
+    "scramble": {
+      "longitudMedia": 20.8,
+      "msMedio": 17.2
+    },
+    "resueltos": "40/40 (100.0%)",
+    "elegida": {
+      "longitudMedia": 19.98,
+      "msMedio": 47.72,
+      "msMax": 701
+    },
+    "A": {
+      "n": 0,
+      "longitudMedia": null,
+      "msMedio": null
+    },
+    "B": {
+      "n": 0,
+      "longitudMedia": null,
+      "msMedio": null,
+      "fase1": null,
+      "fase2": null
+    },
+    "gana": {
+      "sin bloqueos": 40
+    },
+    "sinBloqueos": {
+      "longitudMedia": null,
+      "optimas": 0,
+      "n": 0
+    }
+  },
+  "pareja": {
+    "nombre": "Una pareja (UFR+UF)",
+    "firma": "40000000000",
+    "geometrias": 24,
+    "estados": "1802166803103744000",
+    "estadosExacto": true,
+    "espacio": "grande",
+    "msTablas": 963,
+    "scramble": {
+      "longitudMedia": 39,
+      "msMedio": 1
+    },
+    "resueltos": "40/40 (100.0%)",
+    "elegida": {
+      "longitudMedia": 20.35,
+      "msMedio": 1138.71,
+      "msMax": 1506
+    },
+    "A": {
+      "n": 40,
+      "longitudMedia": 20.4,
+      "msMedio": 428.56
+    },
+    "B": {
+      "n": 39,
+      "longitudMedia": 22.38,
+      "msMedio": 311.98,
+      "fase1": 1.79,
+      "fase2": 20.59
+    },
+    "gana": {
+      "A": 38,
+      "B": 2
+    },
+    "sinBloqueos": {
+      "longitudMedia": 20.05,
+      "optimas": 0,
+      "n": 40
+    }
+  },
+  "1x2x2": {
+    "nombre": "Un bloque 1x2x2",
+    "firma": "B40000000000",
+    "geometrias": 4,
+    "estados": "13652778811392000",
+    "estadosExacto": true,
+    "espacio": "grande",
+    "msTablas": 807,
+    "scramble": {
+      "longitudMedia": 33,
+      "msMedio": 1.5
+    },
+    "resueltos": "40/40 (100.0%)",
+    "elegida": {
+      "longitudMedia": 19.63,
+      "msMedio": 1117.79,
+      "msMax": 1424
+    },
+    "A": {
+      "n": 40,
+      "longitudMedia": 19.63,
+      "msMedio": 347.51
+    },
+    "B": {
+      "n": 38,
+      "longitudMedia": 20.95,
+      "msMedio": 387.17,
+      "fase1": 1.08,
+      "fase2": 19.87
+    },
+    "gana": {
+      "A": 40
+    },
+    "sinBloqueos": {
+      "longitudMedia": 19.25,
+      "optimas": 0,
+      "n": 40
+    }
+  },
+  "casi-bloqueada": {
+    "nombre": "Casi bloqueada (2x2x2 + centros D y L unidos: solo gira B)",
+    "firma": "B41600A20040",
+    "geometrias": 1,
+    "estados": "4",
+    "estadosExacto": true,
+    "espacio": "pequeño",
+    "msTablas": 2,
+    "scramble": {
+      "longitudMedia": 1,
+      "msMedio": 0.1
+    },
+    "resueltos": "40/40 (100.0%)",
+    "elegida": {
+      "longitudMedia": 1,
+      "msMedio": 32.57,
+      "msMax": 666
+    },
+    "A": {
+      "n": 40,
+      "longitudMedia": 1,
+      "msMedio": 0.05
+    },
+    "B": {
+      "n": 40,
+      "longitudMedia": 1,
+      "msMedio": 0.02,
+      "fase1": 0,
+      "fase2": 1
+    },
+    "gana": {
+      "A": 40
+    },
+    "sinBloqueos": {
+      "longitudMedia": 1,
+      "optimas": 40,
+      "n": 40
+    }
+  },
+  "bicube": {
+    "nombre": "Bicube (E0400B43FC5A1)",
+    "firma": "E0400B43FC5A1",
+    "geometrias": 121,
+    "estados": "7260",
+    "estadosExacto": true,
+    "espacio": "pequeño",
+    "msTablas": 24,
+    "scramble": {
+      "longitudMedia": 18.85,
+      "msMedio": 0.6
+    },
+    "resueltos": "40/40 (100.0%)",
+    "elegida": {
+      "longitudMedia": 18.85,
+      "msMedio": 263.69,
+      "msMax": 1106
+    },
+    "A": {
+      "n": 40,
+      "longitudMedia": 18.85,
+      "msMedio": 0.24
+    },
+    "B": {
+      "n": 40,
+      "longitudMedia": 20,
+      "msMedio": 0.98,
+      "fase1": 3.9,
+      "fase2": 16.1
+    },
+    "gana": {
+      "A": 40
+    },
+    "sinBloqueos": {
+      "longitudMedia": 11.88,
+      "optimas": 18,
+      "n": 40
+    }
+  },
+  "cab": {
+    "nombre": "CAB Cube 5-5 (22006F100000C6)",
+    "firma": "22006F100000C6",
+    "geometrias": 15704,
+    "estados": "157040",
+    "estadosExacto": true,
+    "espacio": "pequeño",
+    "msTablas": 932,
+    "scramble": {
+      "longitudMedia": 34.83,
+      "msMedio": 1.2
+    },
+    "resueltos": "40/40 (100.0%)",
+    "elegida": {
+      "longitudMedia": 34.83,
+      "msMedio": 430.39,
+      "msMax": 1136
+    },
+    "A": {
+      "n": 40,
+      "longitudMedia": 34.83,
+      "msMedio": 0.13
+    },
+    "B": {
+      "n": 40,
+      "longitudMedia": 55.98,
+      "msMedio": 5.88,
+      "fase1": 24.48,
+      "fase2": 31.5
+    },
+    "gana": {
+      "A": 40
+    },
+    "sinBloqueos": {
+      "longitudMedia": 16.65,
+      "optimas": 1,
+      "n": 40
+    }
+  },
+  "meffert": {
+    "nombre": "Bandaged Cube de Meffert (33EC01800846)",
+    "firma": "33EC01800846",
+    "geometrias": 440,
+    "estados": "1108800",
+    "estadosExacto": true,
+    "espacio": "pequeño",
+    "msTablas": 4574,
+    "scramble": {
+      "longitudMedia": 18.88,
+      "msMedio": 1.1
+    },
+    "resueltos": "40/40 (100.0%)",
+    "elegida": {
+      "longitudMedia": 18.88,
+      "msMedio": 384.85,
+      "msMax": 1043
+    },
+    "A": {
+      "n": 40,
+      "longitudMedia": 18.88,
+      "msMedio": 0.21
+    },
+    "B": {
+      "n": 40,
+      "longitudMedia": 21.23,
+      "msMedio": 1.53,
+      "fase1": 5.78,
+      "fase2": 15.45
+    },
+    "gana": {
+      "A": 40
+    },
+    "sinBloqueos": {
+      "longitudMedia": 15.15,
+      "optimas": 5,
+      "n": 40
+    }
+  },
+  "varios": {
+    "nombre": "Varios bloques (pareja, barra 1x1x3, centro+arista)",
+    "firma": "40002000C00",
+    "geometrias": 1440,
+    "estados": "108355387392000",
+    "estadosExacto": true,
+    "espacio": "grande",
+    "msTablas": 1059,
+    "scramble": {
+      "longitudMedia": 51,
+      "msMedio": 2.6
+    },
+    "resueltos": "40/40 (100.0%)",
+    "elegida": {
+      "longitudMedia": 25.07,
+      "msMedio": 1174.3,
+      "msMax": 2183
+    },
+    "A": {
+      "n": 38,
+      "longitudMedia": 25.03,
+      "msMedio": 458.86
+    },
+    "B": {
+      "n": 37,
+      "longitudMedia": 29.97,
+      "msMedio": 322.39,
+      "fase1": 5.05,
+      "fase2": 24.92
+    },
+    "gana": {
+      "A": 37,
+      "B": 3
+    },
+    "sinBloqueos": {
+      "longitudMedia": 19.55,
+      "optimas": 0,
+      "n": 40
+    }
+  },
+  "most-signatures": {
+    "nombre": "Most signatures (10840080200C21)",
+    "firma": "10840080200C21",
+    "geometrias": 184352,
+    "estados": "955680768",
+    "estadosExacto": false,
+    "espacio": "grande",
+    "msTablas": 4027,
+    "scramble": {
+      "longitudMedia": 102,
+      "msMedio": 4.8
+    },
+    "resueltos": "40/40 (100.0%)",
+    "elegida": {
+      "longitudMedia": 23.05,
+      "msMedio": 1134.07,
+      "msMax": 1768
+    },
+    "A": {
+      "n": 37,
+      "longitudMedia": 22.16,
+      "msMedio": 393.44
+    },
+    "B": {
+      "n": 30,
+      "longitudMedia": 31.63,
+      "msMedio": 364.04,
+      "fase1": 12.3,
+      "fase2": 19.33
+    },
+    "gana": {
+      "A": 37,
+      "B": 3
+    },
+    "sinBloqueos": {
+      "longitudMedia": 17.52,
+      "optimas": 1,
+      "n": 40
+    }
+  }
+}

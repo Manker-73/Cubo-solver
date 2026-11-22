@@ -254,10 +254,10 @@ export function baseNxN(N) {
     ...modelo3DNxN(N),
     renderizar(estado, opciones = {}) {
       const k = opciones.vista ? CARAS.indexOf(opciones.vista) : -1;
-      if (k < 0) return svgDePegatinas(pegatinas, estado, PALETA_CUBO, opciones);
+      if (k < 0) return svgDePegatinas(pegatinas, estado, opciones.paleta || PALETA_CUBO, opciones);
       // una sola cara, ampliada (para editar cubos grandes en pantallas pequeñas)
       const solo = Array.from({ length: N * N }, (_, i) => k * N * N + i);
-      return svgDePegatinas(pegatinas, estado, PALETA_CUBO, { ...opciones, solo, margen: 0.04 });
+      return svgDePegatinas(pegatinas, estado, opciones.paleta || PALETA_CUBO, { ...opciones, solo, margen: 0.04 });
     },
     // Vistas del editor: la red completa o una cara ampliada
     vistasEditor: [{ id: 'red', nombre: 'Red' }].concat(CARAS.map((c) => ({ id: c, nombre: c }))),

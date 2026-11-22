@@ -182,7 +182,11 @@ export function inversaCubo(c) {
  *   profundidad de fase 1, y se devuelve la solución más corta encontrada
  *   traducida al estado original. Es la técnica de min2phase y acelera mucho
  *   la búsqueda de soluciones de 20 movimientos.
- * opciones: { objetivo (longitud con la que parar), msMax, maxLong }
+ * opciones: { objetivo (longitud con la que parar), msMax, maxLong,
+ *   esLegal(m, k), alAvanzar(m, k) } — los dos últimos (opcionales) los usan los
+ *   cubos vendados: esLegal dice si el giro m se puede hacer en la profundidad k
+ *   (el estado de esa profundidad lo lleva quien llama) y alAvanzar avisa de que
+ *   se baja a la profundidad k + 1 con el giro m.
  */
 export function resolverKociemba(entrada, opciones = {}) {
   inicializarKociemba();
@@ -199,7 +203,12 @@ export function resolverKociemba(entrada, opciones = {}) {
   let nodos = 0;
   let actual = variantes[0];
 
-  const cam = new Array(40);
+  const cam = new Array(64);
+  const esLegal = opciones.esLegal || null;
+  const alAvanzar = opciones.alAvanzar || null;
+  let abortar = false; // con esLegal: límite de tiempo estricto (puede no haber solución)
+  // cara del giro anterior a la búsqueda (para no repetirla ni romper el orden de las opuestas)
+  const ultimaInicial = opciones.ultimaInicial ?? -1;
 
   function traducir(movs, v) {
     let r = movs;
@@ -212,21 +221,25 @@ export function resolverKociemba(entrada, opciones = {}) {
     // IDA* de la fase 2 con profundidad máxima prof
     const h = Math.max(T.podaSC[sp * N_PERM8 + cp], T.podaSE[sp * N_PERM8 + ud]);
     if (h > prof) return -1;
-    for (let lim = h; lim <= prof; lim++) {
+    for (let lim = h; lim <= prof && !abortar; lim++) {
       if (dfs2(cp, ud, sp, lim, n1, ultima)) return lim;
     }
     return -1;
   }
   function dfs2(cp, ud, sp, togo, k, ultima) {
     if (togo === 0) return cp === 0 && ud === 0 && sp === 0;
+    if (esLegal && (++nodos & 1023) === 0 && Date.now() - t0 > msMax) abortar = true;
+    if (abortar) return false;
     for (let i = 0; i < MOV_F2.length; i++) {
       const m = MOV_F2[i];
       const f = (m / 3) | 0;
       if (ultima >= 0 && (f === ultima || (f % 3 === ultima % 3 && f < ultima))) continue;
+      if (esLegal && !esLegal(m, k)) continue;
       const cp2 = T.cperm[cp * 10 + i], ud2 = T.udperm[ud * 10 + i], sp2 = T.sperm[sp * 10 + i];
       const h = Math.max(T.podaSC[sp2 * N_PERM8 + cp2], T.podaSE[sp2 * N_PERM8 + ud2]);
       if (h >= togo) continue;
       cam[k] = m;
+      if (alAvanzar) alAvanzar(m, k);
       if (dfs2(cp2, ud2, sp2, togo - 1, k + 1, f)) return true;
     }
     return false;
@@ -237,8 +250,9 @@ export function resolverKociemba(entrada, opciones = {}) {
     let c = actual.cubo;
     for (let i = 0; i < n1; i++) c = multiplicar(c, MOV_CUBO[cam[i]]);
     const cp = getCPerm(c), ud = getUDPerm(c), sp = getSlicePerm(c);
-    const ultima = n1 > 0 ? (cam[n1 - 1] / 3) | 0 : -1;
+    const ultima = n1 > 0 ? (cam[n1 - 1] / 3) | 0 : ultimaInicial;
     const n2 = fase2(cp, ud, sp, maxLong - n1, n1, ultima);
+    if (abortar) return true;
     if (n2 >= 0) {
       mejor = traducir(cam.slice(0, n1 + n2), actual);
       maxLong = n1 + n2 - 1;
@@ -256,7 +270,8 @@ export function resolverKociemba(entrada, opciones = {}) {
       }
       return false;
     }
-    if ((++nodos & 1023) === 0 && Date.now() - t0 > msMax && mejor) { tiempoAgotado = true; return true; }
+    if ((++nodos & 1023) === 0 && Date.now() - t0 > msMax && (mejor || esLegal)) { tiempoAgotado = true; return true; }
+    if (abortar) return true;
     for (let m = 0; m < N_MOV; m++) {
       const f = (m / 3) | 0;
       if (ultima >= 0 && (f === ultima || (f % 3 === ultima % 3 && f < ultima))) continue;
@@ -264,7 +279,9 @@ export function resolverKociemba(entrada, opciones = {}) {
       if (T.podaST[sl2 * N_TWIST + tw2] >= togo) continue;
       if (T.podaSF[sl2 * N_FLIP + fl2] >= togo) continue;
       if (T.podaTF[tw2 * N_FLIP + fl2] >= togo) continue;
+      if (esLegal && !esLegal(m, k)) continue;
       cam[k] = m;
+      if (alAvanzar) alAvanzar(m, k);
       if (dfs1(tw2, fl2, sl2, togo - 1, k + 1, f)) return true;
       if (k + togo > maxLong) return false; // la cota bajó al encontrar una solución
     }
@@ -279,7 +296,7 @@ export function resolverKociemba(entrada, opciones = {}) {
     for (const v of variantes) {
       if (v.h0 > n1 || n1 > maxLong) continue;
       actual = v;
-      if (dfs1(v.tw, v.fl, v.sl, n1, 0, -1)) { fin = true; break; }
+      if (dfs1(v.tw, v.fl, v.sl, n1, 0, ultimaInicial)) { fin = true; break; }
     }
   }
   return mejor ? { movimientos: mejor.map((m) => NOMBRES_MOV[m]), tiempoAgotado, ms: Date.now() - t0 } : null;
@@ -296,4 +313,41 @@ export function paridad8(p) {
   let s = 0;
   for (let i = 0; i < p.length; i++) for (let j = i + 1; j < p.length; j++) if (p[j] < p[i]) s ^= 1;
   return s;
+}
+
+/**
+ * Solución ÓPTIMA (giros de cara) por IDA* con la cota de la fase 1 (la distancia
+ * al subgrupo G1 nunca es mayor que la distancia al resuelto). Solo es rápida en
+ * estados cercanos al resuelto; con msMax devuelve null si no le da tiempo.
+ * La usan los cubos vendados para comparar con el mismo estado sin bloqueos.
+ */
+export function resolverOptimoKociemba(cubo, { msMax = 300, maxProf = 20 } = {}) {
+  inicializarKociemba();
+  const t0 = Date.now();
+  let nodos = 0, agotado = false;
+  const cam = [];
+  const esResuelto = (c) => c.cp.every((x, i) => x === i) && c.ep.every((x, i) => x === i) && c.co.every((x) => x === 0) && c.eo.every((x) => x === 0);
+  function dfs(c, tw, fl, sl, togo, ultima) {
+    if (togo === 0) return esResuelto(c);
+    if ((++nodos & 1023) === 0 && Date.now() - t0 > msMax) { agotado = true; return false; }
+    for (let m = 0; m < N_MOV; m++) {
+      const f = (m / 3) | 0;
+      if (ultima >= 0 && (f === ultima || (f % 3 === ultima % 3 && f < ultima))) continue;
+      const tw2 = T.twist[tw * N_MOV + m], fl2 = T.flip[fl * N_MOV + m], sl2 = T.slice[sl * N_MOV + m];
+      const h = Math.max(T.podaST[sl2 * N_TWIST + tw2], T.podaSF[sl2 * N_FLIP + fl2], T.podaTF[tw2 * N_FLIP + fl2]);
+      if (h >= togo) continue;
+      cam.push(m);
+      if (dfs(multiplicar(c, MOV_CUBO[m]), tw2, fl2, sl2, togo - 1, f)) return true;
+      cam.pop();
+      if (agotado) return false;
+    }
+    return false;
+  }
+  const tw = getTwist(cubo), fl = getFlip(cubo), sl = getSlice(cubo);
+  const h0 = Math.max(T.podaST[sl * N_TWIST + tw], T.podaSF[sl * N_FLIP + fl], T.podaTF[tw * N_FLIP + fl]);
+  for (let lim = h0; lim <= maxProf; lim++) {
+    if (dfs(cubo, tw, fl, sl, lim, -1)) return cam.map((m) => NOMBRES_MOV[m]);
+    if (agotado) return null;
+  }
+  return null;
 }

@@ -24,7 +24,7 @@ function construir() {
   return html;
 }
 
-async function abrir(t, { beforeParse } = {}) {
+async function abrir(t, { beforeParse, url = 'https://localhost/' } = {}) {
   let JSDOM;
   try { ({ JSDOM } = await import('jsdom')); } catch { t.skip('jsdom no instalado'); return null; }
   const errores = [];
@@ -33,7 +33,7 @@ async function abrir(t, { beforeParse } = {}) {
   const vc = new VirtualConsole();
   vc.sendTo(console, { omitJSDOMErrors: true });
   vc.on('jsdomError', (e) => { if (!/HTMLCanvasElement/.test(e.message)) console.error(e); });
-  const dom = new JSDOM(construir(), { runScripts: 'dangerously', pretendToBeVisual: true, url: 'https://localhost/', beforeParse, virtualConsole: vc });
+  const dom = new JSDOM(construir(), { runScripts: 'dangerously', pretendToBeVisual: true, url, beforeParse, virtualConsole: vc });
   const w = dom.window;
   w.addEventListener('error', (e) => errores.push(e.message));
   const doc = w.document;
@@ -729,4 +729,134 @@ test('app: modo aprender (sin WebGL, en 2D): 3x3, 2x2, 4x4, 5x5, Pyraminx, Skewb
   await elegirPuzzle(ctx, '6x6');
   assert.equal(ctx.doc.getElementById('metodo').hidden, true);
   assert.deepEqual(ctx.errores, []);
+});
+
+// ---------- Bloqueos (cubo vendado) ----------
+import { crear3x3Vendado } from '../src/puzzles/vendado.js';
+
+/** Comprueba en Node que la solución mostrada solo tiene giros legales y resuelve el cubo. */
+function comprobarSolucionVendada(doc, def, estadoInicial) {
+  const movs = [...doc.querySelectorAll('#movs li')].map((li) => li.textContent);
+  const p = crear3x3Vendado(def);
+  let e = estadoInicial;
+  for (const m of movs) {
+    assert.ok(p.movimientoLegal(e, m).legal, `giro ilegal en la solución: ${m}`);
+    e = p.aplicarMovimiento(e, m);
+    assert.ok(p.bloquesIntactos(e));
+  }
+  assert.ok(p.estaResuelto(e));
+  return movs;
+}
+
+async function probarBloqueos(ctx) {
+  const { w, doc, hasta } = ctx;
+  await elegirPuzzle(ctx, '3x3');
+  const panel = doc.getElementById('panel-bloqueos');
+  assert.equal(panel.hidden, false, 'la sección Bloqueos se ve en el 3x3');
+  // Crear un bloque tocando piezas en el editor (2D): UFR (pegatina 8) y UF (pegatina 7)
+  doc.getElementById('bloq-nuevo').click();
+  for (const i of [8, 7]) doc.querySelector(`#vista-editor [data-i="${i}"]`).dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
+  assert.match(doc.getElementById('bloq-grupos').textContent, /UFR \+ UF/);
+  // tocar otra vez quita la pieza; volver a tocar la pone
+  doc.querySelector('#vista-editor [data-i="7"]').dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
+  assert.doesNotMatch(doc.getElementById('bloq-grupos').textContent, /UFR \+ UF/);
+  doc.querySelector('#vista-editor [data-i="7"]').dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
+  // un segundo bloque, con un error (piezas que no son vecinas) que se ve al momento
+  doc.getElementById('bloq-nuevo').click();
+  for (const i of [45 + 8, 27 + 8]) doc.querySelector(`#vista-editor [data-i="${i}"]`).dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
+  await hasta(() => /no son vecinas/.test(doc.getElementById('bloq-errores').textContent));
+  assert.equal(doc.getElementById('bloq-aplicar').disabled, true);
+  // borrarlo y aplicar
+  doc.querySelectorAll('#bloq-grupos button[data-accion="borrar"]')[1].click();
+  assert.equal(doc.getElementById('bloq-aplicar').disabled, false);
+  doc.getElementById('bloq-aplicar').click();
+  await hasta(() => doc.getElementById('bloq-resumen').textContent === '1 bloque');
+  await hasta(() => /24 geometrías/.test(doc.getElementById('bloq-analisis').textContent), 60000);
+  assert.match(doc.getElementById('bloq-analisis').textContent, /1\.802\.166\.803\.103\.744\.000 estados/);
+  assert.equal(doc.getElementById('bloq-firma-actual').textContent, '40000000000');
+  // scramble legal, cargar y resolver
+  await hasta(() => !doc.getElementById('scramble').classList.contains('generando') && doc.getElementById('scramble').textContent.length > 0, 60000);
+  const scr = doc.getElementById('scramble').textContent.trim().split(/\s+/);
+  const p = crear3x3Vendado([['UFR', 'UF']]);
+  const ini = p.aplicarSecuencia(p.estadoResuelto(), scr); // lanza un error si algún giro es ilegal
+  doc.getElementById('cargar').click();
+  doc.getElementById('resolver').click();
+  await hasta(() => !doc.getElementById('solucion').hidden || doc.querySelector('#mensajes .mensaje.error'), 60000);
+  assert.equal(doc.querySelector('#mensajes .mensaje.error'), null, doc.getElementById('mensajes').textContent);
+  assert.match(doc.getElementById('sol-resumen').textContent, /estrategia [AB]/);
+  assert.match(doc.getElementById('sol-resumen').textContent, /sin bloqueos: \d+/);
+  comprobarSolucionVendada(doc, [['UFR', 'UF']], ini);
+  const n = doc.querySelectorAll('#movs li').length;
+  for (let i = 0; i < n; i++) doc.getElementById('r-adelante').click();
+  assert.match(doc.getElementById('paso').textContent, /Resuelto/);
+  assert.ok(w.cuboSolver.resuelto());
+  // Ejemplo predefinido de espacio pequeño (CAB): scramble de estado aleatorio y solución óptima
+  const sel = doc.getElementById('bloq-config');
+  sel.value = 'ej:cab';
+  sel.dispatchEvent(new w.Event('change'));
+  await hasta(() => /15\.704 geometrías/.test(doc.getElementById('bloq-analisis').textContent), 60000);
+  assert.match(doc.getElementById('bloq-analisis').textContent, /Espacio pequeño/);
+  await hasta(() => !doc.getElementById('scramble').classList.contains('generando') && doc.getElementById('scramble').textContent.length > 0, 60000);
+  doc.getElementById('cargar').click();
+  doc.getElementById('resolver').click();
+  await hasta(() => !doc.getElementById('solucion').hidden || doc.querySelector('#mensajes .mensaje.error'), 60000);
+  assert.equal(doc.querySelector('#mensajes .mensaje.error'), null, doc.getElementById('mensajes').textContent);
+  assert.match(doc.getElementById('sol-resumen').textContent, /BFS, óptima/);
+  const cab = crear3x3Vendado('22006F100000C6');
+  const scrCab = doc.getElementById('scramble').textContent.trim().split(/\s+/);
+  comprobarSolucionVendada(doc, cab.bloqueos, cab.aplicarSecuencia(cab.estadoResuelto(), scrCab));
+  // Firma imposible (dos centros opuestos en un bloque): error y no se aplica
+  doc.getElementById('bloq-firma').value = '1680008C2FB461';
+  doc.getElementById('bloq-importar').click();
+  await hasta(() => /centros opuestos/.test(doc.getElementById('bloq-errores').textContent));
+  assert.match(doc.getElementById('bloq-resumen').textContent, /12 bloques/); // sigue el CAB
+  // Firma válida importada (Bicube)
+  doc.getElementById('bloq-firma').value = 'E0400B43FC5A1';
+  doc.getElementById('bloq-importar').click();
+  await hasta(() => /121 geometrías/.test(doc.getElementById('bloq-analisis').textContent), 60000);
+  // Guardar en el navegador y volver a cargarla
+  doc.getElementById('bloq-nombre').value = 'Mi bicube';
+  doc.getElementById('bloq-guardar').click();
+  assert.ok([...doc.querySelectorAll('#bloq-config option')].some((o) => o.textContent === 'Mi bicube'));
+  assert.match(w.localStorage.getItem('cubo-solver:bloqueos-guardados'), /Mi bicube/);
+  // Quitar todos: vuelve el 3x3 normal (Kociemba)
+  sel.value = 'vacia';
+  sel.dispatchEvent(new w.Event('change'));
+  await hasta(() => doc.getElementById('bloq-resumen').textContent === 'Sin bloqueos');
+  assert.equal(doc.getElementById('bloq-analisis').hidden, true);
+}
+
+test('app: bloqueos (sin Worker): crear bloques tocando piezas, aplicar, resolver, ejemplos, firmas y guardar', async (t) => {
+  const ctx = await abrir(t);
+  if (!ctx) return;
+  await probarBloqueos(ctx);
+  assert.deepEqual(ctx.errores, []);
+  ctx.w.close();
+});
+
+test('app: bloqueos con los Workers reales (tablas por configuración en el Worker)', async (t) => {
+  const reg = { workers: [], peticiones: [], respuestas: 0 };
+  const ctx = await abrir(t, { beforeParse: (win) => instalarWorker(win, reg) });
+  if (!ctx) return;
+  try {
+    assert.match(ctx.doc.getElementById('modo-calculo').textContent, /Web Worker/);
+    await probarBloqueos(ctx);
+    assert.deepEqual(ctx.errores, []);
+  } finally {
+    reg.workers.forEach((x) => x.terminate());
+    ctx.w.close();
+  }
+});
+
+test('app: bloqueos compartidos por URL (#bloqueos=...) y ?firma=...', async (t) => {
+  for (const url of ['https://localhost/#bloqueos=U.UF-DB.DBL', 'https://localhost/?firma=300C0000000C03']) {
+    const ctx = await abrir(t, { url });
+    if (!ctx) return;
+    const { doc, hasta } = ctx;
+    await hasta(() => doc.getElementById('panel-bloqueos').hidden === false);
+    await hasta(() => /bloques/.test(doc.getElementById('bloq-resumen').textContent));
+    await hasta(() => /geometrías/.test(doc.getElementById('bloq-analisis').textContent), 60000);
+    assert.deepEqual(ctx.errores, []);
+    ctx.w.close();
+  }
 });

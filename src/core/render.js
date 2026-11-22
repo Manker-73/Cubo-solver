@@ -39,12 +39,24 @@ export function svgDePegatinas(pegatinas, colores, paleta, opciones = {}) {
   for (const f of fondos) {
     s += `<polygon points="${f.map(([x, y]) => r2(x) + ',' + r2(y)).join(' ')}" fill="#1b1b1f" />`;
   }
+  const expandir = opciones.expandir || null; // Map(i -> [{ dx, dy } por lado]) : piezas pegadas
   lista.forEach(([p, i]) => {
     const c = colores[i];
     const color = c >= 0 && paleta[c] ? paleta[c].hex : '#3a3a40';
-    const pts = p.poligono.map(([x, y]) => r2(x) + ',' + r2(y)).join(' ');
+    let poli = p.poligono;
+    const ex = expandir && expandir.get(i);
+    if (ex) {
+      poli = poli.map(([x, y]) => [x, y]);
+      ex.forEach((d, k) => {
+        if (!d) return;
+        for (const v of [k, (k + 1) % poli.length]) { poli[v][0] += d.dx; poli[v][1] += d.dy; }
+      });
+    }
+    const pts = poli.map(([x, y]) => r2(x) + ',' + r2(y)).join(' ');
     const editable = opciones.editable && (!opciones.editables || opciones.editables.has(i));
-    s += `<polygon points="${pts}" fill="${color}" stroke="#111" stroke-width="${r2(trazo)}" stroke-linejoin="round" data-i="${i}"${editable ? ' class="pegatina"' : ''}/>`;
+    const marca = opciones.marcas && opciones.marcas.get(i); // color del contorno (bloques en edición)
+    const trazoP = marca ? `stroke="${marca}" stroke-width="${r2(trazo * 3)}"` : `stroke="#111" stroke-width="${r2(trazo)}"`;
+    s += `<polygon points="${pts}" fill="${color}" ${trazoP} stroke-linejoin="round" data-i="${i}"${editable ? ' class="pegatina"' : ''}/>`;
   });
   s += '</svg>';
   return s;

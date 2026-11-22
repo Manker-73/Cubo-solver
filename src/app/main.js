@@ -7,6 +7,8 @@ import { PUZZLES } from '../puzzles/index.js';
 import { crearMotor } from './motor.js';
 import { crearVista3D, hayWebGL } from './vista3d.js';
 import { crearReproductor } from './reproductor.js';
+import { puzzleConBloqueos, claveBloqueos } from '../core/bloqueos.js';
+import { crearPanelBloqueos, bloqueosDeURL, leerBloqueosGuardados } from './bloqueos-ui.js';
 
 /* global __CODIGO_WORKER__ */
 const CODIGO_WORKER = typeof __CODIGO_WORKER__ !== 'undefined' ? __CODIGO_WORKER__ : null;
@@ -41,9 +43,27 @@ const st = {
   pasoScramble: 0,   // paso del reproductor del scramble (n = scramble aplicado)
   prefijos: [],      // estados del scramble tras 0..n movimientos (orientación real)
   metodos: {},       // modo aprender: método elegido en cada puzzle ('' = solución óptima)
+  bloqueos: [],      // bloques aplicados a los puzzles con soporte de bloqueos (3x3): [[clave de pieza, ...]]
 };
+
+// ---------- Bloqueos (cubo vendado) ----------
+// Con bloques aplicados, el 3x3 es el mismo puzzle envuelto por puzzleConBloqueos: la
+// interfaz lo usa como cualquier otro, y las peticiones al Worker llevan los bloques.
+const vendados = new Map(); // id + clave de los bloques -> puzzle con bloqueos
+function puzzleActivo(id) {
+  const base = PUZZLES.find((x) => x.id === id);
+  if (!base || !base.soporteBloqueos || !st.bloqueos.length) return base;
+  const k = id + '#' + claveBloqueos(st.bloqueos);
+  if (!vendados.has(k)) vendados.set(k, puzzleConBloqueos(base, st.bloqueos));
+  return vendados.get(k);
+}
+/** Clave de un puzzle para las cachés (scrambles, tablas): el id y, si hay, sus bloques. */
+const claveP = (p) => (p.claveBloqueos ? p.id + '#' + p.claveBloqueos : p.id);
+/** Datos de una petición al motor: con los bloques, si el puzzle los tiene. */
+const datosDe = (p, extra = {}) => (p.bloqueos && p.bloqueos.length ? { ...extra, bloqueos: p.bloqueos } : extra);
+const baseDe = (p) => (p ? PUZZLES.find((x) => x.id === p.id) : null);
 const ms3D = () => 420 / st.velocidad;
-const ocupado = () => !!st.ocupado && !!st.p && st.ocupado === st.p.id;
+const ocupado = () => !!st.ocupado && !!st.p && st.ocupado === claveP(st.p);
 
 // ---------- Vista 3D ----------
 function usar3D(cual) {
@@ -175,6 +195,23 @@ const esperarPintado = () => new Promise((r) => requestAnimationFrame(() => setT
 
 let motor = null;
 
+const panelBloqueos = crearPanelBloqueos({
+  $,
+  base: () => baseDe(st.p),
+  aplicados: () => st.bloqueos,
+  aplicar(def) {
+    st.bloqueos = def;
+    seleccionar(st.p.id);
+  },
+  pintarEditor: () => pintarEditor(),
+  quitarSolucion: () => quitarSolucion(),
+  mensaje: (t, x) => mensaje(t, x),
+  limpiarMensajes: () => limpiarMensajes(),
+  vistaEditor: () => vista3D('editor'),
+  contenedor2D: 'vista-editor',
+  vistaCara: () => st.vista,
+});
+
 function puedeResolver(p) {
   return p.capacidades.resolver && p.capacidades.editar;
 }
@@ -187,7 +224,7 @@ function pintarSelector() {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'chip' + (puedeResolver(p) ? ' con-solver' : '');
-    b.setAttribute('aria-pressed', String(st.p === p));
+    b.setAttribute('aria-pressed', String(!!st.p && st.p.id === p.id));
     b.title = puedeResolver(p) ? 'Scramble, validador y solucionador' : 'Scramble (solucionador próximamente)';
     b.innerHTML = `<span class="punto" aria-hidden="true"></span>${p.nombre}`;
     b.addEventListener('click', () => seleccionar(p.id));
@@ -196,7 +233,7 @@ function pintarSelector() {
 }
 
 async function seleccionar(id) {
-  const p = PUZZLES.find((x) => x.id === id);
+  const p = puzzleActivo(id);
   if (!p) return;
   // Los dos paneles cambian a la vez y al momento; lo que esté en marcha para el
   // puzzle anterior sigue en el Worker, pero su respuesta ya no se mostrará.
@@ -234,6 +271,7 @@ async function seleccionar(id) {
   pintarAccionesEditor();
   pintarVistas();
   limpiarMensajes();
+  panelBloqueos.alSeleccionar();
   pintarEditor();
   $('aviso-tablas').hidden = true;
   const r = nuevoScramble();
@@ -249,9 +287,10 @@ const avisoEnCamino = new Map(); // puzzle -> promesa de asegurarTablas (un solo
 const inicioTablas = new Map();  // puzzle -> instante en que se empezaron a generar sus tablas
 function asegurarTablas() {
   const p = st.p;
-  if (!p.capacidades.resolver || st.listos.has(p.id)) return Promise.resolve();
-  if (!avisoEnCamino.has(p.id)) avisoEnCamino.set(p.id, generarTablas(p).finally(() => avisoEnCamino.delete(p.id)));
-  return avisoEnCamino.get(p.id);
+  const k = claveP(p);
+  if (!p.capacidades.resolver || st.listos.has(k)) return Promise.resolve();
+  if (!avisoEnCamino.has(k)) avisoEnCamino.set(k, generarTablas(p).finally(() => avisoEnCamino.delete(k)));
+  return avisoEnCamino.get(k);
 }
 async function generarTablas(p) {
   const aviso = $('aviso-tablas');
@@ -260,7 +299,8 @@ async function generarTablas(p) {
   const base = p.avisoInicializacion || 'Generando tablas de búsqueda…';
   const dondeTxt = () => (motor.modo() === 'worker' ? ' (en segundo plano)' : '');
   const t0 = performance.now();
-  inicioTablas.set(p.id, t0);
+  const k = claveP(p);
+  inicioTablas.set(k, t0);
   aviso.textContent = base + dondeTxt();
   // el aviso es de este puzzle: si se cambia de puzzle, deja de actualizarse (y vuelve al volver)
   const reloj = setInterval(() => {
@@ -270,10 +310,11 @@ async function generarTablas(p) {
     aviso.textContent = `${base}${dondeTxt()} ${textoSegundos(performance.now() - t0)}`;
   }, 100);
   try {
-    if (!tablasEnCamino.has(p.id)) tablasEnCamino.set(p.id, motor.pedir('inicializar', p.id).finally(() => tablasEnCamino.delete(p.id)));
-    const r = await tablasEnCamino.get(p.id);
+    if (!tablasEnCamino.has(k)) tablasEnCamino.set(k, motor.pedir('inicializar', p.id, datosDe(p)).finally(() => tablasEnCamino.delete(k)));
+    const r = await tablasEnCamino.get(k);
     const ms = r.yaEstaba ? Math.round(performance.now() - t0) : r.ms;
-    st.listos.add(p.id);
+    st.listos.add(k);
+    if (st.p === p && p.bloqueos) panelBloqueos.fijarAnalisis({ ...r.analisis, msTablas: r.analisis && r.analisis.msTablas != null ? r.analisis.msTablas : ms });
     if (st.p === p) aviso.textContent = `Tablas de ${p.nombre} generadas en ${ms} ms ${motor.modo() === 'worker' ? 'en un Web Worker (la página no se bloquea)' : 'en el hilo principal'}.`;
   } finally {
     clearInterval(reloj);
@@ -291,27 +332,28 @@ const esMovil = () => !!(typeof window !== 'undefined' && window.matchMedia && w
 const COSTE_PESADO = 500; // ms: en el móvil, no se precargan los que tardan más hasta que se elige el puzzle
 
 function pedirScramble(p, prioridad) {
-  let prom = st.enCamino.get(p.id);
+  const k = claveP(p);
+  let prom = st.enCamino.get(k);
   if (prom) {
     if (prioridad !== 'baja') motor.subirPrioridad(prom.idPeticion, prioridad);
     return prom;
   }
-  const peticion = motor.pedir('scramble', p.id, {}, { prioridad });
+  const peticion = motor.pedir('scramble', p.id, datosDe(p), { prioridad });
   prom = peticion.then((r) => {
-    st.enCamino.delete(p.id);
+    st.enCamino.delete(k);
     // nadie la espera (precarga) o la esperaba una generación ya pasada: se guarda
-    if (!prom.reclamada && !st.precargados.has(p.id)) st.precargados.set(p.id, r.movimientos);
+    if (!prom.reclamada && !st.precargados.has(k)) st.precargados.set(k, r.movimientos);
     return r.movimientos;
-  }, (err) => { st.enCamino.delete(p.id); throw err; });
+  }, (err) => { st.enCamino.delete(k); throw err; });
   prom.idPeticion = peticion.id;
   prom.reclamada = false;
-  st.enCamino.set(p.id, prom);
+  st.enCamino.set(k, prom);
   return prom;
 }
 
 /** Después de mostrar un scramble de p: el siguiente de p y, en segundo plano, los demás. */
 function rellenarPrecargas(p) {
-  if (!st.precargados.has(p.id)) pedirScramble(p, 'media').catch(() => {});
+  if (!st.precargados.has(claveP(p))) pedirScramble(p, 'media').catch(() => {});
   st.visitados.add(p.id);
   // las de los demás puzzles, cuando ya se sabe si hay Worker (sin él, solo las baratas)
   motor.listo.then(() => precargarOtros(p));
@@ -319,7 +361,7 @@ function rellenarPrecargas(p) {
 function precargarOtros(p) {
   const local = motor.modo() !== 'worker';
   const candidatos = PUZZLES
-    .filter((q) => q !== p && !st.precargados.has(q.id) && !st.enCamino.has(q.id))
+    .filter((q) => q.id !== p.id && !st.precargados.has(claveP(q)) && !st.enCamino.has(claveP(q)))
     // sin Worker, solo los que no necesitan tablas (no bloquear la página);
     // en el móvil, los pesados solo cuando el usuario ya ha elegido ese puzzle
     .filter((q) => (local ? (q.costeScramble || 0) <= 20 : !(esMovil() && (q.costeScramble || 0) > COSTE_PESADO && !st.visitados.has(q.id))))
@@ -358,7 +400,7 @@ function mostrarScramble(p, movimientos) {
   $('panel-scramble').dataset.puzzle = p.id;
   const texto = p.formatear(st.scramble);
   const el = $('scramble');
-  el.textContent = texto;
+  el.textContent = !st.scramble.length && p.bloqueos ? 'Con estos bloques no hay ningún movimiento posible (mira la sección Bloqueos).' : texto;
   el.classList.remove('generando');
   el.classList.toggle('largo', texto.length > 140);
   $('longitud').textContent = p.describirLongitud ? p.describirLongitud(st.scramble) : `${st.scramble.length} movimientos`;
@@ -373,9 +415,9 @@ function mostrarScramble(p, movimientos) {
 async function nuevoScramble() {
   const p = st.p;
   const gen = ++st.gen;
-  const listo = st.precargados.get(p.id);
+  const listo = st.precargados.get(claveP(p));
   if (listo) {
-    st.precargados.delete(p.id);
+    st.precargados.delete(claveP(p));
     mostrarScramble(p, listo);
     rellenarPrecargas(p);
     return;
@@ -392,7 +434,7 @@ async function nuevoScramble() {
   }
   if (gen !== st.gen || st.p !== p) {
     // respuesta obsoleta (se cambió de puzzle o se pidió otro): no se muestra
-    if (!st.precargados.has(p.id)) st.precargados.set(p.id, movs);
+    if (!st.precargados.has(claveP(p))) st.precargados.set(claveP(p), movs);
     return;
   }
   mostrarScramble(p, movs);
@@ -505,6 +547,18 @@ function estadoMostrado() {
 
 function pintarEditor() {
   const p = st.p;
+  if (panelBloqueos.editando()) {
+    // editando los bloques: el editor enseña el cubo resuelto con los bloques del borrador
+    $('panel-resolver').dataset.puzzle = p.id;
+    const v = vista3D('editor');
+    $('vista-editor').hidden = !!v;
+    $('vista3d-editor').hidden = !v;
+    panelBloqueos.dibujar();
+    pintarModos();
+    $('deshacer').disabled = true;
+    pintarSolucion();
+    return;
+  }
   const editable = puedeResolver(p);
   const mostrado = estadoMostrado();
   $('panel-resolver').dataset.puzzle = p.id;
@@ -553,6 +607,7 @@ function alPulsarPegatina(ev) {
 }
 
 function tocarPegatina(i) {
+  if (panelBloqueos.editando()) { panelBloqueos.tocar(i); return; }
   if (!puedeResolver(st.p) || ocupado()) return;
   const mostradoAntes = estadoMostrado();
   if (!new Set(st.p.pegatinasEditables(mostradoAntes)).has(i)) return;
@@ -712,17 +767,17 @@ async function resolver() {
   if (!puedeResolver(p)) { mensaje('error', 'Este puzzle aún no tiene solucionador.'); return; }
   const sel = st.sel; // si se cambia de puzzle (aunque se vuelva a este), la respuesta no se muestra
   const vigente = () => st.p === p && st.sel === sel;
-  st.ocupado = p.id;
+  st.ocupado = claveP(p);
   $('resolver').disabled = true;
   let reloj = null;
   try {
     if (st.sol) { st.editor = st.sol.base; quitarSolucion(); }
     st.seleccion = null;
     limpiarMensajes();
-    if (!st.listos.has(p.id)) {
+    if (!st.listos.has(claveP(p))) {
       // tablas en camino (o por pedir): el clic queda en espera, con el tiempo a la vista
       const pedidas = asegurarTablas();
-      const t0 = inicioTablas.get(p.id) ?? performance.now();
+      const t0 = inicioTablas.get(claveP(p)) ?? performance.now();
       const m = mensaje('info', `Generando tablas… ${textoSegundos(performance.now() - t0)} · la solución aparecerá al terminar.`);
       reloj = setInterval(() => { m.textContent = `Generando tablas… ${textoSegundos(performance.now() - t0)} · la solución aparecerá al terminar.`; }, 100);
       await pedidas;
@@ -731,7 +786,7 @@ async function resolver() {
       if (!vigente()) return;
       limpiarMensajes();
     }
-    const v = await motor.pedir('validar', p.id, { estado: st.editor });
+    const v = await motor.pedir('validar', p.id, datosDe(p, { estado: st.editor }));
     if (!vigente()) return;
     if (!v.valido) {
       mensaje('error', 'Este estado no es posible:');
@@ -742,7 +797,7 @@ async function resolver() {
     if (metodo) { await resolverAprendiendo(p, metodo, vigente); return; }
     mensaje('info', 'Buscando solución…');
     await esperarPintado();
-    const r = await motor.pedir('resolver', p.id, { estado: st.editor });
+    const r = await motor.pedir('resolver', p.id, datosDe(p, { estado: st.editor }));
     if (!vigente()) return;
     limpiarMensajes();
     if (!r.ok) {
@@ -753,7 +808,7 @@ async function resolver() {
       mensaje('ok', 'El puzzle ya está resuelto.');
       return;
     }
-    st.sol = { movimientos: r.movimientos, base: p.clonar(st.editor), ms: r.ms, fases: r.fases || null };
+    st.sol = { movimientos: r.movimientos, base: p.clonar(st.editor), ms: r.ms, fases: r.fases || null, vendado: p.bloqueos ? { estrategia: r.estrategia, detalle: r.detalle, sinBloqueos: r.sinBloqueos } : null };
     st.paso = 0;
     pintarVistas();
     mensaje('ok', 'Estado válido. Sigue la solución paso a paso con los controles.');
@@ -763,7 +818,7 @@ async function resolver() {
     mensaje('error', `Error al resolver: ${err.message}`);
   } finally {
     if (reloj) clearInterval(reloj);
-    if (st.ocupado === p.id) st.ocupado = false;
+    if (st.ocupado === claveP(p)) st.ocupado = false;
     if (vigente()) {
       $('resolver').disabled = !puedeResolver(st.p);
       pintarEditor();
@@ -777,11 +832,11 @@ async function resolverAprendiendo(p, metodo, vigente) {
   mensaje('info', `Preparando la solución paso a paso (método ${nombre})…`);
   await esperarPintado();
   const base = p.clonar(st.editor);
-  const r = await motor.pedir('aprender', p.id, { estado: base, opciones: { metodo } });
+  const r = await motor.pedir('aprender', p.id, datosDe(p, { estado: base, opciones: { metodo } }));
   if (!vigente()) return;
   let optima = null;
   try {
-    const o = await motor.pedir('resolver', p.id, { estado: base });
+    const o = await motor.pedir('resolver', p.id, datosDe(p, { estado: base }));
     if (o.ok) optima = o.movimientos.length;
   } catch { /* la comparación es opcional */ }
   if (!vigente()) return;
@@ -802,7 +857,7 @@ function quitarSolucion() {
   if (habia) pintarVistas();
 }
 
-const NOMBRE_FASE = { paridad: 'Paridad', centros: 'Centros', aristas: 'Aristas', '3x3': '3x3' };
+const NOMBRE_FASE = { paridad: 'Paridad', centros: 'Centros', aristas: 'Aristas', '3x3': '3x3', geometria: 'Geometría', permutacion: 'Permutación' };
 const nombreFase = (f) => NOMBRE_FASE[f] || f;
 
 /** Fase del paso k (el movimiento k-1 acaba de hacerse; en el paso 0, la primera). */
@@ -823,7 +878,8 @@ function pintarSolucion() {
     const rot = n - st.sol.giros;
     $('sol-resumen').textContent = `Método ${st.sol.metodo}: ${st.sol.giros} giros${rot ? ` (+ ${rot} ${rot === 1 ? 'giro' : 'giros'} del cubo entero)` : ''}`
       + (st.sol.optima != null ? ` · solución óptima: ${st.sol.optima} giros` : '');
-  } else $('sol-resumen').textContent = `${largo} · ${Math.max(1, Math.round(st.sol.ms))} ms`;
+  } else if (st.sol.vendado) $('sol-resumen').textContent = resumenVendado(largo);
+  else $('sol-resumen').textContent = `${largo} · ${Math.max(1, Math.round(st.sol.ms))} ms`;
   // Fases: un botón por tramo que lleva al final de ese tramo
   const barra = $('fases');
   const fases = st.sol.fases || [];
@@ -875,6 +931,18 @@ function pintarSolucion() {
   $('r-play').setAttribute('aria-label', repSol.reproduciendo ? 'Pausar' : 'Reproducir');
   $('r-velocidad').textContent = `×${st.velocidad}`;
   pintarExplicacion();
+}
+
+/** Resumen de una solución del cubo vendado: estrategia, fases y comparación sin bloqueos. */
+function resumenVendado(largo) {
+  const v = st.sol.vendado, d = v.detalle || {};
+  let t = `${largo} · ${Math.max(1, Math.round(st.sol.ms))} ms`;
+  if (v.estrategia === 'A') t += ` · estrategia A (búsqueda directa: ${d.A ? d.A.metodo + (d.A.optima ? ', óptima' : '') : ''})`;
+  else if (v.estrategia === 'B') t += ` · estrategia B (geometría ${d.B.fase1} + permutación ${d.B.fase2})`;
+  const otra = v.estrategia === 'A' ? d.B : d.A;
+  if (otra) t += ` · la otra: ${otra.longitud}`;
+  if (v.sinBloqueos) t += ` · sin bloqueos: ${v.sinBloqueos.longitud}${v.sinBloqueos.optima ? ' (óptima)' : ' (Kociemba)'}`;
+  return t;
 }
 
 function pararReproduccion() {
@@ -965,6 +1033,11 @@ function iniciar() {
   $('copiar-sol').addEventListener('click', (e) => st.sol && copiar(st.p.formatear(st.sol.movimientos), e.currentTarget));
   let inicial = '3x3';
   try { inicial = localStorage.getItem('cubo-solver:puzzle') || inicial; } catch { /* sin almacenamiento */ }
+  // Bloques: los de la URL (enlace compartido) o los últimos aplicados en este navegador
+  const deURL = bloqueosDeURL();
+  st.bloqueos = deURL || leerBloqueosGuardados();
+  if (deURL) inicial = '3x3';
+  panelBloqueos.iniciar();
   if (!PUZZLES.some((p) => p.id === inicial)) inicial = '3x3';
   // El puzzle inicial se elige al momento (antes se esperaba al ping de los Workers,
   // ~1–2 s, y un clic en ese tiempo daba con st.p = null y se perdía sin aviso). Las

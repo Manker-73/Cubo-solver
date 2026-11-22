@@ -2,6 +2,7 @@
 
 import { definirPuzzle } from '../core/puzzle.js';
 import { aprender3x3, METODOS_3x3 } from '../aprender/metodos-3x3.js';
+import { soporteBloqueos3x3, solucionSinBloqueos, EJEMPLOS_BLOQUEOS } from './cubo3-bloqueos.js';
 import { crearModeloPiezas } from '../core/piezas.js';
 import { reetiquetar, cierreGrupo } from '../core/simetria.js';
 import { aplicarPerm, componer } from '../core/perm.js';
@@ -187,4 +188,8 @@ export default definirPuzzle({
   aprender: (estado, metodo) => aprender3x3(estado, metodo),
   generarScramble,
   estadoAleatorio: (rng) => cuboAPegatinas(cuboAleatorio(rng)),
+  // Cubo vendado (bloqueos definidos por el usuario): ver src/core/bloqueos.js
+  soporteBloqueos: soporteBloqueos3x3,
+  solucionSinBloqueos,
+  ejemplosBloqueos: EJEMPLOS_BLOQUEOS,
 });

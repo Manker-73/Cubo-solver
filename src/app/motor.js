@@ -106,7 +106,8 @@ export function crearMotor({ codigoWorker = null, alCambiarModo = () => {}, dosW
         // ping a un Worker concreto (o, si ya no está, a cualquiera)
         t = vivo(tarea.destino) || principal || fondo;
         if (!libre(t)) continue;
-      } else if (tarea.msg.op === 'scramble') {
+      } else if (tarea.msg.op === 'scramble' && !tarea.msg.bloqueos) {
+        // (los de un cubo vendado necesitan sus tablas: van con lo demás, al principal)
         if (tarea.prioridad === 'baja') {
           // precarga: solo en el Worker de fondo libre y sin nada más urgente esperando
           // (si no hay Worker de fondo, en el principal libre y sin nada esperando)
