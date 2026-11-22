@@ -435,7 +435,7 @@ En la vista previa del scramble del Megaminx, los centros cambiaban de color de 
 
 ## Validación de la configuración
 - Un bloque tiene que ser **conexo por caras** en el cubo resuelto (cubies que comparten una cara: la esquina UFR y el centro U no lo son, solo se tocan en una arista del cubie).
-- **Centros opuestos**: se rechazan, como pide la especificación. Ojo: en la realidad sí existen bloques así, a través del núcleo; por ejemplo, la firma 1680008C2FB461, que en el foro de twistypuzzles se da como el Bandaged Cube de Meffert, tiene un bloque L + DL + D + DR + R + núcleo, y la app no la acepta. Quitar la regla es una línea (`opuestas` en `comprobarBloqueos`) y el resto ya funcionaría; lo dejo como pregunta para Óscar.
+- **Centros opuestos**: se permiten (decisión de Óscar, cambiando lo que decía la especificación). Existen cubos reales así, a través del núcleo o de aristas: la firma 1680008C2FB461, el Bandaged Cube de Meffert, tiene un bloque L + DL + D + DR + R + núcleo, y la app da exactamente las cifras publicadas en el foro de twistypuzzles: 32 formas y 58.320 permutaciones (1.866.240 estados). La regla general (mover todas las piezas del bloque o ninguna) ya basta para que se comporte bien; con L y R en el mismo bloque, por ejemplo, L, R, D, M y E son ilegales y S es legal.
 - Totalmente bloqueado: ningún giro legal en el resuelto. Muy limitado: un tercio de los giros o menos en el resuelto, o menos de 100.000 estados; el aviso dice cuántas geometrías y cuántos estados.
 
 ## Geometría y estados alcanzables
@@ -473,6 +473,7 @@ En la vista previa del scramble del Megaminx, los centros cambiaban de color de 
   | Varios bloques | grande | 24,14 | 29,24 (5,17 + 24,07) | 475 / 25 |
   | Most signatures | grande | 22,38 | 30,07 (12,07 + 18,00) | 488 / 12 |
   | Bicube | pequeño | 18,29 (óptima) | 20,26 (3,93 + 16,33) | 500 / 0 |
+  | Bandaged Cube de Meffert (1680008C2FB461) | pequeño | 22,22 (óptima) | 24,76 (2,88 + 21,88) | 500 / 0 |
   | Bandaged Cube (33EC01800846) | pequeño | 18,53 (óptima) | 21,33 (5,59 + 15,74) | 500 / 0 |
   | CAB Cube | pequeño | 33,77 (óptima) | 54,11 (23,77 + 30,34) | 500 / 0 |
 

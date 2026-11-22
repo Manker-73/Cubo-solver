@@ -165,12 +165,6 @@ export function soporteBloqueosNxN(N) {
       for (let i = 0; i < 3; i++) { const d = Math.abs(ca[i] - cb[i]); if (d) { dif++; tot += d; } }
       return dif === 1 && tot === 2;
     },
-    /** true si son dos centros opuestos. */
-    opuestas(a, b) {
-      const A = piezas[a], B = piezas[b];
-      if (A.tipo !== 'centro' || B.tipo !== 'centro') return false;
-      return A.cubie.every((x, i) => x === -B.cubie[i]);
-    },
     /**
      * Identifica las piezas por sus colores: donde[p] = posición actual del
      * punto p (de la pieza resuelta). { donde } o { errores }.

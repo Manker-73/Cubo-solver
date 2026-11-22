@@ -13,7 +13,7 @@
 //   mapa(mov)         mapa[p] = posición a la que va el punto en la posición p
 //   enCapa(mov)       enCapa[p] = 1 si la pieza en la posición p se mueve
 //   rotaciones        mapas de las rotaciones del puzzle entero (son libres)
-//   adyacentes(a, b), opuestas(a, b)   reglas para validar los bloques
+//   adyacentes(a, b)  regla para validar los bloques (piezas vecinas)
 //   identificar(estado) -> { donde } | { errores }   donde[p] = posición del punto p
 //   estadoDesde(donde) -> estado del puzzle
 //   busquedaRapida    (opcional) búsqueda directa propia del puzzle (3x3: Kociemba con legalidad)
@@ -60,15 +60,6 @@ export function comprobarBloqueos(soporte, definicion) {
     if (ks.length < 2) {
       if (ks.length === 1) avisos.push(`${nombre} solo tiene una pieza (${soporte.piezas[ks[0]].clave}): no bloquea nada y se ignora.`);
       return;
-    }
-    // Centros opuestos
-    for (let i = 0; i < ks.length; i++) {
-      for (let j = i + 1; j < ks.length; j++) {
-        if (soporte.opuestas(ks[i], ks[j])) {
-          errores.push(`${nombre} une dos centros opuestos (${soporte.piezas[ks[i]].clave} y ${soporte.piezas[ks[j]].clave}): un bloque así no es posible.`);
-          return;
-        }
-      }
     }
     // Conexo por adyacencias (en el puzzle resuelto)
     const visto = new Set([ks[0]]);

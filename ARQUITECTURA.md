@@ -249,7 +249,7 @@ si hace falta, puntos sin pegatina como el núcleo del 3x3):
 | `busqueda` | giros de los scrambles y las búsquedas (en el 3x3, los 18 de cara) |
 | `mapa(mov)`, `enCapa(mov)` | a dónde va cada punto; qué posiciones mueve el giro (también M/E/S y rotaciones) |
 | `rotaciones` | mapas de las rotaciones del puzzle entero (son libres: la solución sirve en cualquier orientación) |
-| `adyacentes(a, b)`, `opuestas(a, b)` | reglas de validación de los bloques |
+| `adyacentes(a, b)` | regla de validación de los bloques (piezas vecinas) |
 | `identificar(estado)`, `estadoDesde(donde)` | posiciones de los puntos a partir de los colores (piezas distinguibles) y al revés |
 | `ejeDe(familia)`, `pegatinas2D` | (opcionales) redundancias U D U; polígonos de la red para dibujar unidos los bloques |
 | `busquedaRapida(mod, S, opciones)` | (opcional) búsqueda directa propia del puzzle; en el 3x3, Kociemba con legalidad |

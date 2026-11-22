@@ -25,7 +25,8 @@ Ya no queda ningún puzzle sin validador ni solver. **Modo aprender** (solución
 ### Qué hay
 - `src/core/bloqueos.js`: capa **genérica** `puzzleConBloqueos(puzzle, bloques)` sobre la interfaz común (el puzzle aporta un `soporteBloqueos`: piezas, giros y capas). Legalidad con una sola regla, geometrías por BFS, grupo de la fase 2 por Schreier–Sims, número exacto de estados alcanzables, BFS completo de los espacios pequeños, scramble, estrategias A y B. Probada también con el 2x2. Detalles en ARQUITECTURA.md ("Bloqueos") y decisiones en DECISIONES.md ("Noche 10").
 - 3x3: giros de cara, M, E, S y x, y, z; núcleo como pieza (para las firmas); Kociemba con filtro de legalidad como búsqueda directa; comparación con la solución sin bloqueos (óptima si da tiempo, si no Kociemba).
-- Formato de la comunidad: firma hexadecimal de 54 uniones (Bandaged Cube Explorer), importar y exportar. Orden de las uniones comprobado con cifras publicadas: CAB Cube 15.704 formas y 10 permutaciones (exacto).
+- Formato de la comunidad: firma hexadecimal de 54 uniones (Bandaged Cube Explorer), importar y exportar. Orden de las uniones comprobado con cifras publicadas: CAB Cube 15.704 formas y 10 permutaciones, Bandaged Cube de Meffert 32 formas y 58.320 permutaciones (exactos).
+- Centros opuestos permitidos (decidido después de la noche, a petición de Óscar): el Bandaged Cube de Meffert (1680008C2FB461) ya se puede cargar.
 - Interfaz: sección *Bloqueos* (crear, editar y borrar bloques tocando piezas en 2D o 3D, cada uno con su color; errores al momento; ejemplos; guardar en el navegador; enlace `#bloqueos=…` o `?firma=…`; elegir estrategia A, B o la más corta), análisis (giros posibles, geometrías, estados, tiempo de las tablas), piezas pegadas dibujadas unidas en 3D y en 2D, resumen de la solución (estrategia, fases, comparación sin bloqueos) y fases *Geometría* / *Permutación* en la reproducción.
 
 ### Resultados (`tests/bloqueos.test.mjs`, 500 scrambles y soluciones por configuración)
@@ -40,12 +41,13 @@ Cada scramble y cada solución se aplican giro a giro comprobando que el giro es
 | Casi bloqueada (2x2x2 + centros D y L unidos: solo gira B) | 1 | 4 | pequeño | 10 ms | 1 | 500/500 (100 %) | 1 / 0 | 1 (0 + 1) / 0 | 1 / 3 / 953 | 500 / 0 | 1 (500 óptimas) |
 | Bicube (E0400B43FC5A1) | 121 | 7.260 | pequeño | 32 ms | 18,29 | 500/500 (100 %) | 18,29 / 0 | 20,26 (3,93 + 16,33) / 1 | 18,29 / 223 / 1.048 | 500 / 0 | 11,93 (249 óptimas) |
 | CAB Cube 5-5 (22006F100000C6) | 15.704 | 157.040 | pequeño | 1.011 ms | 33,77 | 500/500 (100 %) | 33,77 / 0 | 54,11 (23,77 + 30,34) / 3 | 33,77 / 382 / 1.110 | 500 / 0 | 16,47 (33 óptimas) |
+| Bandaged Cube de Meffert (1680008C2FB461, centros opuestos) | 32 | 1.866.240 | pequeño | 8.278 ms | 22,22 | 500/500 (100 %) | 22,22 / 0 | 24,76 (2,88 + 21,88) / 1 | 22,22 / 397 / 1.357 | 500 / 0 | 15,05 (14 óptimas) |
 | Bandaged Cube de twistypuzzles (33EC01800846) | 440 | 1.108.800 | pequeño | 4.475 ms | 18,53 | 500/500 (100 %) | 18,53 / 0 | 21,33 (5,59 + 15,74) / 1 | 18,53 / 348 / 1.234 | 500 / 0 | 15,21 (77 óptimas) |
 | Most signatures (10840080200C21) | 184.352 | 955.680.768 (aprox.) | grande | 3.620 ms | 74,34 | 500/500 (100 %) | 22,38 / 385 | 30,07 (12,07 + 18) / 354 | 22,63 / 1.128 / 21.390 | 488 / 12 | 17,21 (6 óptimas) |
 
 
 - **Cuándo gana cada estrategia**: en los espacios pequeños, siempre la A (es la óptima por BFS); la B es 2–20 giros más larga (en el CAB, +20: su fase 1 sola ya son ~24). En los grandes, la A (Kociemba con legalidad) gana en ~95–98 % de los casos y la B en el resto (25 de 500 con varios bloques, 13 con el 1x2x2, 12 en el *Most signatures*, 9 con la pareja), cuando su fase 1 deja un estado que Kociemba resuelve más corto. Lo esperado era que la B ganase en los vendados complejos; con estos datos no es así, porque una búsqueda directa que respeta la legalidad no tiene que pagar la fase 1 por separado. Detalles en DECISIONES.md.
-- Unidad: firmas conocidas (CAB, Bicube, Equator, *Most signatures* = 2 · 92.176 geometrías), BFS = |geometrías| · |grupo de la fase 2|, configuraciones imposibles (no vecinas, centros opuestos, pieza repetida o inexistente) y totalmente bloqueadas, giros ilegales con mensaje, bloques rotos e inalcanzables en el validador, capas centrales y rotaciones (20 secuencias de 40 giros legales cualesquiera), sin bloqueos = 3x3 normal (mismo scramble y misma solución), 2x2 vendado con la misma capa.
+- Unidad: firmas conocidas (CAB, Bicube, Equator, *Most signatures* = 2 · 92.176 geometrías), BFS = |geometrías| · |grupo de la fase 2|, configuraciones imposibles (no vecinas, pieza repetida o inexistente) y totalmente bloqueadas, giros ilegales con mensaje, bloques rotos e inalcanzables en el validador, capas centrales y rotaciones (20 secuencias de 40 giros legales cualesquiera), sin bloqueos = 3x3 normal (mismo scramble y misma solución), 2x2 vendado con la misma capa.
 - Mezcla de los scrambles de giros al azar: medida con `scripts/mezcla-bloqueos.mjs` (tabla en DECISIONES.md); pasos = max(80, 4·d²) con d el diámetro de las geometrías.
 
 ### Prueba de humo y Chromium
@@ -53,7 +55,6 @@ Cada scramble y cada solución se aplican giro a giro comprobando que el giro es
 - `scripts/comprobar-bloqueos.py` (Chromium real, escritorio 1280 px claro y móvil 390 px oscuro táctil, con 3D y sin 3D): todo lo anterior también tocando el modelo 3D; pegatinas unidas en 3D (4 en la pareja, 8 en el 1x2x2, 36 en el CAB); sin errores en consola ni scroll horizontal. Capturas en `docs/capturas/bloqueos-*.jpg`.
 
 ### Pendiente / para decidir
-- Centros opuestos: la especificación los da por imposibles, pero existen cubos reales así (a través del núcleo; ver DECISIONES.md). Quitar la regla es una línea.
 - Un 4x4 vendado necesitaría seguir la identidad de las piezas iguales en el estado.
 
 ## Noche 9

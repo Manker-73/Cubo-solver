@@ -87,6 +87,7 @@ export const EJEMPLOS_BLOQUEOS = [
   { id: 'casi', nombre: 'Casi bloqueado (solo gira B)', bloques: [['UFR', 'UF', 'UR', 'FR', 'U', 'F', 'R'], ['D', 'DL', 'L']] },
   { id: 'quintamese', nombre: 'Quintamese / Equator Cube (300C0000000C03)', firma: '300C0000000C03' },
   { id: 'bicube', nombre: 'Bicube (E0400B43FC5A1)', firma: 'E0400B43FC5A1' },
+  { id: 'meffert', nombre: 'Bandaged Cube de Meffert (1680008C2FB461)', firma: '1680008C2FB461' },
   { id: 'bandaged-cube', nombre: 'Bandaged Cube de twistypuzzles (33EC01800846)', firma: '33EC01800846' },
   { id: 'cab', nombre: 'CAB Cube 5-5 (22006F100000C6)', firma: '22006F100000C6' },
   { id: 'most-signatures', nombre: 'Most signatures Bandaged Cube (10840080200C21)', firma: '10840080200C21' },

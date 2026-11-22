@@ -793,7 +793,8 @@ async function probarBloqueos(ctx) {
   // La estrategia B forzada: fases Geometría / Permutación en la barra y en el paso
   doc.getElementById('bloq-estrategia').value = 'B';
   doc.getElementById('resolver').click();
-  await hasta(() => /estrategia B/.test(doc.getElementById('sol-resumen').textContent) || doc.querySelector('#mensajes .mensaje.error'), 60000);
+  // (la solución anterior ya podía ser de la B: se espera a la nueva, que empieza en "Inicio")
+  await hasta(() => (/estrategia B/.test(doc.getElementById('sol-resumen').textContent) && /^Inicio/.test(doc.getElementById('paso').textContent)) || doc.querySelector('#mensajes .mensaje.error'), 60000);
   const fases = [...doc.querySelectorAll('#fases .fase')].map((b) => b.dataset.fase);
   assert.ok(fases.includes('Permutación'), fases.join());
   if (fases.includes('Geometría')) {
@@ -817,10 +818,10 @@ async function probarBloqueos(ctx) {
   const cab = crear3x3Vendado('22006F100000C6');
   const scrCab = doc.getElementById('scramble').textContent.trim().split(/\s+/);
   comprobarSolucionVendada(doc, cab.bloqueos, cab.aplicarSecuencia(cab.estadoResuelto(), scrCab));
-  // Firma imposible (dos centros opuestos en un bloque): error y no se aplica
-  doc.getElementById('bloq-firma').value = '1680008C2FB461';
+  // Firma no válida: error y no se aplica
+  doc.getElementById('bloq-firma').value = 'XYZ';
   doc.getElementById('bloq-importar').click();
-  await hasta(() => /centros opuestos/.test(doc.getElementById('bloq-errores').textContent));
+  await hasta(() => /hexadecimal/.test(doc.getElementById('mensajes').textContent));
   assert.match(doc.getElementById('bloq-resumen').textContent, /12 bloques/); // sigue el CAB
   // Firma válida importada (Bicube)
   doc.getElementById('bloq-firma').value = 'E0400B43FC5A1';

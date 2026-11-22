@@ -22,6 +22,7 @@ const CONFIGS = [
   { id: 'casi-bloqueada', nombre: 'Casi bloqueada (2x2x2 + centros D y L unidos: solo gira B)', def: [['UFR', 'UF', 'UR', 'FR', 'U', 'F', 'R'], ['D', 'DL', 'L']] },
   { id: 'bicube', nombre: 'Bicube (E0400B43FC5A1)', def: 'E0400B43FC5A1' },
   { id: 'cab', nombre: 'CAB Cube 5-5 (22006F100000C6)', def: '22006F100000C6' },
+  { id: 'meffert', nombre: 'Bandaged Cube de Meffert (1680008C2FB461, centros opuestos)', def: '1680008C2FB461' },
   { id: 'bandaged-cube', nombre: 'Bandaged Cube de twistypuzzles (33EC01800846)', def: '33EC01800846' },
   { id: 'most-signatures', nombre: 'Most signatures (10840080200C21)', def: '10840080200C21' },
 ];
@@ -57,8 +58,15 @@ test('bloqueos: firmas conocidas (Bandaged Cube Explorer) dan las cifras publica
   assert.equal(BigInt(bi.bfs.tabla.tamano), BigInt(bi.info.estados));
   const eq = crearAnalisisBloqueos(s, bloquesDesdeFirma('300C0000000C03'));
   assert.equal(BigInt(eq.bfs.tabla.tamano), BigInt(eq.info.estados));
+  // Bandaged Cube de Meffert (1680008C2FB461, con un bloque L + DL + D + DR + R + núcleo, dos
+  // centros opuestos): 32 formas y 58.320 permutaciones (foro de twistypuzzles)
+  const mef = crearAnalisisBloqueos(s, bloquesDesdeFirma('1680008C2FB461'));
+  assert.deepEqual(mef.info.errores, []);
+  assert.equal(mef.info.geometrias, 32);
+  assert.equal(mef.info.grupoFase2, '58320');
+  assert.equal(mef.bfs.tabla.tamano, 32 * 58320);
   // Firma <-> bloques, ida y vuelta
-  for (const f of ['22006F100000C6', '33EC01800846', 'E0400B43FC5A1', '300C0000000C03', '10840080200C21']) {
+  for (const f of ['1680008C2FB461', '22006F100000C6', '33EC01800846', 'E0400B43FC5A1', '300C0000000C03', '10840080200C21']) {
     assert.equal(firmaDesdeBloques(bloquesDesdeFirma(f)), f);
   }
   guardarResultado('bloqueos', { firmas: { cab: cab.info.geometrias + ' geometrías, ' + cab.info.grupoFase2 + ' permutaciones' } });
@@ -76,7 +84,8 @@ test('bloqueos: configuraciones imposibles y totalmente bloqueadas', () => {
   const err = (def) => comprobarBloqueos(s, def).errores.join(' ');
   assert.match(err([['UFR', 'DBL']]), /no son vecinas/);
   assert.match(err([['UFR', 'U']]), /no son vecinas/); // esquina y centro solo se tocan en un vértice
-  assert.match(err([['U', 'UF', 'F', 'DF', 'D']]), /centros opuestos/);
+  // dos centros opuestos sí se pueden unir (a través de aristas o del núcleo), como en cubos reales
+  assert.equal(err([['U', 'UF', 'F', 'DF', 'D']]), '');
   assert.match(err([['UFR', 'UF'], ['UF', 'UL']]), /dos bloques/);
   assert.match(err([['UFR', 'XYZ']]), /no existe/);
   assert.match(comprobarBloqueos(s, [['UFR']]).avisos.join(' '), /solo tiene una pieza/);

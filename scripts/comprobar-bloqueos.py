@@ -137,9 +137,9 @@ async def main():
                 resumen[clave + '/cab'] = d and {k: d[k] for k in ('resumen', 'fases', 'unidas')}
                 await pg.locator('#panel-scramble').screenshot(path=f'{OUT}/bloqueos-{cfg}-{modo}-cab.jpg', quality=70, type='jpeg')
                 await pg.evaluate("() => { document.querySelector('.bloq-mas').open = true; }")
-                await pg.fill('#bloq-firma', '1680008C2FB461')
+                await pg.fill('#bloq-firma', 'XYZ')
                 await pg.click('#bloq-importar')
-                await pg.wait_for_function("/centros opuestos/.test(document.getElementById('bloq-errores').textContent)")
+                await pg.wait_for_function("/hexadecimal/.test(document.getElementById('mensajes').textContent)")
                 await pg.fill('#bloq-firma', 'E0400B43FC5A1')
                 await pg.click('#bloq-importar')
                 await pg.wait_for_function("/121 geometrías/.test(document.getElementById('bloq-analisis').textContent)", timeout=120000)
