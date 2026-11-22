@@ -22,7 +22,7 @@ permissions:
 
 # Si llega otro push a la misma rama, se cancela la ejecución anterior (solo cuenta la última).
 concurrency:
-  group: tests-${{ github.ref }}
+  group: tests-${{ github.ref }}-${{ inputs.nivel || 'rapido' }}
   cancel-in-progress: true
 
 jobs:
