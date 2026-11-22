@@ -62,6 +62,8 @@ async function resolverYReproducir(ctx, nombre) {
   const n = doc.querySelectorAll('#movs li').length;
   for (let i = 0; i < n; i++) doc.getElementById('r-adelante').click();
   assert.match(doc.getElementById('paso').textContent, /Resuelto/);
+  // y el estado mostrado al final de la solución está resuelto de verdad (no solo el texto)
+  assert.equal(ctx.w.cuboSolver.resuelto(), true, `${nombre}: la solución no deja el puzzle resuelto`);
 }
 
 test('app: sin Worker, construye, carga y resuelve un scramble en cada puzzle con solver', async (t) => {
@@ -87,6 +89,7 @@ test('app: sin Worker, construye, carga y resuelve un scramble en cada puzzle co
     assert.equal(doc.querySelector('.mensaje.error'), null, nombre + ': error al resolver');
     doc.getElementById('r-fin').click();
     assert.match(doc.getElementById('paso').textContent, /Resuelto/);
+    assert.equal(w.cuboSolver.resuelto(), true, nombre + ': la solución no deja el puzzle resuelto');
     // pintar una pegatina y comprobar que el validador se queja
     doc.getElementById('resetear').click();
     const peg = doc.querySelector('#vista-editor .pegatina');

@@ -24,7 +24,7 @@ import { estadoAlAzar, comprobarCasoAprender } from './aprender-comprobar.mjs';
 const N_CASOS = Math.min(CASOS, 500);
 // rápido: en el 4x4 y el 5x5 cada caso es una reducción completa (~1 s) y en el Square-1 una
 // búsqueda por etapa; en los demás 100 casos cuestan poco
-const casosMetodo = (p) => casosPor(N_CASOS, { '4x4': 20, '5x5': 20, square1: 40 }[p.id] ?? N_CASOS, 'CASOS_APRENDER');
+const casosMetodo = (p) => casosPor(N_CASOS, { '4x4': 8, '5x5': 8, square1: 40 }[p.id] ?? N_CASOS, 'CASOS_APRENDER');
 async function probarMetodo(p, metodo, semilla, paralelo = null) {
   const rng = rngConSemilla(semilla);
   const n = casosMetodo(p);

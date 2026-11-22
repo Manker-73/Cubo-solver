@@ -16,7 +16,7 @@ import { probarScrambles, guardarResultado, CASOS, casosPor, debeRechazar } from
 import { resolverEnParalelo } from './paralelo.mjs';
 
 const completo = CASOS >= 1000;
-const CASOS_SOLVER = casosPor(500, 8, 'CASOS_MEGA'); // rápido: ~2,6 s por caso
+const CASOS_SOLVER = casosPor(500, 5, 'CASOS_MEGA'); // rápido: ~2,6 s por caso
 export const COTA_INFERIOR = 48;
 const e0 = p.estadoResuelto();
 const girarAzar = (e, rng) => aplicarPerm(e, geo.rotaciones[entero(rng, 60)]);

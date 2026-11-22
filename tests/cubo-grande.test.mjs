@@ -13,9 +13,9 @@ import { resolverEnParalelo } from './paralelo.mjs';
 const MODULO = new URL('../src/puzzles/cubo-grande.js', import.meta.url).href;
 
 const completo = CASOS >= 1000;
-// rápido: cada caso del 6x6/7x7 son ~5 s de solver (con límite de tiempo); con 4–8 casos ya
-// se recorren todas las fases (también las de paridad, que salen en ~la mitad de los casos)
-const casosDe = (N) => casosPor(N <= 5 ? 500 : 100, { 4: 8, 5: 6, 6: 4, 7: 4 }[N], 'CASOS_NXN');
+// rápido: cada caso del 6x6/7x7 son ~3–5 s de solver (con límite de tiempo), uno por hilo;
+// el 4x4 y el 5x5 con unos pocos más (las fases de paridad salen en ~la mitad de los casos)
+const casosDe = (N) => casosPor(N <= 5 ? 500 : 100, { 4: 6, 5: 4, 6: 2, 7: 2 }[N], 'CASOS_NXN');
 // Cotas inferiores del número de Dios en OBTM (argumento de conteo; se recalculan en
 // el test de abajo) y cotas superiores / estimaciones de la tabla de ESTADO.md.
 export const COTA_INFERIOR = { 4: 35, 5: 52, 6: 75, 7: 99 };

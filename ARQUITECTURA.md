@@ -67,13 +67,18 @@ src/
     vista3d.js      dibujo con WebGL (sin librerías), girar con ratón/dedo, animaciones, tocar para pintar
     reproductor.js  reproductor de una secuencia (scramble o solución): pasos animados, atrás, play/pausa
     bloqueos-ui.js  sección "Bloqueos": grupos tocando piezas (2D/3D), ejemplos, guardar, URL, firmas
-tests/            node --test (npm test)
+tests/            node --test (npm test; niveles: ver "Tests" más abajo)
+  humo.test.mjs   prueba de humo de cada puzzle del registro, huellas de los giros, vendado y modo aprender
+  huellas.json    huellas (hash del estado) de cada giro básico y de una secuencia fija por puzzle
+  aprender-comprobar.mjs  objetivos por etapa y comprobación de una solución del modo aprender (aprender y humo)
+  util.mjs        CASOS, NIVEL, casosPor, guardarResultado, probarScrambles, probarSolver, debeRechazar
   paralelo.mjs    reparte los casos de los tests largos entre worker_threads
   trabajador.mjs  hilo de trabajo (importa el puzzle, genera sus tablas, resuelve)
 scripts/
   build.mjs       genera dist/index.html y dist/artifact.html
   construir.mjs   empaquetado con esbuild (el Worker va incrustado como texto y se crea desde un blob)
   bench.mjs       benchmark de todos los solvers (npm run bench)
+  tests.mjs       lanzador de los tests por niveles (test:humo, test:rapido, test:solo)
   comprobar-3d.py comprobación en Chromium real de la vista 3D (Playwright; capturas y FPS en docs/capturas/)
   comprobar-aprender.py  modo aprender en Chromium real (escritorio y móvil)
   comprobar-primer-resolver.py  un solo clic en "Resolver" nada más cargar la página (caché vacía; móvil con la CPU a ×4)
@@ -311,8 +316,28 @@ wings) en el estado, en vez de deducirla de los colores: es lo único que no es 
 ## Interfaz: Deshacer
 `main.js` guarda el estado del editor antes de cada cambio (pintar, herramientas, acciones, *Resetear*, *Cargar scramble*; hasta 200) y *Deshacer* (o Ctrl+Z) lo recupera. No necesita nada de los puzzles salvo `clonar`.
 
-## Tests en paralelo
+## Tests
+
+### Niveles (`scripts/tests.mjs`)
+| Nivel | Qué ejecuta | Tiempo (2 núcleos) |
+|---|---|---|
+| `npm run test:humo` | `humo.test.mjs`, `registro.test.mjs` y dos tests de `app.test.mjs` (sin Worker y con Worker), con `--test-name-pattern` | ~1 min 40 s |
+| `npm run test:rapido` | todos los ficheros con `NIVEL=rapido CASOS=100` | ~8 min |
+| `npm test` | todos los ficheros con `CASOS=1000` (el comando de siempre) | ~1 h |
+| `npm run test:solo -- <áreas>` | los ficheros de esas áreas y, en los compartidos, los tests que las nombran (nivel rápido) | según el área |
+
+`tests/util.mjs` exporta `NIVEL` (`humo`, `rapido` o `completo`; por defecto, `completo` si `CASOS >= 1000`) y `casosPor(completo, rapido, variable)`: cada test caro pide así su número de casos, de modo que la suite completa usa exactamente los de siempre y las demás menos. Todo test con datos al azar usa `rngConSemilla` (semilla fija).
+
+**Qué recorta el nivel rápido** (solo número de casos; ninguna comprobación desaparece): solver de 4x4–7x7 (6/4/2/2 casos), Megaminx (5), vista previa Pochmann (30), Square-1 scrambles y solver (30), 3x3 (50), modo aprender en 4x4/5x5 (8) y Square-1 (40), cada configuración vendada (10), capas centrales del vendado (6), método de respaldo de los NxN (1 por tamaño) y "sin aristas libres" (solo 5x5). Además, en rápido los vendados de espacio pequeño se resuelven en el hilo principal, que ya tiene la tabla del BFS completo (en lugar de generarla otra vez en cada worker_thread). En `humo.test.mjs`, en rápido y completo, solo se ejecutan las huellas: el resto es un subconjunto de lo que comprueban los demás ficheros.
+
+### Huellas de los giros (`tests/huellas.json`)
+El solver, el scramble y la vista 3D de un puzzle salen del mismo modelo: si un giro se define al revés, todo sigue siendo coherente y los tests de "resuelve el 100 %" pasan. Lo detecta comparar el estado tras cada giro básico (y tras una secuencia fija) con el guardado. Se regeneran con `HUELLAS=actualizar npm run test:humo` cuando un cambio es intencionado.
+
+### Tests en paralelo
 `tests/paralelo.mjs` (`resolverEnParalelo`) reparte los casos de un test de solver entre worker_threads con una cola dinámica. El hilo principal genera los estados (con la misma semilla que antes) y comprueba cada solución; cada hilo (`tests/trabajador.mjs`) importa el módulo del puzzle, genera sus tablas y llama a `resolver`. Los ficheros de tests se ejecutan de uno en uno (`--test-concurrency=1`) para no tener más hilos que núcleos: varios solvers tienen límites de tiempo.
+
+### Integración continua
+`.github/workflows/tests.yml`: `npm run test:rapido` en cada push a `main` y en los PR, independiente de `pages.yml`.
 
 ## Plan para las próximas noches
 - Modo aprender en Megaminx (por capas) y 6x6/7x7 (reducción como el 5x5, más los centros oblicuos).

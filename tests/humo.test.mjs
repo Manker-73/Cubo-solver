@@ -12,6 +12,8 @@
 //     pintada de otro color y el solver resuelve (1–3 casos).
 //  3. 3x3 vendado: un espacio grande y uno pequeño, giros legales paso a paso.
 //  4. Modo aprender: un caso de cada método, con el objetivo comprobado tras cada etapa.
+// En test:rapido y npm test solo se ejecuta 1 (2–4 son un subconjunto de lo que ya
+// comprueban los ficheros de cada puzzle, de los vendados y del modo aprender, con más casos).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -19,13 +21,15 @@ import crypto from 'node:crypto';
 import { PUZZLES } from '../src/puzzles/index.js';
 import { rngConSemilla } from '../src/core/rng.js';
 import { crear3x3Vendado } from '../src/puzzles/vendado.js';
-import { probarScrambles, probarSolver } from './util.mjs';
+import { probarScrambles, probarSolver, NIVEL } from './util.mjs';
 import { estadoAlAzar, comprobarCasoAprender } from './aprender-comprobar.mjs';
 
 const FICHERO_HUELLAS = new URL('./huellas.json', import.meta.url);
 const ACTUALIZAR = process.env.HUELLAS === 'actualizar';
 const huella = (estado) => crypto.createHash('sha256').update(JSON.stringify(estado)).digest('hex').slice(0, 16);
 const leerHuellas = () => { try { return JSON.parse(fs.readFileSync(FICHERO_HUELLAS, 'utf8')); } catch { return {}; } };
+
+const enHumo = NIVEL === 'humo';
 
 // Casos del solver por puzzle: los de solver lento (con límite de tiempo, 1,5–5 s) solo uno.
 const CASOS_SOLVER = { '2x2': 3, '3x3': 2, pyraminx: 3, skewb: 3, square1: 2 };
@@ -50,7 +54,7 @@ test('humo: huellas de los giros (un giro invertido o cambiado cambia la huella)
   if (ACTUALIZAR) fs.writeFileSync(FICHERO_HUELLAS, JSON.stringify(nuevas, null, 1).replace(/\n {3,}/g, ' ').replace(/\n  \]/g, ' ]') + '\n');
 });
 
-for (const p of PUZZLES) {
+for (const p of enHumo ? PUZZLES : []) {
   test(`humo: ${p.nombre}: scrambles, validador y solver`, () => {
     const s = probarScrambles(p, 1, 2);
     assert.equal(s.scrambles, 2);
@@ -85,7 +89,7 @@ function aplicarComprobando(p, estado, movs) {
   return e;
 }
 
-for (const [nombre, def, n] of [['una pareja UFR+UF (espacio grande)', [['UFR', 'UF']], 2], ['Bicube (espacio pequeño, óptima por BFS)', 'E0400B43FC5A1', 3]]) {
+for (const [nombre, def, n] of !enHumo ? [] : [['una pareja UFR+UF (espacio grande)', [['UFR', 'UF']], 2], ['Bicube (espacio pequeño, óptima por BFS)', 'E0400B43FC5A1', 3]]) {
   test(`humo: 3x3 vendado, ${nombre}`, () => {
     const p = crear3x3Vendado(def);
     p.inicializar();
@@ -106,7 +110,7 @@ for (const [nombre, def, n] of [['una pareja UFR+UF (espacio grande)', [['UFR', 
   });
 }
 
-for (const p of PUZZLES.filter((q) => q.metodosAprender && q.metodosAprender.length)) {
+for (const p of PUZZLES.filter((q) => enHumo && q.metodosAprender && q.metodosAprender.length)) {
   test(`humo: modo aprender, ${p.nombre} (${p.metodosAprender.map((m) => m.id).join(', ')})`, () => {
     const rng = rngConSemilla(31);
     const n = ['4x4', '5x5'].includes(p.id) ? 1 : 2;

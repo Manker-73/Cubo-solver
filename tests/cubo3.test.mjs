@@ -8,7 +8,7 @@ import * as K from '../src/puzzles/kociemba.js';
 import { crearModeloPiezas } from '../src/core/piezas.js';
 import { aplicarPerm } from '../src/core/perm.js';
 import { entero } from '../src/core/rng.js';
-import { probarScrambles, probarSolver, debeRechazar, guardarResultado } from './util.mjs';
+import { CASOS, casosPor, probarScrambles, probarSolver, debeRechazar, guardarResultado } from './util.mjs';
 
 const geo = geometriaNxN(3);
 
@@ -50,7 +50,7 @@ const rotarAzar = (e, i, rng) => {
 };
 
 test('3x3: el solver de dos fases resuelve el 100% (cubo reorientado al azar)', () => {
-  const r = probarSolver(p, { semilla: 32, transformar: rotarAzar });
+  const r = probarSolver(p, { semilla: 32, transformar: rotarAzar, n: casosPor(CASOS, 50) }); // rápido: ~70 ms por caso
   guardarResultado('3x3', r);
 });
 

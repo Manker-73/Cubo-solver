@@ -1,7 +1,7 @@
 // Cubos vendados (bloqueos definidos por el usuario): src/core/bloqueos.js y el 3x3.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { CASOS, casosPor, guardarResultado } from './util.mjs';
+import { CASOS, COMPLETO, casosPor, guardarResultado } from './util.mjs';
 import { resolverEnParalelo } from './paralelo.mjs';
 import { rngConSemilla } from '../src/core/rng.js';
 import cubo3 from '../src/puzzles/cubo3.js';
@@ -11,7 +11,7 @@ import { soporteBloqueosNxN, bloquesDesdeFirma, firmaDesdeBloques } from '../src
 import { soporteBloqueos3x3, EJEMPLOS_BLOQUEOS } from '../src/puzzles/cubo3-bloqueos.js';
 
 // rápido: cada caso son ~1,1 s de solver con límite de tiempo (A, B y la comparación sin bloqueos)
-const N_CASOS = casosPor(Math.min(CASOS, 500), 25, 'CASOS_BLOQUEOS');
+const N_CASOS = casosPor(Math.min(CASOS, 500), 10, 'CASOS_BLOQUEOS');
 const MS_SOLVER = parseInt(process.env.MS_BLOQUEOS || '700', 10);
 
 // Configuraciones de la verificación (ver ESTADO.md)
@@ -210,7 +210,12 @@ for (const cfg of CONFIGS) {
     }
     const msScr = (performance.now() - tScr) / N_CASOS;
     const def = typeof cfg.def === 'string' ? bloquesDesdeFirma(cfg.def) : cfg.def;
-    const { resultados } = await resolverEnParalelo({
+    // rápido, espacio pequeño: en este hilo, que ya tiene la tabla del BFS completo (generarla
+    // otra vez en cada worker_thread costaba más que resolver los casos: hasta 6 s por copia)
+    const enEsteHilo = !COMPLETO && info.espacio === 'pequeño';
+    const { resultados } = enEsteHilo
+      ? { resultados: estados.map((e) => { const t = performance.now(); const r = p.resolver(e, { msMax: MS_SOLVER }); return { r, ms: performance.now() - t }; }) }
+      : await resolverEnParalelo({
       modulo: new URL('../src/puzzles/vendado.js', import.meta.url).href,
       exportar: 'crear3x3Vendado', args: [def],
       estados, opciones: { msMax: MS_SOLVER },

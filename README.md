@@ -74,13 +74,29 @@ npm run build
 
 ## Tests
 
+Tres niveles (tiempos con 2 núcleos):
+
 ```
-npm test            # 1000 casos por puzzle (500 en 4x4, 5x5, Megaminx, el modo aprender y cada configuración vendada, 100 en 6x6 y 7x7)
-npm run test:rapido # 100 casos por puzzle (20 en 4x4–7x7 y Megaminx; 100 en el modo aprender); ~16 min
-npm run bench       # benchmark de los solvers (N=200 npm run bench para más casos)
+npm run test:humo     # < 2 min (~1 min 40 s): humo de cada puzzle, registro y humo de la app (sin Worker y con Worker)
+npm run test:rapido   # ~8 min: las mismas comprobaciones que npm test, con menos casos en los tests caros
+npm test              # suite completa (1000 casos por puzzle; 500 en 4x4, 5x5, Megaminx, el modo aprender
+                      # y cada configuración vendada; 100 en 6x6 y 7x7); ~1 h
+npm run bench         # benchmark de los solvers (N=200 npm run bench para más casos)
 ```
 
-Los resultados (porcentajes, longitudes, tiempos) se guardan en `tests/resultados/`.
+- **`test:humo`** es el paso de "Antes de empezar" de cada noche: para cada puzzle del registro, scrambles, validador (rechaza una pegatina pintada de otro color) y solver con 1–3 casos; el 3x3 vendado (un espacio grande y uno pequeño); un caso de cada método del modo aprender; las **huellas de los giros** (`tests/huellas.json`: el estado tras cada giro básico y tras una secuencia fija; es lo que detecta un giro invertido) y la prueba de humo de la app. Si se cambia un giro a propósito: `HUELLAS=actualizar npm run test:humo` y revisar el diff de `tests/huellas.json`.
+- **`test:solo`**: solo los tests de unas áreas, al nivel rápido, mientras se trabaja:
+
+  ```
+  npm run test:solo -- skewb aprender
+  npm run test:solo -- 4x4          # el fichero de cubos grandes solo con el 4x4 (TAMANOS=4)
+  ```
+
+  Áreas: `2x2`, `3x3`, `4x4`–`7x7`, `nxn`, `pyraminx`, `skewb`, `square1` (o `sq1`), `megaminx`, `vendado` (o `bloqueos`), `aprender`, `3d`, `app`, `humo`, `registro`. Cada área ejecuta sus ficheros enteros y, en los compartidos (humo, aprender, vista 3D, registro), los tests cuyo nombre la menciona.
+- Variables: `HILOS=n` (hilos de los tests largos), `CASOS_NXN`, `CASOS_MEGA`, `CASOS_BLOQUEOS`, `CASOS_APRENDER` (casos de esos tests), `TAMANOS=4,5` (cubos grandes), `BLOQUEOS=pareja,cab` (configuraciones vendadas).
+- Los resultados (porcentajes, longitudes, tiempos) de `npm test` se guardan en `tests/resultados/`; los de los niveles con menos casos van a `tests/.resultados-parciales/` (ignorado por git), para no pisar los de la suite completa (`GUARDAR=1` lo fuerza).
+
+**En GitHub**: `.github/workflows/tests.yml` ejecuta `npm run test:rapido` en cada push a `main` y en cada pull request, aparte de la publicación en Pages (que no espera a los tests). El resultado se ve en la pestaña **Actions** del repositorio → *Tests (rápido)*, o en el icono ✔/✘ junto a cada commit (en la portada y en *Commits*); al pulsarlo se ve el registro de la ejecución.
 
 ## Documentación
 
