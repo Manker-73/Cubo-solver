@@ -1,0 +1,39 @@
+# Ejecuta npm run test:rapido en cada push a main y en cada pull request.
+# Es independiente de pages.yml: la publicación en GitHub Pages no espera a los tests.
+# Resultado: pestaña "Actions" del repositorio → "Tests (rápido)", o el icono ✔/✘ junto a cada commit.
+name: Tests (rápido)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Si llega otro push a la misma rama, se cancela la ejecución anterior (solo cuenta la última).
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rapido:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Núcleos disponibles
+        run: nproc
+
+      - name: npm run test:rapido
+        run: npm run test:rapido
