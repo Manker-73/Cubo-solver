@@ -1,7 +1,7 @@
 // Cubos vendados (bloqueos definidos por el usuario): src/core/bloqueos.js y el 3x3.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { CASOS, guardarResultado } from './util.mjs';
+import { CASOS, casosPor, guardarResultado } from './util.mjs';
 import { resolverEnParalelo } from './paralelo.mjs';
 import { rngConSemilla } from '../src/core/rng.js';
 import cubo3 from '../src/puzzles/cubo3.js';
@@ -10,7 +10,8 @@ import { crearAnalisisBloqueos, comprobarBloqueos, claveBloqueos, resolverBloque
 import { soporteBloqueosNxN, bloquesDesdeFirma, firmaDesdeBloques } from '../src/puzzles/nxn-bloqueos.js';
 import { soporteBloqueos3x3, EJEMPLOS_BLOQUEOS } from '../src/puzzles/cubo3-bloqueos.js';
 
-const N_CASOS = Math.min(CASOS, 500);
+// rápido: cada caso son ~1,1 s de solver con límite de tiempo (A, B y la comparación sin bloqueos)
+const N_CASOS = casosPor(Math.min(CASOS, 500), 25, 'CASOS_BLOQUEOS');
 const MS_SOLVER = parseInt(process.env.MS_BLOQUEOS || '700', 10);
 
 // Configuraciones de la verificación (ver ESTADO.md)
@@ -128,7 +129,7 @@ test('bloqueos: capas centrales y rotaciones (M, E, S, x, y, z) y la solución e
   p.inicializar();
   const todos = ['U', 'R', 'F', 'D', 'L', 'B', 'M', 'E', 'S', 'x', 'y', 'z'].flatMap((m) => [m, m + "'", m + '2']);
   const rng = rngConSemilla(9);
-  for (let caso = 0; caso < 20; caso++) {
+  for (let caso = 0; caso < casosPor(20, 6); caso++) {
     // 40 movimientos legales cualesquiera (también capas centrales y rotaciones)
     let e = p.estadoResuelto();
     const movs = [];

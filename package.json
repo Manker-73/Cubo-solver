@@ -6,7 +6,9 @@
   "private": true,
   "scripts": {
     "test": "node --test --test-concurrency=1 --test-reporter=spec \"tests/*.test.mjs\"",
-    "test:rapido": "CASOS=100 node --test --test-concurrency=1 --test-reporter=spec \"tests/*.test.mjs\"",
+    "test:rapido": "node scripts/tests.mjs rapido",
+    "test:humo": "node scripts/tests.mjs humo",
+    "test:solo": "node scripts/tests.mjs solo",
     "build": "node scripts/build.mjs",
     "bench": "node scripts/bench.mjs"
   },

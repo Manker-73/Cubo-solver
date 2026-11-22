@@ -12,11 +12,11 @@ import { simplificarTramos, ETAPAS, resolverMegaminx, estadisticas } from '../sr
 import { slotMov, NS } from '../src/puzzles/megaminx-busqueda.js';
 import { aplicarPerm } from '../src/core/perm.js';
 import { rngConSemilla, entero } from '../src/core/rng.js';
-import { probarScrambles, guardarResultado, CASOS, debeRechazar } from './util.mjs';
+import { probarScrambles, guardarResultado, CASOS, casosPor, debeRechazar } from './util.mjs';
 import { resolverEnParalelo } from './paralelo.mjs';
 
 const completo = CASOS >= 1000;
-const CASOS_SOLVER = process.env.CASOS_MEGA ? +process.env.CASOS_MEGA : completo ? 500 : 20;
+const CASOS_SOLVER = casosPor(500, 8, 'CASOS_MEGA'); // rápido: ~2,6 s por caso
 export const COTA_INFERIOR = 48;
 const e0 = p.estadoResuelto();
 const girarAzar = (e, rng) => aplicarPerm(e, geo.rotaciones[entero(rng, 60)]);

@@ -6,7 +6,30 @@ import assert from 'node:assert/strict';
 import { rngConSemilla } from '../src/core/rng.js';
 
 export const CASOS = parseInt(process.env.CASOS || '1000', 10);
-const DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), 'resultados');
+
+/**
+ * Nivel de la suite (ver README.md, "Tests"):
+ *  - 'completo' (npm test, CASOS=1000): los casos de siempre;
+ *  - 'rapido' (npm run test:rapido y test:solo, CASOS=100): las mismas comprobaciones con
+ *    menos casos en los tests caros;
+ *  - 'humo' (npm run test:humo): tests/humo.test.mjs y la prueba de humo de la app.
+ */
+export const NIVEL = process.env.NIVEL || (CASOS >= 1000 ? 'completo' : 'rapido');
+export const COMPLETO = NIVEL === 'completo';
+
+/**
+ * Número de casos de un test caro: `completo` en la suite completa y `rapido` en las
+ * demás. `variable` (opcional): variable de entorno que lo fija a mano (p. ej. CASOS_NXN).
+ */
+export function casosPor(completo, rapido, variable = null) {
+  if (variable && process.env[variable]) return parseInt(process.env[variable], 10);
+  return COMPLETO ? completo : rapido;
+}
+
+const DIR_COMPLETO = path.join(path.dirname(fileURLToPath(import.meta.url)), 'resultados');
+// Las ejecuciones con menos casos no pisan los resultados de la suite completa (que se
+// citan en ESTADO.md): van a un directorio ignorado por git. GUARDAR=1 fuerza lo contrario.
+const DIR = COMPLETO || process.env.GUARDAR === '1' ? DIR_COMPLETO : path.join(DIR_COMPLETO, '..', '.resultados-parciales');
 
 /** Guarda métricas de un test en tests/resultados/<nombre>.json (para ESTADO.md). */
 export function guardarResultado(nombre, datos) {
@@ -24,11 +47,11 @@ export function guardarResultado(nombre, datos) {
  * dar estados válidos (si hay validador), sin movimientos redundantes y que se
  * puedan volver a leer desde su texto.
  */
-export function probarScrambles(puzzle, semilla = 1) {
+export function probarScrambles(puzzle, semilla = 1, n = CASOS) {
   const rng = rngConSemilla(semilla);
   let suma = 0, min = Infinity, max = 0, resueltos = 0;
   const t0 = performance.now();
-  for (let i = 0; i < CASOS; i++) {
+  for (let i = 0; i < n; i++) {
     const s = puzzle.generarScramble(rng);
     const red = puzzle.buscarRedundancia(s);
     assert.equal(red, null, `scramble ${i}: ${red}\n${puzzle.formatear(s)}`);
@@ -42,9 +65,9 @@ export function probarScrambles(puzzle, semilla = 1) {
     if (puzzle.estaResuelto(e)) resueltos++;
     suma += s.length; min = Math.min(min, s.length); max = Math.max(max, s.length);
   }
-  const ms = (performance.now() - t0) / CASOS;
-  assert.ok(resueltos <= CASOS * 0.001 + 1, `demasiados scrambles dejan el puzzle resuelto (${resueltos})`);
-  return { scrambles: CASOS, longitudMedia: +(suma / CASOS).toFixed(2), longitudMin: min, longitudMax: max, msPorScramble: +ms.toFixed(2) };
+  const ms = (performance.now() - t0) / n;
+  assert.ok(resueltos <= n * 0.001 + 1, `demasiados scrambles dejan el puzzle resuelto (${resueltos})`);
+  return { scrambles: n, longitudMedia: +(suma / n).toFixed(2), longitudMin: min, longitudMax: max, msPorScramble: +ms.toFixed(2) };
 }
 
 /**
@@ -52,11 +75,11 @@ export function probarScrambles(puzzle, semilla = 1) {
  * resueltos al aplicar la solución. `transformar` permite, por ejemplo,
  * reorientar el puzzle entero antes de resolver.
  */
-export function probarSolver(puzzle, { semilla = 2, transformar = null, opciones = {} } = {}) {
+export function probarSolver(puzzle, { semilla = 2, transformar = null, opciones = {}, n = CASOS } = {}) {
   const rng = rngConSemilla(semilla);
   const msIni = puzzle.inicializar().ms;
   let suma = 0, max = 0, ok = 0, tiempo = 0, tmax = 0;
-  for (let i = 0; i < CASOS; i++) {
+  for (let i = 0; i < n; i++) {
     const s = puzzle.generarScramble(rng);
     let e = puzzle.aplicarSecuencia(puzzle.estadoResuelto(), s);
     if (transformar) e = transformar(e, i, rng);
@@ -73,10 +96,10 @@ export function probarSolver(puzzle, { semilla = 2, transformar = null, opciones
     tiempo += dt; tmax = Math.max(tmax, dt);
   }
   return {
-    resueltos: `${ok}/${CASOS} (${((100 * ok) / CASOS).toFixed(1)}%)`,
-    longitudMediaSolucion: +(suma / CASOS).toFixed(2),
+    resueltos: `${ok}/${n} (${((100 * ok) / n).toFixed(1)}%)`,
+    longitudMediaSolucion: +(suma / n).toFixed(2),
     longitudMaxSolucion: max,
-    msMedioSolucion: +(tiempo / CASOS).toFixed(2),
+    msMedioSolucion: +(tiempo / n).toFixed(2),
     msMaxSolucion: +tmax.toFixed(1),
     msInicializacion: msIni,
   };

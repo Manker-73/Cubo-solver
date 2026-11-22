@@ -6,7 +6,10 @@ import p, { coloresDeIds, estadoAleatorioValido, MIN_MOVIMIENTOS, indicePegatina
 import * as M from '../src/puzzles/square1-motor.js';
 import { ordenGrupo } from '../src/core/grupo.js';
 import { rngConSemilla, entero, barajar } from '../src/core/rng.js';
-import { probarScrambles, guardarResultado, debeRechazar, CASOS } from './util.mjs';
+import { probarScrambles, guardarResultado, debeRechazar, CASOS, casosPor } from './util.mjs';
+
+// Scrambles y solver: cada caso es una búsqueda (~0,15–0,3 s); en rápido bastan 30
+const N_SQ1 = casosPor(CASOS, 30);
 
 const resuelto = () => M.estadoResueltoIds();
 const igualesIds = (a, b) => JSON.stringify(a) === JSON.stringify(b);
@@ -166,10 +169,10 @@ test('Square-1: no hay ninguna restricción de paridad, ni con la capa del medio
 });
 
 test('Square-1: scrambles de estado aleatorio válidos, legales y sin redundancias', () => {
-  const r = probarScrambles(p, 71); // aplicarSecuencia lanza error ante cualquier "/" ilegal
+  const r = probarScrambles(p, 71, N_SQ1); // aplicarSecuencia lanza error ante cualquier "/" ilegal
   const rng = rngConSemilla(72);
   let barras = 0, wca = 0, giros = 0, minWCA = Infinity, empiezaCorte = 0;
-  for (let i = 0; i < CASOS; i++) {
+  for (let i = 0; i < N_SQ1; i++) {
     const s = p.generarScramble(rng);
     for (const m of s) {
       if (m === '/') continue;
@@ -184,8 +187,8 @@ test('Square-1: scrambles de estado aleatorio válidos, legales y sin redundanci
     barras += M.contarBarras(s); wca += s.length; giros += M.contarGiros(s); minWCA = Math.min(minWCA, s.length);
   }
   Object.assign(r, {
-    barrasMedias: +(barras / CASOS).toFixed(2), movimientosWCAMedios: +(wca / CASOS).toFixed(2),
-    giroMetricaMedia: +(giros / CASOS).toFixed(2), minMovimientosWCA: minWCA, empiezanPorBarra: empiezaCorte,
+    barrasMedias: +(barras / N_SQ1).toFixed(2), movimientosWCAMedios: +(wca / N_SQ1).toFixed(2),
+    giroMetricaMedia: +(giros / N_SQ1).toFixed(2), minMovimientosWCA: minWCA, empiezanPorBarra: empiezaCorte,
   });
   guardarResultado('square1', { scramble: r });
 });
@@ -215,7 +218,7 @@ test('Square-1: el solver resuelve el 100 % (movimientos aplicados uno a uno, cu
   const msIni = p.inicializar().ms;
   const rng = rngConSemilla(74);
   let ok = 0, sb = 0, sw = 0, sg = 0, maxB = 0, maxW = 0, maxG = 0, t = 0, tmax = 0, noCortables = 0;
-  for (let i = 0; i < CASOS; i++) {
+  for (let i = 0; i < N_SQ1; i++) {
     const s = p.generarScramble(rng);
     let e = p.aplicarSecuencia(p.estadoResuelto(), s);
     // la mitad de los casos se empieza girando las capas a una alineación cualquiera (a menudo sin "/" posible)
@@ -234,11 +237,11 @@ test('Square-1: el solver resuelve el 100 % (movimientos aplicados uno a uno, cu
     t += dt; tmax = Math.max(tmax, dt);
   }
   const res = {
-    resueltos: `${ok}/${CASOS} (${((100 * ok) / CASOS).toFixed(1)}%)`,
-    barrasMedia: +(sb / CASOS).toFixed(2), barrasMax: maxB,
-    movimientosWCAMedia: +(sw / CASOS).toFixed(2), movimientosWCAMax: maxW,
-    giroMetricaMedia: +(sg / CASOS).toFixed(2), giroMetricaMax: maxG,
-    msMedio: +(t / CASOS).toFixed(1), msMax: +tmax.toFixed(1), msInicializacion: msIni,
+    resueltos: `${ok}/${N_SQ1} (${((100 * ok) / N_SQ1).toFixed(1)}%)`,
+    barrasMedia: +(sb / N_SQ1).toFixed(2), barrasMax: maxB,
+    movimientosWCAMedia: +(sw / N_SQ1).toFixed(2), movimientosWCAMax: maxW,
+    giroMetricaMedia: +(sg / N_SQ1).toFixed(2), giroMetricaMax: maxG,
+    msMedio: +(t / N_SQ1).toFixed(1), msMax: +tmax.toFixed(1), msInicializacion: msIni,
     casosQueEmpiezanSinBarraPosible: noCortables,
   };
   guardarResultado('square1', { solver: res });

@@ -7,13 +7,15 @@ import { geometriaNxN } from '../src/puzzles/nxn.js';
 import { modeloPiezasNxN } from '../src/puzzles/nxn-piezas.js';
 import { aplicarPerm } from '../src/core/perm.js';
 import { rngConSemilla, entero } from '../src/core/rng.js';
-import { CASOS, probarScrambles, debeRechazar, guardarResultado } from './util.mjs';
+import { CASOS, casosPor, probarScrambles, debeRechazar, guardarResultado } from './util.mjs';
 import { resolverEnParalelo } from './paralelo.mjs';
 
 const MODULO = new URL('../src/puzzles/cubo-grande.js', import.meta.url).href;
 
 const completo = CASOS >= 1000;
-const casosDe = (N) => (process.env.CASOS_NXN ? +process.env.CASOS_NXN : completo ? (N <= 5 ? 500 : 100) : 20);
+// rápido: cada caso del 6x6/7x7 son ~5 s de solver (con límite de tiempo); con 4–8 casos ya
+// se recorren todas las fases (también las de paridad, que salen en ~la mitad de los casos)
+const casosDe = (N) => casosPor(N <= 5 ? 500 : 100, { 4: 8, 5: 6, 6: 4, 7: 4 }[N], 'CASOS_NXN');
 // Cotas inferiores del número de Dios en OBTM (argumento de conteo; se recalculan en
 // el test de abajo) y cotas superiores / estimaciones de la tabla de ESTADO.md.
 export const COTA_INFERIOR = { 4: 35, 5: 52, 6: 75, 7: 99 };
@@ -264,7 +266,7 @@ test('NxN: método de respaldo (3-ciclos) cuando la búsqueda no llega', () => {
   const rng = rngConSemilla(77);
   for (const N of TAMANOS) {
     const p = puzzles[N];
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < casosPor(3, 1); i++) {
       const e = p.aplicarSecuencia(p.estadoResuelto(), p.generarScramble(rng));
       const op = N === 4 ? { metodo: 'conmutadores' } : { centros: { plan: [[[1, 5]], [[1, 5]], [[1, 5]]] } };
       const r = p.resolver(e, op);

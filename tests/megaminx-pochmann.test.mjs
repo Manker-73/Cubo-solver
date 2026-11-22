@@ -14,7 +14,9 @@ import { CENTROS, sigmaDeCentros } from '../src/puzzles/megaminx-piezas.js';
 import { aplicarPerm } from '../src/core/perm.js';
 import { dot } from '../src/core/geometria.js';
 import { rngConSemilla, entero } from '../src/core/rng.js';
-import { CASOS, guardarResultado } from './util.mjs';
+import { CASOS, casosPor, guardarResultado } from './util.mjs';
+
+const N_VISTA = casosPor(Math.min(CASOS, 1000), 30); // rápido: cada caso es una resolución (~0,1 s)
 
 const e0 = p.estadoResuelto();
 const centros = (e) => CENTROS.map((i) => e[i]);
@@ -90,10 +92,10 @@ test('Pochmann: la indicación de cómo sujetar el puzzle coincide con dónde qu
   }
 });
 
-test(`Pochmann: el estado de la vista previa pasa el validador y el solver lo resuelve (${Math.min(CASOS, 1000)} casos)`, () => {
+test(`Pochmann: el estado de la vista previa pasa el validador y el solver lo resuelve (${N_VISTA} casos)`, () => {
   p.inicializar();
   const rng = rngConSemilla(93);
-  const n = Math.min(CASOS, 1000);
+  const n = N_VISTA;
   let suma = 0;
   for (let i = 0; i < n; i++) {
     const v = p.estadoVistaScramble(p.aplicarSecuencia(e0, p.generarScramble(rng)));
