@@ -70,7 +70,8 @@ if (nivel === 'completo') {
     process.exit(2);
   }
   const propios = [...new Set(areas.flatMap((a) => AREAS[a].ficheros))];
-  const patrones = [...new Set(areas.map((a) => AREAS[a].patron).filter(Boolean))];
+  // las huellas de los giros siempre (2 s): son lo único que detecta un giro invertido
+  const patrones = [...new Set([...areas.map((a) => AREAS[a].patron).filter(Boolean), '^humo: huellas'])];
   const tamanos = areas.map((a) => AREAS[a].tamano).filter(Boolean);
   // solo un tamaño de NxN pedido (y no "nxn" entero): el fichero de cubos grandes solo con esos
   const env = { ...rapido, ...(tamanos.length && !areas.includes('nxn') && !process.env.TAMANOS ? { TAMANOS: tamanos.join(',') } : {}) };
