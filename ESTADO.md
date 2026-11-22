@@ -1,5 +1,7 @@
 # Estado del proyecto (final de la noche 10 — 22/11/2026)
 
+> Sesión en curso (fase 0, tests más rápidos): medición de partida en marcha.
+
 > Progreso de la noche 10 (3x3 vendado): capa genérica de bloqueos ✔ · M/E/S y rotaciones ✔ · validación de la configuración (imposible, bloqueado, muy limitado, geometrías y estados) ✔ · scramble (uniforme o paseo al azar medido) ✔ · estrategias A y B con elección automática ✔ · firmas de la comunidad (importar/exportar) ✔ · interfaz (2D/3D, ejemplos, guardar, URL) ✔ · tests de 500 casos ✔ · Chromium real ✔ · documentación ✔ · push ✔ (hecho al reanudar la sesión; el workflow de GitHub Pages terminó bien) · artifact republicado ✔.
 
 > Progreso de la noche 9: corrección del primer "Resolver" ✔ · 5x5 ✔ · Pyraminx ✔ · Skewb ✔ · Square-1 ✔ · números de las OLL ✔ · Megaminx ✘ · 6x6/7x7 ✘ · tests y Chromium ✔ · documentación ✔ · push, GitHub Pages (despliegue del último commit comprobado en la web: un clic en *Resolver* nada más cargar → "Generando tablas…" → solución) y artifact republicado ✔.
