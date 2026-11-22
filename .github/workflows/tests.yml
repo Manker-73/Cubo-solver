@@ -1,4 +1,6 @@
 # Ejecuta npm run test:rapido en cada push a main y en cada pull request.
+# A mano (Actions → "Tests (rápido)" → Run workflow) se puede elegir el nivel: rapido, humo o
+# completo (npm test, la suite completa: más de una hora).
 # Es independiente de pages.yml: la publicación en GitHub Pages no espera a los tests.
 # Resultado: pestaña "Actions" del repositorio → "Tests (rápido)", o el icono ✔/✘ junto a cada commit.
 name: Tests (rápido)
@@ -8,6 +10,12 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+    inputs:
+      nivel:
+        description: 'Nivel: rapido, humo o completo (npm test)'
+        default: rapido
+        type: choice
+        options: [rapido, humo, completo]
 
 permissions:
   contents: read
@@ -18,9 +26,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  rapido:
+  tests:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: ${{ inputs.nivel == 'completo' && 300 || 40 }}
     steps:
       - uses: actions/checkout@v4
 
@@ -35,5 +43,5 @@ jobs:
       - name: Núcleos disponibles
         run: nproc
 
-      - name: npm run test:rapido
-        run: npm run test:rapido
+      - name: Tests (nivel ${{ inputs.nivel || 'rapido' }})
+        run: node scripts/tests.mjs ${{ inputs.nivel || 'rapido' }}

@@ -488,3 +488,29 @@ En la vista previa del scramble del Megaminx, los centros cambiaban de color de 
 - Sección "Bloqueos" debajo de los dos paneles, solo en los puzzles con soporte (el 3x3). Mientras se editan los bloques, el editor (2D o 3D) enseña el cubo resuelto con las piezas sueltas atenuadas y cada bloque de un color; tocar una pieza la pone o la quita del bloque que se edita (y la quita de cualquier otro). Los errores (piezas no vecinas, centros opuestos) salen al momento; *Aplicar* manda la configuración al Worker, que hace el análisis y las tablas.
 - "No hay interruptores": con bloques aplicados, el 3x3 es el puzzle envuelto y todo (scramble, cargar, resolver, reproducir) va igual que siempre. El modo aprender se oculta (no hay métodos humanos para cubos vendados).
 - Se guardan en `localStorage` (con try/catch) la configuración aplicada y las que el usuario guarda con nombre. Enlace: `#bloqueos=UF.UFR-DB.DBL` (piezas separadas por puntos, bloques por guiones); también se acepta `?firma=...`.
+
+# Fase 0: tests más rápidos (mantenimiento, 23/11/2026)
+
+## Diagnóstico (medido, `test:rapido` de partida: 18 min 24 s con 2 núcleos)
+Casi todo el tiempo es de **solvers con límite de tiempo**: cada caso consume (casi) todo su presupuesto, así que el tiempo es casos × presupuesto / hilos, más las tablas, que se regeneran en cada proceso, en cada worker_thread y en cada ventana de jsdom.
+- **Vendados** (367 s): cada caso ~1,1 s (estrategia A, B y la comparación sin bloqueos, cada una con su límite); en los de espacio pequeño A y B son instantáneas (BFS) y lo que cuesta es la comparación sin bloqueos (~0,4 s) y la tabla del BFS completo, que se generaba 3 veces (hilo principal y 2 hilos; 6 s cada una en el de Meffert).
+- **App** (221 s): cada test abre una ventana nueva y la app genera en el hilo principal las tablas de cada puzzle que visita (~16 s si los recorre todos) y resuelve con los límites de la app. Perfilado: cálculo puro del bundle (2 s de espera en 44 s).
+- **Cubos grandes** (207 s): 6x6/7x7 ~3–5 s por caso; el método de respaldo (12 resoluciones en un hilo).
+- **Modo aprender** (178 s): el 4x4 ~1,2 s por caso (una reducción completa), 100 casos × 2 métodos.
+- **Square-1** (50 s): el scramble de estado aleatorio es una búsqueda (~0,15 s) y el solver ~0,3 s.
+
+## Qué se recortó y por qué es seguro
+- Solo en `test:rapido`/`test:solo`: **número de casos** de los tests caros (`casosPor(completo, rapido)` en `tests/util.mjs`; la lista está en ARQUITECTURA.md → Tests). Ninguna comprobación desaparece: cada test sigue comprobando lo mismo en cada caso, y `npm test` usa exactamente los casos de antes (la rama completa de cada `casosPor` es la expresión anterior). Todos los casos salen de semillas fijas.
+- **Compartir trabajo**: en rápido, los vendados de espacio pequeño se resuelven en el hilo principal, que ya tiene la tabla del BFS (en completo siguen en paralelo: con 500 casos compensa).
+- `humo.test.mjs`: en rápido y completo solo las huellas; el resto es un subconjunto de los demás ficheros.
+- Las ejecuciones con menos casos ya **no pisan `tests/resultados/`** (van a `tests/.resultados-parciales/`, ignorado): antes había que restaurarlos a mano tras cada `test:rapido`.
+
+## Comprobaciones nuevas (encontradas al sabotear)
+- **Huellas de los giros** (`tests/huellas.json`): un giro invertido (probado con R del Skewb) **no lo detectaba ningún test**, ni en la suite completa: scramble, validador, solver, vista 3D y modo aprender salen del mismo modelo y siguen siendo coherentes. Ahora se compara el estado tras cada giro básico con el guardado. `test:solo` las incluye siempre.
+- La prueba de humo de la app solo miraba el texto «Resuelto» al final de la solución: una interfaz que perdiera el último giro pasaba (comprobado). Ahora también `cuboSolver.resuelto()`.
+
+## Lo que no funcionó / descartado
+- Recortar "sin aristas libres" a un tamaño: no ahorra nada. En el proceso completo ese test tarda ~12 s con cualquier número de tamaños (solo, con el 5x5, son 2 s): es el coste de la memoria acumulada por las tablas de 4x4–7x7 del hilo principal, no de las resoluciones. Se deja con 5x5, 6x6 y 7x7 en todos los niveles.
+- La app no se puede acelerar desde los tests: compartir una ventana entre tests cambiaría lo que se prueba (estado limpio, tablas generándose) y las tablas viven dentro del bundle. Queda como suelo de `test:rapido` (~3,6 min de ~8).
+- **Caché de tablas en disco** (punto 5): no se hizo. Con los números de arriba ahorraría como mucho las tablas de los worker_threads de cubos grandes y aprender (~30–40 s en rápido), no la app (las tablas están dentro del bundle) ni los vendados (las tablas dependen de la configuración); y necesita serializar tablas en `src/`, con riesgo de servir tablas viejas tras un cambio. No compensa ahora.
+- Ejecutar ficheros en paralelo: no (ver "Tests más rápidos", noche 6: los solvers con límite de tiempo darían otros resultados).
