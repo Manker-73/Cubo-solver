@@ -2,8 +2,8 @@
   "firmas": {
     "cab": "15704 geometrías, 10 permutaciones"
   },
-  "casos": 40,
-  "fecha": "2026-11-22T13:08:28.190Z",
+  "casos": 1000,
+  "fecha": "2026-11-22T13:10:49.277Z",
   "sin-bloqueos": {
     "nombre": "Sin bloqueos",
     "firma": "0",
