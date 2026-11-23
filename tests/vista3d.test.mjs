@@ -237,12 +237,20 @@ test('3D: orientación de referencia del estado resuelto (colores por dirección
 });
 
 test('3D: piezas para resaltar (número de piezas y pegatinas de una pieza)', () => {
-  const esperado = { '2x2': 8, '3x3': 26, '4x4': 56, '5x5': 98, '6x6': 152, '7x7': 218, pyraminx: 14, skewb: 14, megaminx: 62, square1: 18 };
+  const esperado = { '2x2': 8, '3x3': 26, '4x4': 56, '5x5': 98, '6x6': 152, '7x7': 218, pyraminx: 14, skewb: 14, megaminx: 62, square1: 18, fto: 42 };
   for (const p of PUZZLES) {
     const v = p.vista3D(p.estadoResuelto());
     const piezas = new Set(v.geometria.pegatinas.map((q) => q.pieza));
     assert.equal(piezas.size, esperado[p.id], p.id);
   }
+  // FTO: 6 esquinas de 4 pegatinas, 12 aristas de 2 y 24 triángulos de 1
+  const fto = obtenerPuzzle('fto').vista3D(obtenerPuzzle('fto').estadoResuelto()).geometria;
+  const tamanos = {};
+  for (const k of new Set(fto.pegatinas.map((q) => q.pieza))) {
+    const n = pegatinasDePiezas(fto, [k]).length;
+    tamanos[n] = (tamanos[n] || 0) + 1;
+  }
+  assert.deepEqual(tamanos, { 1: 24, 2: 12, 4: 6 });
   const p = obtenerPuzzle('3x3');
   const v = p.vista3D(p.estadoResuelto());
   const esquina = v.geometria.pegatinas.find((q) => q.centro.every((x) => x > 0.5)).pieza; // UFR

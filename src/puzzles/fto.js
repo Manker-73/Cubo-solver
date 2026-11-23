@@ -14,7 +14,7 @@
 import { definirPuzzle } from '../core/puzzle.js';
 import { svgDePegatinas } from '../core/render.js';
 import { reetiquetar } from '../core/simetria.js';
-import { paridad } from '../core/perm.js';
+import { paridad, aplicarPerm } from '../core/perm.js';
 import { rngSeguro } from '../core/rng.js';
 import {
   geo, modelo, CARAS, IDX, OPUESTA, PALETA_FTO, ESQUINAS, ARISTAS, TRI_A, TRI_B, SIGMAS, sigmaPar,
@@ -111,8 +111,11 @@ function analizar(estado) {
   const triA = TRI_A.filter((t) => enA[estado[t.pegatinas[0]]]).length;
   const par = aristasA !== 6 ? aristasA > 6 : triA >= 6;
   const candidatas = SIGMAS.map((s, i) => ({ s, i })).filter(({ i }) => sigmaPar[i] === par);
-  // la de quien lo sujeta (identidad) primero, si vale
-  candidatas.sort((a, b) => (b.s.every((x, k) => x === k) ? 1 : 0) - (a.s.every((x, k) => x === k) ? 1 : 0));
+  // primero la que deja más pegatinas en su sitio (con el puzzle resuelto en cualquier
+  // orientación, la que lo deja resuelto; a igualdad, la de quien lo sujeta)
+  const enSitio = (/** @type {number[]} */ s) => estado.reduce((n, c, i) => n + (s[c] === caraDe[i] ? 1 : 0), 0);
+  const identidad = (/** @type {number[]} */ s) => (s.every((x, k) => x === k) ? 1 : 0);
+  candidatas.sort((a, b) => enSitio(b.s) - enSitio(a.s) || identidad(b.s) - identidad(a.s));
   const sigma = candidatas[0].s;
   const deA = CARAS.map((_, c) => c).filter((c) => enA[sigma[c]]); // colores pintados que hacen de tétrada A
   const deB = CARAS.map((_, c) => c).filter((c) => !enA[sigma[c]]);
@@ -146,10 +149,10 @@ function analizar(estado) {
  * que salga dentro de `tiempoMax` (o la primera, si `primera`).
  * @param {EstadoOrbita[][]} orientaciones @param {{ tiempoMax?: number, primera?: boolean }} op
  */
-function resolverOrientaciones(orientaciones, { tiempoMax = 1500, primera = false } = {}) {
+function resolverOrientaciones(orientaciones, { tiempoMax = 1000, primera = false } = {}) {
   inicializarTablas();
   const t0 = performance.now();
-  /** @type {{ movimientos: Movimiento[], fases: import('../core/tipos.js').Fase[] } | null} */
+  /** @type {{ movimientos: Movimiento[], fases: import('../core/tipos.js').Fase[], k: number } | null} */
   let mejor = null;
   const hechas = new Set();
   for (let ronda = 0, presupuesto = 40; ; ronda++, presupuesto *= 3) {
@@ -161,9 +164,9 @@ function resolverOrientaciones(orientaciones, { tiempoMax = 1500, primera = fals
       const r = resolverPiezas(orientaciones[k], { hasta: ahora + presupuesto });
       if (!r) continue;
       hechas.add(k);
-      const u = unirPartes(r.partes);
+      const u = { ...unirPartes(r.partes), k };
       if (!mejor || u.movimientos.length < mejor.movimientos.length) mejor = u;
-      if (primera) return mejor;
+      if (primera || mejor.movimientos.length === 0) return mejor;
     }
     if (mejor && (hechas.size === orientaciones.length || ronda >= 2)) return mejor;
   }
@@ -174,7 +177,8 @@ function resolver(estado, opciones = {}) {
   const t0 = performance.now();
   const a = analizar(estado);
   if (!a.valido) return { ok: false, errores: a.errores };
-  const r = resolverOrientaciones(a.orientaciones, { tiempoMax: opciones.tiempoMax ?? 1500 });
+  if (estaResuelto(estado)) return { ok: true, movimientos: [], fases: [], ms: performance.now() - t0 };
+  const r = resolverOrientaciones(a.orientaciones, { tiempoMax: opciones.tiempoMax ?? 1000 });
   return { ok: true, movimientos: r.movimientos, fases: r.fases, ms: performance.now() - t0 };
 }
 
@@ -195,11 +199,26 @@ function estaResuelto(e) {
 const aplicar = (e, m) => /** @type {EstadoPegatinas} */ (geo.aplicar(e, m));
 const MOVS = CARAS.flatMap((c) => [c, c + "'"]);
 
+// Rotaciones del grupo como cambio de sistema de referencia: girar el puzzle entero con la
+// rotación i y renombrar los colores con SIGMAS[i] deja el resuelto de referencia en el resuelto
+// de referencia, y un giro X en ese marco es el giro MAPA[i][X] en el original. Una solución
+// encontrada en el marco i, traducida, lleva el estado exactamente al resuelto de referencia
+// (no a uno girado).
+const ROT_GRUPO = SIGMAS.map((_, i) => i).filter((i) => sigmaPar[i])
+  .sort((a, b) => (geo.rotaciones[b].every((/** @type {number} */ x, /** @type {number} */ j) => x === j) ? 1 : 0) - (geo.rotaciones[a].every((/** @type {number} */ x, /** @type {number} */ j) => x === j) ? 1 : 0));
+const MAPA = geo.rotaciones.map((/** @type {number[]} */ R) => Object.fromEntries(CARAS.map((c, f) => {
+  const s = caraDe.indexOf(f);
+  return [c, CARAS[caraDe[R[s]]]];
+})));
+/** @param {Movimiento} m @param {number} i */
+const traducir = (m, i) => MAPA[i][m.replace("'", '')] + (m.endsWith("'") ? "'" : '');
+
 /**
  * Scramble de estado aleatorio (Reglamento 4b3: estado uniforme entre los que necesitan al
- * menos 2 giros). Se elige el estado de piezas al azar, se resuelve desde la orientación de
- * referencia (blanco arriba, verde delante: 4d6) y se invierte la solución. Solo esa
- * orientación, para que el reparto siga siendo uniforme.
+ * menos 2 giros). Se elige el estado de piezas al azar, se busca una solución que lo lleve
+ * exactamente al resuelto de referencia (blanco arriba, verde delante: 4d6) y se invierte.
+ * Para no depender de lo difícil que sea un marco, se prueba en los 12 marcos girados (ver
+ * ROT_GRUPO): todos llevan al mismo resuelto, así que el reparto sigue siendo uniforme.
  * @param {Rng} rng @returns {Movimiento[]}
  */
 function generarScramble(rng = rngSeguro()) {
@@ -208,8 +227,10 @@ function generarScramble(rng = rngSeguro()) {
     const est = piezasAleatorias(rng);
     const e = pegatinasDe(est);
     if (estaResuelto(e) || MOVS.some((m) => estaResuelto(aplicar(e, m)))) continue; // menos de 2 giros
-    const r = resolverOrientaciones([est], { primera: true });
-    return simplificar(r.movimientos.slice().reverse().map(invertirMovimiento));
+    const marcos = ROT_GRUPO.map((i) => piezasDe(reetiquetar(aplicarPerm(e, geo.rotaciones[i]), SIGMAS[i])));
+    const r = resolverOrientaciones(marcos, { primera: true });
+    const sol = r.movimientos.map((m) => traducir(m, ROT_GRUPO[r.k]));
+    return simplificar(sol.slice().reverse().map(invertirMovimiento));
   }
 }
 

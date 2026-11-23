@@ -453,7 +453,7 @@ test('app: si el Worker no se puede crear o falla, todo sigue en el hilo princip
 // ---------- Cambio de puzzle: los dos paneles a la vez; scrambles precargados ----------
 const { PUZZLES: LISTA } = await import('../src/puzzles/index.js');
 const porNombre = (n) => LISTA.find((p) => p.nombre === n);
-const ESTADO_ALEATORIO = ['2x2', '3x3', 'pyraminx', 'skewb', 'square1'];
+const ESTADO_ALEATORIO = ['2x2', '3x3', 'pyraminx', 'skewb', 'square1', 'fto'];
 
 /**
  * Vigila la página: tras cada cambio del DOM (y cada 5 ms), el panel del scramble y el de

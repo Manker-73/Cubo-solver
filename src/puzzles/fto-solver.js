@@ -378,7 +378,7 @@ export function simplificar(movs) {
  * @param {EstadoOrbita[]} est @param {{ hasta: number, candidatos?: number, extra1?: number }} op
  * @returns {{ partes: string[][], nodos: number } | null}
  */
-export function resolverPiezas(est, { hasta, candidatos = 40, extra1 = 1 }) {
+export function resolverPiezas(est, { hasta, candidatos = 20, extra1 = 1 }) {
   inicializar();
   const [F1, F2, F3] = fases;
   const cuenta = { nodos: 0, hasta };
