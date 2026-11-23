@@ -1,4 +1,6 @@
-# Estado del proyecto (fase 0 tras la noche 10 — 23/11/2026)
+# Estado del proyecto (noche 11 — rediseño visual — 23/11/2026)
+
+> Progreso de la noche 11 (rediseño visual): en curso.
 
 > Progreso de la fase 0 (tests más rápidos, sin cambios en `src/`): diagnóstico ✔ · `test:humo` < 2 min ✔ · `test:rapido` ✔ (8 min 20 s; objetivo < 8 min ✘ por ~20 s: la app sola son ~3,6 min) · `npm test` sin cambios en lo que comprueba ✔ (completo lanzado en GitHub; en local solo los ficheros baratos) · `test:solo` ✔ · GitHub Action ✔ (pasa en GitHub) · sabotajes ✔ · caché de tablas en disco ✘ (descartada con números, ver DECISIONES.md) · documentación ✔ · push ✔ · GitHub Pages ✔.
 
