@@ -36,7 +36,9 @@ function cryptoConSemilla(win) {
   Object.defineProperty(win, 'crypto', { configurable: true, value: { getRandomValues, subtle: original && original.subtle, randomUUID: original && original.randomUUID && original.randomUUID.bind(original) } });
 }
 
-async function abrir(t, { beforeParse, url = 'https://localhost/' } = {}) {
+// Noche 11: la app abre en la portada (#/); las herramientas de siempre están en WCA Puzzles (#/wca),
+// así que por defecto los tests abren #/wca. Los de bloqueos abren Bandaged Cubes (#/bandaged).
+async function abrir(t, { beforeParse, url = 'https://localhost/#/wca', esperarHerramienta = true } = {}) {
   let JSDOM;
   try { ({ JSDOM } = await import('jsdom')); } catch { t.skip('jsdom no instalado'); return null; }
   const errores = [];
@@ -53,7 +55,7 @@ async function abrir(t, { beforeParse, url = 'https://localhost/' } = {}) {
     const t0 = Date.now();
     while (!cond()) { if (Date.now() - t0 > ms) throw new Error('tiempo agotado'); await espera(40); }
   };
-  await hasta(() => doc.getElementById('scramble').textContent.length > 0 && !doc.getElementById('scramble').classList.contains('generando'));
+  if (esperarHerramienta) await hasta(() => doc.getElementById('scramble').textContent.length > 0 && !doc.getElementById('scramble').classList.contains('generando'));
   return { w, doc, hasta, errores };
 }
 
@@ -626,7 +628,7 @@ async function abrirSinEsperar(t, ctl) {
   const vc = new VirtualConsole();
   const errores = [];
   vc.on('jsdomError', (e) => { if (!/HTMLCanvasElement/.test(e.message)) errores.push(e.message); });
-  const dom = new JSDOM(construir(), { runScripts: 'dangerously', pretendToBeVisual: true, url: 'https://localhost/', virtualConsole: vc,
+  const dom = new JSDOM(construir(), { runScripts: 'dangerously', pretendToBeVisual: true, url: 'https://localhost/#/wca', virtualConsole: vc, // noche 11: herramienta en #/wca
     beforeParse: (win) => {
       workerControlado(win, ctl);
       win.addEventListener('error', (e) => errores.push(e.message));
@@ -765,9 +767,13 @@ function comprobarSolucionVendada(doc, def, estadoInicial) {
 
 async function probarBloqueos(ctx) {
   const { w, doc, hasta } = ctx;
-  await elegirPuzzle(ctx, '3x3');
+  // Noche 11: el vendado es la sección Bandaged Cubes (#/bandaged, abierta por el test): el 3x3 ya
+  // está elegido y no hay selector (antes: clic en el chip del 3x3 de la herramienta única).
+  await hasta(() => w.cuboSolver.estado().seccion === 'bandaged' && doc.querySelector('#vista-scramble svg') && !doc.getElementById('nuevo').disabled);
+  assert.equal(doc.getElementById('selector').hidden, true, 'Bandaged Cubes no tiene selector de puzzle');
+  assert.equal(doc.getElementById('panel-scramble').dataset.puzzle, '3x3');
   const panel = doc.getElementById('panel-bloqueos');
-  assert.equal(panel.hidden, false, 'la sección Bloqueos se ve en el 3x3');
+  assert.equal(panel.hidden, false, 'la sección de bloques se ve en Bandaged Cubes');
   // Crear un bloque tocando piezas en el editor (2D): UFR (pegatina 8) y UF (pegatina 7)
   doc.getElementById('bloq-nuevo').click();
   for (const i of [8, 7]) doc.querySelector(`#vista-editor [data-i="${i}"]`).dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
@@ -855,7 +861,7 @@ async function probarBloqueos(ctx) {
 }
 
 test('app: bloqueos (sin Worker): crear bloques tocando piezas, aplicar, resolver, ejemplos, firmas y guardar', async (t) => {
-  const ctx = await abrir(t);
+  const ctx = await abrir(t, { url: 'https://localhost/#/bandaged' });
   if (!ctx) return;
   await probarBloqueos(ctx);
   assert.deepEqual(ctx.errores, []);
@@ -864,7 +870,7 @@ test('app: bloqueos (sin Worker): crear bloques tocando piezas, aplicar, resolve
 
 test('app: bloqueos con los Workers reales (tablas por configuración en el Worker)', async (t) => {
   const reg = { workers: [], peticiones: [], respuestas: 0 };
-  const ctx = await abrir(t, { beforeParse: (win) => instalarWorker(win, reg) });
+  const ctx = await abrir(t, { beforeParse: (win) => instalarWorker(win, reg), url: 'https://localhost/#/bandaged' });
   if (!ctx) return;
   try {
     assert.match(ctx.doc.getElementById('modo-calculo').textContent, /Web Worker/);
@@ -876,15 +882,215 @@ test('app: bloqueos con los Workers reales (tablas por configuración en el Work
   }
 });
 
-test('app: bloqueos compartidos por URL (#bloqueos=...) y ?firma=...', async (t) => {
-  for (const url of ['https://localhost/#bloqueos=U.UF-DB.DBL', 'https://localhost/?firma=300C0000000C03']) {
+// Enlaces de antes de las secciones (noche 11): siguen funcionando y abren Bandaged Cubes con esa
+// configuración; la URL pasa a la forma nueva (#/bandaged?…) para que recargar la conserve.
+test('app: bloqueos compartidos por URL (#bloqueos=...) y ?firma=... (enlaces antiguos → Bandaged Cubes)', async (t) => {
+  const casos = [
+    ['https://localhost/#bloqueos=U.UF-DB.DBL', 2],
+    ['https://localhost/?firma=300C0000000C03', null],
+    ['https://localhost/?bloqueos=UFR.UF', 1],
+    ['https://localhost/#firma=40000000000', 1],
+    ['https://localhost/#/bandaged?bloqueos=UFR.UF', 1], // el enlace nuevo de "Copiar enlace"
+  ];
+  for (const [url, n] of casos) {
     const ctx = await abrir(t, { url });
     if (!ctx) return;
-    const { doc, hasta } = ctx;
+    const { w, doc, hasta } = ctx;
     await hasta(() => doc.getElementById('panel-bloqueos').hidden === false);
-    await hasta(() => /bloques/.test(doc.getElementById('bloq-resumen').textContent));
+    await hasta(() => /bloques?$/.test(doc.getElementById('bloq-resumen').textContent));
     await hasta(() => /geometrías/.test(doc.getElementById('bloq-analisis').textContent), 60000);
+    assert.equal(w.cuboSolver.estado().seccion, 'bandaged', url);
+    if (n != null) assert.equal(w.cuboSolver.estado().bloqueos, n, url);
+    assert.equal(doc.getElementById('t-seccion').textContent, 'Bandaged Cubes');
+    assert.equal(doc.getElementById('portada').hidden, true);
+    assert.match(w.location.hash, /^#\/bandaged\?bloqueos=/, `${url}: la URL pasa a la forma nueva`);
+    assert.equal(w.location.search, '', `${url}: sin ?firma= en la URL nueva`);
+    // el 3x3 de WCA Puzzles es el normal aunque haya bloques aplicados en Bandaged Cubes
+    w.location.hash = '#/wca/3x3';
+    await hasta(() => w.cuboSolver.estado().seccion === 'wca' && !doc.getElementById('scramble').classList.contains('generando'));
+    assert.equal(w.cuboSolver.estado().bloqueos, 0, 'WCA: 3x3 sin bloqueos');
+    assert.equal(doc.getElementById('panel-bloqueos').hidden, true, 'WCA: sin la sección de bloques');
+    // y al volver a Bandaged Cubes siguen los mismos bloques
+    w.location.hash = '#/bandaged';
+    await hasta(() => w.cuboSolver.estado().seccion === 'bandaged' && w.cuboSolver.estado().bloqueos > 0);
+    assert.match(w.location.hash, /^#\/bandaged\?bloqueos=/);
     assert.deepEqual(ctx.errores, []);
-    ctx.w.close();
+    w.close();
   }
+});
+
+// ---------- Secciones, navegación y tema (noche 11) ----------
+const esperaHash = (ctx, re) => ctx.hasta(() => re.test(ctx.w.location.hash));
+const herramientaLista = (ctx, seccion, puzzle) => ctx.hasta(() => {
+  const e = ctx.w.cuboSolver.estado();
+  return e.seccion === seccion && (!puzzle || e.puzzle === puzzle) && ctx.doc.querySelector('#vista-scramble svg')
+    && !ctx.doc.getElementById('scramble').classList.contains('generando') && ctx.doc.getElementById('scramble').textContent.length > 0;
+});
+
+test('app: navegación entre secciones (portada, WCA Puzzles con #/wca/<id>, Bandaged Cubes); las bloqueadas no se pueden abrir', async (t) => {
+  const ctx = await abrir(t, { url: 'https://localhost/', esperarHerramienta: false });
+  if (!ctx) return;
+  const { w, doc, hasta, errores } = ctx;
+  // Portada
+  assert.equal(doc.getElementById('portada').hidden, false);
+  assert.equal(doc.getElementById('herramienta').hidden, true);
+  assert.equal(w.cuboSolver.estado().seccion, 'portada');
+  assert.match(doc.querySelector('.heroe h1').textContent, /Mezcla\. Comprueba\. Resuelve\. Aprende\./);
+  const tarjetas = [...doc.querySelectorAll('#secciones-disponibles a.tarjeta-seccion')];
+  assert.deepEqual(tarjetas.map((a) => a.getAttribute('href')), ['#/wca', '#/bandaged']);
+  assert.deepEqual(tarjetas.map((a) => a.querySelector('.nombre').textContent), ['WCA Puzzles', 'Bandaged Cubes']);
+  // Bloqueadas: ni enlaces ni botones ni enfocables; con candado y "Próximamente"
+  const bloq = [...doc.querySelectorAll('#secciones-bloqueadas .tarjeta-bloqueada')];
+  assert.deepEqual(bloq.map((x) => x.querySelector('.nombre').textContent), ['Shape Mods', 'Cuboids', 'Others']);
+  for (const x of bloq) {
+    assert.equal(x.querySelector('a, button, [tabindex], [href]'), null, 'una sección bloqueada no es un enlace');
+    assert.match(x.textContent, /Próximamente/);
+    assert.ok(x.querySelector('svg'), 'candado');
+  }
+  assert.match(doc.getElementById('secciones-bloqueadas').textContent, /Más en camino/);
+  // Un clic en una sección bloqueada no navega
+  bloq[0].dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
+  await espera(100);
+  assert.equal(w.cuboSolver.estado().seccion, 'portada');
+  // Clic en WCA Puzzles: la herramienta con el 3x3 (o el último elegido) y la URL #/wca/3x3
+  tarjetas[0].click();
+  await herramientaLista(ctx, 'wca', '3x3');
+  await esperaHash(ctx, /^#\/wca\/3x3$/);
+  assert.equal(doc.getElementById('portada').hidden, true);
+  assert.equal(doc.getElementById('t-seccion').textContent, 'WCA Puzzles');
+  assert.equal(doc.getElementById('panel-bloqueos').hidden, true);
+  assert.equal(doc.querySelector('#selector .chip[aria-pressed="true"]').textContent, '3x3');
+  // FTO: chip bloqueado, no es un botón
+  const fto = doc.querySelector('#selector .chip-pronto');
+  assert.equal(fto.textContent, 'FTO · pronto');
+  assert.equal(fto.tagName, 'SPAN');
+  assert.equal(doc.querySelector('#selector button[data-pronto]'), null);
+  // Elegir un puzzle cambia la URL (#/wca/<id>)
+  chipDe(doc, 'Pyraminx').click();
+  await herramientaLista(ctx, 'wca', 'pyraminx');
+  assert.equal(w.location.hash, '#/wca/pyraminx');
+  // Y la URL elige el puzzle
+  w.location.hash = '#/wca/skewb';
+  await herramientaLista(ctx, 'wca', 'skewb');
+  assert.equal(doc.querySelector('#selector .chip[aria-pressed="true"]').textContent, 'Skewb');
+  // Un puzzle que no existe o aún no se puede usar (FTO): se queda en WCA Puzzles con el actual
+  for (const h of ['#/wca/fto', '#/wca/nada']) {
+    w.location.hash = h;
+    await esperaHash(ctx, /^#\/wca\/skewb$/);
+    assert.equal(w.cuboSolver.estado().puzzle, 'skewb', h);
+  }
+  // "Inicio" vuelve a la portada
+  doc.querySelector('.volver').click();
+  await hasta(() => w.cuboSolver.estado().seccion === 'portada');
+  assert.equal(doc.getElementById('portada').hidden, false);
+  // Bandaged Cubes: 3x3, sin selector, con la sección de bloques
+  doc.querySelector('a.tarjeta-seccion[href="#/bandaged"]').click();
+  await herramientaLista(ctx, 'bandaged', '3x3');
+  assert.equal(doc.getElementById('t-seccion').textContent, 'Bandaged Cubes');
+  assert.equal(doc.getElementById('selector').hidden, true);
+  assert.equal(doc.getElementById('panel-bloqueos').hidden, false);
+  // Secciones bloqueadas o desconocidas por URL: vuelven a la portada
+  for (const h of ['#/shape-mods', '#/cuboids', '#/others', '#/shape-mods/mirror', '#/nada', '#algo']) {
+    w.location.hash = '#/wca/3x3';
+    await herramientaLista(ctx, 'wca', '3x3');
+    w.location.hash = h;
+    await hasta(() => w.cuboSolver.estado().seccion === 'portada');
+    assert.equal(w.location.hash, '#/', h);
+    assert.equal(doc.getElementById('herramienta').hidden, true, h);
+  }
+  // "Cómo funciona": la portada con el foco en esa parte
+  w.location.hash = '#/como-funciona';
+  await hasta(() => doc.activeElement && doc.activeElement.id === 'como-funciona');
+  assert.equal(doc.getElementById('portada').hidden, false);
+  assert.deepEqual(errores, []);
+  w.close();
+});
+
+test('app: tema oscuro por defecto aunque el sistema esté en claro; el botón lo cambia y se guarda', async (t) => {
+  // el sistema pide modo claro
+  const sistemaClaro = (win) => {
+    win.matchMedia = (q) => ({ matches: /prefers-color-scheme:\s*light/.test(q), media: q, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {} });
+  };
+  let ctx = await abrir(t, { url: 'https://localhost/', esperarHerramienta: false, beforeParse: sistemaClaro });
+  if (!ctx) return;
+  let { w, doc } = ctx;
+  const raiz = () => doc.documentElement;
+  const boton = () => doc.getElementById('tema');
+  assert.equal(raiz().dataset.theme, 'dark', 'oscuro por defecto');
+  assert.equal(w.cuboSolver.estado().tema, 'oscuro');
+  assert.equal(boton().tagName, 'BUTTON');
+  assert.equal(boton().getAttribute('aria-label'), 'Cambiar a modo claro');
+  assert.equal(doc.getElementById('tema-texto').textContent, 'Modo claro');
+  boton().click();
+  assert.equal(raiz().dataset.theme, 'light');
+  assert.equal(w.localStorage.getItem('cubo-solver:tema'), 'claro');
+  assert.equal(boton().getAttribute('aria-label'), 'Cambiar a modo oscuro');
+  assert.equal(doc.getElementById('tema-texto').textContent, 'Modo oscuro');
+  // en una sección con herramienta el tema se mantiene
+  w.location.hash = '#/wca/2x2';
+  await herramientaLista(ctx, 'wca', '2x2');
+  assert.equal(raiz().dataset.theme, 'light');
+  boton().click();
+  assert.equal(raiz().dataset.theme, 'dark');
+  assert.equal(w.localStorage.getItem('cubo-solver:tema'), 'oscuro');
+  assert.deepEqual(ctx.errores, []);
+  w.close();
+  // persistencia: al volver a abrir la página con 'claro' guardado, sale en claro
+  ctx = await abrir(t, { url: 'https://localhost/', esperarHerramienta: false, beforeParse: (win) => { sistemaClaro(win); win.localStorage.setItem('cubo-solver:tema', 'claro'); } });
+  ({ w, doc } = ctx);
+  assert.equal(doc.documentElement.dataset.theme, 'light', 'tema guardado');
+  assert.equal(w.cuboSolver.estado().tema, 'claro');
+  w.close();
+  // sin almacenamiento (localStorage lanza): oscuro, y el botón funciona durante la sesión
+  ctx = await abrir(t, {
+    url: 'https://localhost/', esperarHerramienta: false,
+    beforeParse: (win) => { Object.defineProperty(win, 'localStorage', { configurable: true, get() { throw new Error('SecurityError'); } }); },
+  });
+  ({ w, doc } = ctx);
+  assert.equal(doc.documentElement.dataset.theme, 'dark');
+  doc.getElementById('tema').click();
+  assert.equal(doc.documentElement.dataset.theme, 'light', 'sin almacenamiento el tema dura la sesión');
+  assert.deepEqual(ctx.errores, []);
+  w.close();
+});
+
+async function reproducirHastaElFinal(ctx, nombre) {
+  const { doc, hasta, w } = ctx;
+  // velocidad ×8 y play: avanza solo hasta "Resuelto"
+  while (doc.getElementById('r-velocidad').textContent !== '×8') doc.getElementById('r-velocidad').click();
+  doc.getElementById('r-play').click();
+  await hasta(() => /Resuelto/.test(doc.getElementById('paso').textContent), 60000);
+  assert.equal(w.cuboSolver.resuelto(), true, `${nombre}: la reproducción deja el puzzle resuelto`);
+}
+
+test('app: recorrido completo (scramble → resolver → reproducir) en WCA Puzzles y en Bandaged Cubes', async (t) => {
+  const ctx = await abrir(t, { url: 'https://localhost/', esperarHerramienta: false });
+  if (!ctx) return;
+  const { w, doc, hasta, errores } = ctx;
+  // WCA Puzzles (3x3)
+  doc.querySelector('a.tarjeta-seccion[href="#/wca"]').click();
+  await herramientaLista(ctx, 'wca', '3x3');
+  doc.getElementById('nuevo').click();
+  await herramientaLista(ctx, 'wca', '3x3');
+  doc.getElementById('cargar').click();
+  doc.getElementById('resolver').click();
+  await hasta(() => !doc.getElementById('solucion').hidden || doc.querySelector('#mensajes .mensaje.error'), 60000);
+  assert.equal(doc.querySelector('#mensajes .mensaje.error'), null, doc.getElementById('mensajes').textContent);
+  await reproducirHastaElFinal(ctx, 'WCA 3x3');
+  // Bandaged Cubes: una pareja (UFR + UF) por la URL, scramble legal, resolver y reproducir
+  w.location.hash = '#/bandaged?bloqueos=UFR.UF';
+  await hasta(() => w.cuboSolver.estado().seccion === 'bandaged' && w.cuboSolver.estado().bloqueos === 1);
+  await hasta(() => /24 geometrías/.test(doc.getElementById('bloq-analisis').textContent), 60000);
+  await herramientaLista(ctx, 'bandaged', '3x3');
+  const scr = doc.getElementById('scramble').textContent.trim().split(/\s+/);
+  const p = crear3x3Vendado([['UFR', 'UF']]);
+  const ini = p.aplicarSecuencia(p.estadoResuelto(), scr); // lanza un error si algún giro es ilegal
+  doc.getElementById('cargar').click();
+  doc.getElementById('resolver').click();
+  await hasta(() => !doc.getElementById('solucion').hidden || doc.querySelector('#mensajes .mensaje.error'), 60000);
+  assert.equal(doc.querySelector('#mensajes .mensaje.error'), null, doc.getElementById('mensajes').textContent);
+  comprobarSolucionVendada(doc, [['UFR', 'UF']], ini);
+  await reproducirHastaElFinal(ctx, 'Bandaged pareja');
+  assert.deepEqual(errores, []);
+  w.close();
 });

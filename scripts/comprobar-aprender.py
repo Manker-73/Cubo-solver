@@ -10,7 +10,8 @@ import asyncio, json, os
 from playwright.async_api import async_playwright
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-URL = 'file://' + os.path.join(RAIZ, 'dist/index.html')
+# Noche 11: la app abre en la portada; las herramientas están en #/wca (WCA Puzzles).
+URL = 'file://' + os.path.join(RAIZ, 'dist/index.html') + '#/wca'
 OUT = os.path.join(RAIZ, 'docs/capturas')
 CONFIGS = [
     ('escritorio', dict(viewport={'width': 1280, 'height': 900}, color_scheme='light')),

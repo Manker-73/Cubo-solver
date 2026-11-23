@@ -21,7 +21,7 @@ export function bloqueosDeTexto(t) {
   return decodeURIComponent(t).split('-').map((g) => g.split('.').filter(Boolean)).filter((g) => g.length);
 }
 
-/** Configuración pedida en la URL (#bloqueos=... o ?bloqueos=... o ?firma=...), o null. */
+/** Configuración pedida en la URL (#bloqueos=... o ?bloqueos=... o ?firma=...), o null. Con las secciones (noche 11) main.js le pasa la consulta de #/bandaged?… como hash. */
 export function bloqueosDeURL(loc = typeof location !== 'undefined' ? location : null) {
   if (!loc) return null;
   const params = new URLSearchParams((loc.hash || '').replace(/^#/, '') + '&' + (loc.search || '').replace(/^\?/, ''));
@@ -293,7 +293,7 @@ export function crearPanelBloqueos(ctx) {
       pintarConfigs();
     });
     $('bloq-enlace').addEventListener('click', async (ev) => {
-      const url = location.href.split('#')[0].split('?')[0] + '#bloqueos=' + encodeURIComponent(textoDeBloqueos(ctx.aplicados()));
+      const url = location.href.split('#')[0].split('?')[0] + '#/bandaged?bloqueos=' + encodeURIComponent(textoDeBloqueos(ctx.aplicados()));
       const b = ev.currentTarget;
       try { await navigator.clipboard.writeText(url); b.textContent = 'Enlace copiado'; } catch { $('bloq-url').hidden = false; $('bloq-url').value = url; $('bloq-url').select(); b.textContent = 'Cópialo de aquí'; }
       setTimeout(() => { b.textContent = 'Copiar enlace'; }, 1600);

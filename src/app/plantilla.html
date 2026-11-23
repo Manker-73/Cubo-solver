@@ -1,18 +1,57 @@
-<title>Cubo Solver</title>
+<title>Cubo-solver</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<meta name="color-scheme" content="dark light">
+<style>/*FUENTES*/</style>
 <style>/*ESTILOS*/</style>
-<div class="app">
+<div class="app" id="app" data-seccion="portada">
+  <a class="saltar" href="#contenido">Saltar al contenido</a>
   <header class="cabecera">
-    <div class="marca">
-      <h1>Cubo Solver</h1>
-      <p class="sub">Scrambles WCA, validador y solucionador</p>
-    </div>
-    <nav class="selector" id="selector" aria-label="Puzzle"></nav>
+    <a class="marca" href="#/" aria-label="Cubo-solver: inicio">
+      <svg class="logo" width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><rect x="1" y="1" width="28" height="28" rx="6" fill="none" stroke="currentColor" stroke-width="2"/><path d="M10.3 1v28M19.7 1v28M1 10.3h28M1 19.7h28" stroke="currentColor" stroke-width="2"/></svg>
+      <span class="marca-nombre">Cubo-solver</span>
+    </a>
+    <nav class="cab-enlaces" aria-label="Enlaces">
+      <a href="#/como-funciona" class="cab-enlace solo-ancho">Cómo funciona</a>
+      <a href="https://github.com/Manker-73/Cubo-solver" class="cab-enlace solo-ancho" rel="noopener" target="_blank">GitHub</a>
+      <button type="button" class="boton-tema" id="tema" aria-label="Cambiar a modo claro">
+        <svg class="icono-sol" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        <svg class="icono-luna" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+        <span class="tema-texto" id="tema-texto" aria-hidden="true">Modo claro</span>
+      </button>
+    </nav>
   </header>
 
-  <main class="paneles">
+  <main id="contenido" tabindex="-1">
+  <div class="portada" id="portada">
+    <section class="heroe" aria-labelledby="t-portada">
+      <span class="eyebrow">scramble · validar · resolver · aprender</span>
+      <h1 id="t-portada">Mezcla. Comprueba. Resuelve. Aprende.</h1>
+      <p class="heroe-texto">Scrambles oficiales, validador de estados y soluciones animadas en 3D para tus puzzles, con métodos humanos explicados paso a paso.</p>
+    </section>
+    <nav class="secciones" aria-label="Secciones">
+      <div class="secciones-disponibles" id="secciones-disponibles"></div>
+      <ul class="secciones-bloqueadas" id="secciones-bloqueadas"></ul>
+    </nav>
+    <section class="como-funciona" id="como-funciona" aria-labelledby="t-como" tabindex="-1">
+      <h2 id="t-como">Cómo funciona</h2>
+      <ol class="pasos">
+        <li><span class="paso-num">01</span><strong>Mezcla</strong><span>Elige el puzzle y pulsa <em>Nuevo scramble</em>: estado aleatorio donde la WCA lo usa, con vista previa en 2D o 3D.</span></li>
+        <li><span class="paso-num">02</span><strong>Comprueba</strong><span>Pinta el estado de tu puzzle tocando las pegatinas (o carga el scramble). Si es imposible, la app dice qué pieza falla.</span></li>
+        <li><span class="paso-num">03</span><strong>Resuelve</strong><span>Pulsa <em>Resolver</em> y recorre la solución movimiento a movimiento, con los giros animados en 3D.</span></li>
+        <li><span class="paso-num">04</span><strong>Aprende</strong><span>Con el modo aprender, la solución sigue un método humano (por capas, CFOP, Ortega…) explicado etapa a etapa.</span></li>
+      </ol>
+      <p class="tenue">Todo se calcula en tu navegador: funciona sin conexión una vez cargada la página.</p>
+    </section>
+  </div>
+
+  <div class="seccion-herramienta" id="herramienta" hidden>
+    <div class="seccion-cab">
+      <a class="volver" href="#/"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Inicio</a>
+      <h1 id="t-seccion" tabindex="-1">WCA Puzzles</h1>
+      <p class="seccion-intro" id="intro-seccion"></p>
+      <nav class="selector" id="selector" aria-label="Puzzle"></nav>
+    </div>
+    <div class="paneles">
     <section class="panel" aria-labelledby="t-scramble" id="panel-scramble">
       <div class="panel-cab">
         <h2 id="t-scramble">Scramble</h2>
@@ -107,7 +146,7 @@
 
     <section class="panel panel-bloqueos" aria-labelledby="t-bloqueos" id="panel-bloqueos" hidden>
       <div class="panel-cab">
-        <h2 id="t-bloqueos">Bloqueos</h2>
+        <h2 id="t-bloqueos">Tus bloques</h2>
         <span class="etiqueta" id="bloq-resumen">Sin bloqueos</span>
       </div>
       <p class="desc">Pega piezas entre sí para convertir el cubo en un cubo vendado. Un giro solo es posible si mueve todas las piezas de cada bloque o ninguna; los bloques viajan con los giros y el scramble y la solución solo usan giros legales.</p>
@@ -154,6 +193,8 @@
         <p class="tenue">La firma es el formato de la comunidad (Bandaged Cube Explorer, de Andreas Nortmann): 54 uniones posibles entre cubies vecinos, en hexadecimal.</p>
       </details>
     </section>
+    </div>
+  </div>
   </main>
   <footer class="pie">
     <span>Notación WCA. Los scrambles de 2x2, 3x3, Pyraminx, Skewb y Square-1 son de estado aleatorio; los de 4x4–7x7, de movimientos aleatorios, y los del Megaminx, en notación Pochmann.</span>

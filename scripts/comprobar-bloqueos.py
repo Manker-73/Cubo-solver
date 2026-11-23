@@ -13,7 +13,8 @@ import asyncio, json, os
 from playwright.async_api import async_playwright
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-URL = 'file://' + os.path.join(RAIZ, 'dist/index.html')
+# Noche 11: el cubo vendado es su propia sección, Bandaged Cubes (#/bandaged), sin selector de puzzle.
+URL = 'file://' + os.path.join(RAIZ, 'dist/index.html') + '#/bandaged'
 OUT = os.path.join(RAIZ, 'docs/capturas')
 CONFIGS = [
     ('escritorio', dict(viewport={'width': 1280, 'height': 900}, color_scheme='light')),
@@ -69,8 +70,8 @@ async def main():
                 pg.on('console', lambda m, c=clave: errores.append(f'{c}: {m.text}') if m.type == 'error' else None)
                 await pg.goto(URL)
                 await esperar_scramble(pg)
-                await pg.locator('#selector .chip', has_text='3x3').first.click()
-                await esperar_scramble(pg)
+                # (antes: clic en el chip del 3x3; en Bandaged Cubes el 3x3 ya está elegido y no hay selector)
+                assert await pg.evaluate("document.getElementById('selector').hidden"), 'Bandaged Cubes no tiene selector de puzzle'
                 modo = '3d' if modo3d else '2d'
                 await pg.evaluate(f"() => {{ for (const id of ['modo-previa', 'modo-editor']) {{ const b = document.querySelector('#' + id + ' button[data-modo=\"{modo}\"]'); if (b) b.click(); }} }}")
                 # 1) crear un bloque tocando piezas

@@ -32,11 +32,12 @@ const AREAS = {
   vendado: { ficheros: ['bloqueos'], patron: 'vendado|bloqueos' },
   aprender: { ficheros: ['aprender', 'oll-numeros'], patron: 'aprender' },
   '3d': { ficheros: ['vista3d'], patron: '3D' },
-  app: { ficheros: ['app'], patron: null },
+  app: { ficheros: ['app', 'diseno'], patron: null },
+  diseno: { ficheros: ['diseno'], patron: 'diseño' },
   humo: { ficheros: ['humo'], patron: null },
   registro: { ficheros: ['registro'], patron: 'registro|interfaz' },
 };
-const ALIAS = { sq1: 'square1', 'square-1': 'square1', bloqueos: 'vendado', mega: 'megaminx', pyra: 'pyraminx', vista3d: 'vista3d', '3D': '3d', interfaz: 'registro' };
+const ALIAS = { 'diseño': 'diseno', tema: 'diseno', sq1: 'square1', 'square-1': 'square1', bloqueos: 'vendado', mega: 'megaminx', pyra: 'pyraminx', vista3d: 'vista3d', '3D': '3d', interfaz: 'registro' };
 for (const N of [4, 5, 6, 7]) AREAS[`${N}x${N}`] = { ficheros: ['cubo-grande', 'nxn'], patron: `NxN|${N}x${N}`, tamano: N };
 AREAS.vista3d = AREAS['3d'];
 const COMPARTIDOS = ['humo', 'aprender', 'vista3d', 'registro'];
@@ -58,9 +59,11 @@ if (nivel === 'completo') {
 } else if (nivel === 'rapido') {
   estado = ejecutar(todos.map((x) => `tests/${x}`), { env: rapido });
 } else if (nivel === 'humo') {
-  estado = ejecutar([f('humo'), f('registro'), f('app')], {
+  estado = ejecutar([f('humo'), f('registro'), f('diseno'), f('app')], {
     env: { NIVEL: 'humo', CASOS: process.env.CASOS || '100' },
-    patrones: ['^humo:', '^registro:', '^interfaz:', '^app: sin Worker, construye', '^app: con Web Worker'],
+    // noche 11: diseño (rutas y contraste), navegación entre secciones, tema, enlaces antiguos y recorrido completo
+    patrones: ['^humo:', '^registro:', '^interfaz:', '^diseño:', '^app: sin Worker, construye', '^app: con Web Worker',
+      '^app: navegación', '^app: tema', '^app: bloqueos compartidos por URL', '^app: recorrido completo'],
   });
 } else if (nivel === 'solo') {
   const areas = resto.map((a) => ALIAS[a] || ALIAS[a.toLowerCase()] || a.toLowerCase());
