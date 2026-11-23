@@ -49,12 +49,28 @@ async def resolver_y_reproducir(pg, nombre, fallos):
     if err:
         fallos.append(f'{nombre}: {err}')
         return
-    for _ in range(3):
+    for _ in range(4):
+        if await pg.text_content('#r-velocidad') == '×8':
+            break
         await pg.click('#r-velocidad')
     await pg.click('#r-play')
     await pg.wait_for_function("() => /Resuelto/.test(document.getElementById('paso').textContent)", timeout=120000)
     if not await pg.evaluate('window.cuboSolver.resuelto()'):
         fallos.append(f'{nombre}: la reproducción no deja el puzzle resuelto')
+
+
+async def etapa(nombre, fallos, pg, coro):
+    """Ejecuta una parte de la comprobación; si falla (p. ej. un tiempo agotado), lo apunta con una captura y sigue."""
+    try:
+        await coro
+        return True
+    except Exception as e:
+        fallos.append(f'{nombre}: {type(e).__name__}: {str(e).splitlines()[0]}')
+        try:
+            await pg.screenshot(path=f'{OUT}/diseno-fallo-{nombre.replace(" ", "-")}.jpg', quality=60, type='jpeg', full_page=True)
+        except Exception:
+            pass
+        return False
 
 
 async def main():
@@ -112,33 +128,41 @@ async def main():
                 info['pequenos']['portada'] = await pg.evaluate(PEQUENOS)
                 await pg.screenshot(path=f'{OUT}/diseno-{disp}-{tema}-portada.jpg', quality=70, type='jpeg', full_page=True)
 
-                # ---------- WCA Puzzles: 3x3 con la solución en 3D ----------
-                await pg.click('a.tarjeta-seccion[href="#/wca"]')
-                await esperar_scramble(pg)
-                await pg.click('#selector .chip:has-text("3x3")')
-                await esperar_scramble(pg)
-                await pg.evaluate("() => { for (const id of ['modo-previa', 'modo-editor']) { const b = document.querySelector('#' + id + ' button[data-modo=\"3d\"]'); if (b) b.click(); } }")
-                await resolver_y_reproducir(pg, f'{clave} WCA 3x3', fallos)
-                info['wca3d'] = await pg.evaluate("() => ({ webgl: window.cuboSolver.estado().webgl, lienzo: !document.getElementById('vista3d-editor').hidden, hash: location.hash })")
-                if not info['wca3d']['lienzo']:
-                    fallos.append(f'{clave}: la solución del 3x3 no se ve en 3D')
-                info['scroll']['wca'] = await pg.evaluate('document.documentElement.scrollWidth')
-                info['pequenos']['wca'] = await pg.evaluate(PEQUENOS)
-                await pg.screenshot(path=f'{OUT}/diseno-{disp}-{tema}-wca.jpg', quality=70, type='jpeg', full_page=True)
+                async def parte_wca():
+                    # ---------- WCA Puzzles: 3x3 con la solución en 3D ----------
+                    await pg.click('a.tarjeta-seccion[href="#/wca"]')
+                    await esperar_scramble(pg)
+                    await pg.click('#selector .chip:has-text("3x3")')
+                    await esperar_scramble(pg)
+                    await pg.evaluate("() => { for (const id of ['modo-previa', 'modo-editor']) { const b = document.querySelector('#' + id + ' button[data-modo=\"3d\"]'); if (b) b.click(); } }")
+                    await resolver_y_reproducir(pg, f'{clave} WCA 3x3', fallos)
+                    info['wca3d'] = await pg.evaluate("() => ({ webgl: window.cuboSolver.estado().webgl, lienzo: !document.getElementById('vista3d-editor').hidden, hash: location.hash })")
+                    if not info['wca3d']['lienzo']:
+                        fallos.append(f'{clave}: la solución del 3x3 no se ve en 3D')
+                    info['scroll']['wca'] = await pg.evaluate('document.documentElement.scrollWidth')
+                    info['pequenos']['wca'] = await pg.evaluate(PEQUENOS)
+                    await pg.screenshot(path=f'{OUT}/diseno-{disp}-{tema}-wca.jpg', quality=70, type='jpeg', full_page=True)
 
-                # ---------- Bandaged Cubes ----------
-                await pg.click('.volver')
-                await pg.wait_for_selector('#portada:not([hidden])')
-                await pg.click('a.tarjeta-seccion[href="#/bandaged"]')
-                await esperar_scramble(pg)
-                await pg.select_option('#bloq-config', 'ej:1x2x2') if await pg.locator('#bloq-config option[value="ej:1x2x2"]').count() else None
-                await pg.wait_for_function("() => /geometrías/.test(document.getElementById('bloq-analisis').textContent)", timeout=90000)
-                await esperar_scramble(pg)
-                await resolver_y_reproducir(pg, f'{clave} Bandaged', fallos)
-                info['bandaged'] = await pg.evaluate("() => ({ hash: location.hash, bloqueos: window.cuboSolver.estado().bloqueos })")
-                info['scroll']['bandaged'] = await pg.evaluate('document.documentElement.scrollWidth')
-                info['pequenos']['bandaged'] = await pg.evaluate(PEQUENOS)
-                await pg.screenshot(path=f'{OUT}/diseno-{disp}-{tema}-bandaged.jpg', quality=70, type='jpeg', full_page=True)
+
+                await etapa(f'{clave} WCA', fallos, pg, parte_wca())
+
+                async def parte_bandaged():
+                    # ---------- Bandaged Cubes ----------
+                    await pg.click('.volver')
+                    await pg.wait_for_selector('#portada:not([hidden])')
+                    await pg.click('a.tarjeta-seccion[href="#/bandaged"]')
+                    await esperar_scramble(pg)
+                    await pg.select_option('#bloq-config', 'ej:1x2x2') if await pg.locator('#bloq-config option[value="ej:1x2x2"]').count() else None
+                    await pg.wait_for_function("() => /geometrías/.test(document.getElementById('bloq-analisis').textContent)", timeout=90000)
+                    await esperar_scramble(pg)
+                    await resolver_y_reproducir(pg, f'{clave} Bandaged', fallos)
+                    info['bandaged'] = await pg.evaluate("() => ({ hash: location.hash, bloqueos: window.cuboSolver.estado().bloqueos })")
+                    info['scroll']['bandaged'] = await pg.evaluate('document.documentElement.scrollWidth')
+                    info['pequenos']['bandaged'] = await pg.evaluate(PEQUENOS)
+                    await pg.screenshot(path=f'{OUT}/diseno-{disp}-{tema}-bandaged.jpg', quality=70, type='jpeg', full_page=True)
+
+
+                await etapa(f'{clave} Bandaged', fallos, pg, parte_bandaged())
 
                 ancho = opts['viewport']['width']
                 for k, v in info['scroll'].items():

@@ -21,7 +21,7 @@ src/
     schreier.js     cadena de estabilizadores con arrays tipados (orden, pertenencia, elemento al azar)
     tabla-estados.js  tabla hash de estados empaquetados (BFS completo de los espacios pequeños)
   puzzles/        un módulo por puzzle
-    index.js        REGISTRO: la única lista de puzzles
+    index.js        REGISTRO: la única lista de puzzles (con su `categoria`: sección de la app) y PUZZLES_PRONTO (anunciados)
     nxn.js          cubos NxN (modelo de pegatinas, notación, dibujo, scramble aleatorio, simplificación de capas)
     nxn-piezas.js   NxN: piezas y órbitas (esquinas, aristas centrales, wings, centros) deducidas de la geometría
     nxn-grupo.js    NxN: demostración de las restricciones (Schreier–Sims + paridades por órbita)
@@ -58,8 +58,11 @@ src/
     metodos-skewb.js     Skewb: primera capa (arriba), esquinas de abajo (sledgehammers) y centros
     metodos-square1.js   Square-1: forma de cubo, orientar, permutar y paridad (con las tablas de la fase 2 del solver)
   app/            interfaz
-    plantilla.html, estilos.css
-    main.js         interfaz (solo usa la interfaz común)
+    plantilla.html, estilos.css   (cabecera, portada, herramienta; temas oscuro y claro con variables CSS)
+    fuentes/        subconjuntos woff2 (Inter, Bricolage Grotesque, JetBrains Mono) que build.mjs incrusta; licencias OFL
+    secciones.js    SECCIONES (portada y menú) y rutas por hash: leerRuta / hashDe (sin DOM)
+    tema.js         tema oscuro por defecto / claro, guardado en localStorage
+    main.js         interfaz (solo usa la interfaz común): secciones, herramienta, navegación
     motor.js        dos Web Workers (principal: tablas del solver, validar, resolver; fondo: scrambles) con cola por prioridades (o el hilo principal si no hay)
     servicio.js     tablas, scrambles, validación y búsquedas (lo usan el Worker y el hilo principal)
     worker.js       punto de entrada del Worker
@@ -68,6 +71,7 @@ src/
     reproductor.js  reproductor de una secuencia (scramble o solución): pasos animados, atrás, play/pausa
     bloqueos-ui.js  sección "Bloqueos": grupos tocando piezas (2D/3D), ejemplos, guardar, URL, firmas
 tests/            node --test (npm test; niveles: ver "Tests" más abajo)
+  diseno.test.mjs rutas de las secciones y contraste ≥ 4,5:1 de los colores de los dos temas
   humo.test.mjs   prueba de humo de cada puzzle del registro, huellas de los giros, vendado y modo aprender
   huellas.json    huellas (hash del estado) de cada giro básico y de una secuencia fija por puzzle
   aprender-comprobar.mjs  objetivos por etapa y comprobación de una solución del modo aprender (aprender y humo)
@@ -75,7 +79,9 @@ tests/            node --test (npm test; niveles: ver "Tests" más abajo)
   paralelo.mjs    reparte los casos de los tests largos entre worker_threads
   trabajador.mjs  hilo de trabajo (importa el puzzle, genera sus tablas, resuelve)
 scripts/
-  build.mjs       genera dist/index.html y dist/artifact.html
+  build.mjs       genera dist/index.html y dist/artifact.html (con las fuentes en base64; SIN_FUENTES=1 sin ellas)
+  fuentes.sh      regenera los subconjuntos de src/app/fuentes/ (fonttools)
+  comprobar-diseno.py  rediseño en Chromium real: portada, WCA (3x3 en 3D) y Bandaged, escritorio/móvil, oscuro/claro, sin red
   construir.mjs   empaquetado con esbuild (el Worker va incrustado como texto y se crea desde un blob)
   bench.mjs       benchmark de todos los solvers (npm run bench)
   tests.mjs       lanzador de los tests por niveles (test:humo, test:rapido, test:solo)
@@ -303,8 +309,26 @@ wings) en el estado, en vez de deducirla de los colores: es lo único que no es 
 - Vista 3D: una pegatina con `expandir: [bool por lado]` llega hasta el borde por esos lados (sin el
   hueco negro); en 2D, `svgDePegatinas(..., { expandir })` hace lo mismo con la red.
 
+## Interfaz: secciones, navegación y temas (noche 11)
+
+```
+#/                    portada: titular, una tarjeta por sección (SECCIONES), «Cómo funciona»
+#/como-funciona       portada con el foco en «Cómo funciona»
+#/wca[/<id>]          WCA Puzzles: la herramienta con el selector (puzzles con categoria 'wca' + PUZZLES_PRONTO bloqueados)
+#/bandaged[?bloqueos=…|?firma=…]   Bandaged Cubes: el 3x3 con «Tus bloques», sin selector
+#/<bloqueada o desconocida>  -> #/ (replaceState)
+#bloqueos=… #firma=… ?bloqueos=… ?firma=…  (enlaces antiguos) -> #/bandaged?…
+```
+
+- **`secciones.js`**: `SECCIONES = [{ id, nombre, descripcion, descripcionCorta?, estado: 'disponible' | 'bloqueada', estilo? }]` (los nombres en inglés, como en la comunidad; `INTRO_SECCION` tiene el texto en español de cada herramienta). `leerRuta(hash, search)` devuelve `{ seccion, puzzle?, consulta?, ancla?, redirigir?, antigua? }` y `hashDe(ruta)` lo contrario; no tocan el DOM (los prueba `tests/diseno.test.mjs`). **Para añadir una sección**: una línea en `SECCIONES` (bloqueada sale ya en la portada como «Próximamente»); para abrirla, `estado: 'disponible'` y, en `main.js`, qué hace `aplicarRuta` con ella (qué puzzles muestra el selector: los de su `categoria`).
+- **`main.js`**: `aplicarRuta()` (al cargar y en cada `hashchange`) muestra `#portada` o `#herramienta`, pone el título y la introducción de la sección y elige el puzzle (`seleccionar`, síncrona como siempre). `st.seccion` decide dos cosas: el selector (`pintarSelector` solo en WCA) y los bloques (`puzzleActivo` solo envuelve el 3x3 con `puzzleConBloqueos` en Bandaged; el panel de bloques recibe `base() = null` fuera de Bandaged y se oculta). Los cambios de URL que no son una navegación del usuario (elegir un chip, aplicar bloques, normalizar un enlace antiguo) usan `history.replaceState`, que no dispara `hashchange`.
+- La herramienta es un solo DOM para las dos secciones (mismos ids que antes); en Bandaged el panel de bloques va primero por CSS (`.seccion-herramienta[data-seccion="bandaged"] .panel-bloqueos { order: -1 }`).
+- **Temas** (`tema.js` + `estilos.css`): `data-theme="dark" | "light"` en `<html>`; `:root` tiene los colores oscuros (por defecto, sin mirar `prefers-color-scheme`) y `:root[data-theme="light"]` los claros. Variables: `--fondo`, `--superficie` (paneles), `--linea`, `--tinta`, `--tenue`, `--acento`, `--acento-texto`, `--acento-tinta` (texto sobre acento), `--acento-suave`, `--raya-1`/`--raya-2` (fondo rayado de lo bloqueado), `--error(-suave)`, `--ok(-suave)`, `--aviso`, `--lienzo` (fondo de las vistas 2D/3D) y `--contorno` (contorno fino de los dibujos en oscuro). El test de contraste lee estos dos bloques del CSS: un color nuevo de texto o de fondo debe añadirse a su lista de pares.
+- **Fuentes**: `--f-display` (Bricolage Grotesque 800, títulos), `--f-texto` (Inter), `--f-mono` (JetBrains Mono 500, notación y etiquetas), incrustadas como `@font-face` en base64 por `build.mjs` (marcador `/*FUENTES*/` de la plantilla), con pilas del sistema detrás. La app no hace ninguna petición de red.
+- `window.cuboSolver.estado()` incluye `seccion`, `tema` y `bloqueos` (número de bloques del puzzle activo).
+
 ## Interfaz: arranque
-- El puzzle inicial se elige **al momento** al cargar la página, sin esperar a que los Workers respondan al ping (las peticiones esperan en la cola del motor). Los botones que necesitan un puzzle (*Resetear*, *Cargar*, *Resolver*, *Nuevo scramble*, *Copiar*) empiezan desactivados en el HTML y `seleccionar` los activa.
+- (Desde la noche 11, al entrar en una sección con herramienta; en la portada no se elige ninguno.) El puzzle inicial se elige **al momento**, sin esperar a que los Workers respondan al ping (las peticiones esperan en la cola del motor). Los botones que necesitan un puzzle (*Resetear*, *Cargar*, *Resolver*, *Nuevo scramble*, *Copiar*) empiezan desactivados en el HTML y `seleccionar` los activa.
 - *Resolver* nunca ignora un clic: si las tablas del puzzle no están, muestra "Generando tablas… X s · la solución aparecerá al terminar." (el tiempo desde que empezaron a generarse; `asegurarTablas` comparte una sola petición y un solo aviso por puzzle) y la solución aparece sola al terminar.
 
 ## Interfaz: cambio de puzzle, scrambles precargados y Workers
@@ -321,7 +345,7 @@ wings) en el estado, en vez de deducirla de los colores: es lo único que no es 
 ### Niveles (`scripts/tests.mjs`)
 | Nivel | Qué ejecuta | Tiempo (2 núcleos) |
 |---|---|---|
-| `npm run test:humo` | `humo.test.mjs`, `registro.test.mjs` y dos tests de `app.test.mjs` (sin Worker y con Worker), con `--test-name-pattern` | ~1 min 40 s |
+| `npm run test:humo` | `humo.test.mjs`, `registro.test.mjs`, `diseno.test.mjs` y seis tests de `app.test.mjs` (sin Worker, con Worker, navegación, tema, enlaces antiguos y recorrido completo), con `--test-name-pattern` | ~3 min 15 s |
 | `npm run test:rapido` | todos los ficheros con `NIVEL=rapido CASOS=100` | ~8 min 20 s |
 | `npm test` | todos los ficheros con `CASOS=1000` (el comando de siempre) | ~1 h |
 | `npm run test:solo -- <áreas>` | los ficheros de esas áreas y, en los compartidos, los tests que las nombran (nivel rápido) | según el área |

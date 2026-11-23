@@ -515,3 +515,47 @@ Casi todo el tiempo es de **solvers con límite de tiempo**: cada caso consume (
 - La app no se puede acelerar desde los tests: compartir una ventana entre tests cambiaría lo que se prueba (estado limpio, tablas generándose) y las tablas viven dentro del bundle. Queda como suelo de `test:rapido` (~3,6 min de ~8).
 - **Caché de tablas en disco** (punto 5): no se hizo. Con los números de arriba ahorraría como mucho las tablas de los worker_threads de cubos grandes y aprender (~30–40 s en rápido), no la app (las tablas están dentro del bundle) ni los vendados (las tablas dependen de la configuración); y necesita serializar tablas en `src/`, con riesgo de servir tablas viejas tras un cambio. No compensa ahora.
 - Ejecutar ficheros en paralelo: no (ver "Tests más rápidos", noche 6: los solvers con límite de tiempo darían otros resultados).
+
+## Noche 11: rediseño visual (portada, secciones, tema oscuro)
+
+### Navegación y secciones
+- **Hash, no rutas**: la app sigue siendo un único HTML que se abre con doble clic (`file://`) y en GitHub Pages; con `#/…` no hace falta servidor ni reescrituras. Rutas: `#/` portada, `#/como-funciona` (portada con el foco en esa parte), `#/wca` y `#/wca/<id>`, `#/bandaged` y `#/bandaged?bloqueos=…`.
+- **Una sola lista** (`src/app/secciones.js`, `SECCIONES`): id, nombre, descripción, estado `disponible` | `bloqueada`. La portada pinta una tarjeta por sección; desbloquear una es cambiar su `estado` (y, si trae herramienta nueva, decir en `main.js` qué muestra). Las bloqueadas son `<li>` sin enlace ni botón (no se enfocan) y por URL redirigen a la portada (`history.replaceState`, sin dejar la ruta mala en el historial).
+- **Una sola herramienta en el DOM**: WCA Puzzles y Bandaged Cubes usan los mismos paneles (scramble, resolver) con los mismos ids; cambia qué se muestra: en WCA el selector de puzzles y sin bloques; en Bandaged, el 3x3 fijo, sin selector y con «Tus bloques» primero (CSS `order`). Duplicar el DOM habría duplicado también `main.js` y los tests. Consecuencia: **el 3x3 de WCA Puzzles es siempre el normal** aunque haya bloques aplicados en Bandaged Cubes (`puzzleActivo` solo envuelve con `puzzleConBloqueos` en esa sección); los bloques se conservan al volver.
+- **La herramienta arranca al entrar**: en la portada no se elige puzzle ni se generan tablas (antes, al cargar la página, se generaban las del 3x3). Al entrar en una sección el puzzle se elige al momento, como desde la noche 9 (el arreglo del primer «Resolver» sigue igual: los tests lo comprueban en `#/wca`).
+- **Enlaces antiguos**: `#bloqueos=…`, `#firma=…`, `?bloqueos=…` y `?firma=…` abren Bandaged Cubes con esa configuración y la URL pasa a `#/bandaged?…` (sin `?firma` en la búsqueda). Busqué otros enlaces que la app genere o lea: no hay más (el único `location` era el de los bloqueos; el puzzle elegido va en `localStorage`, no en la URL). «Copiar enlace» genera ahora `#/bandaged?bloqueos=…`, y la URL de Bandaged Cubes refleja siempre los bloques aplicados (recargar o compartir la barra de direcciones los conserva).
+- Elegir un puzzle en WCA Puzzles cambia la URL con `replaceState` (no llena el historial de «atrás» con cada chip); entrar en una sección sí añade una entrada.
+- El **FTO** aparece como chip bloqueado «FTO · pronto» (`<span class="chip-pronto">`, no es botón) a partir de `PUZZLES_PRONTO` del registro. `#/wca/fto` deja el puzzle actual. El registro tiene ahora `categoria` (`'wca'`) en cada puzzle; lo añade `src/puzzles/index.js`, no los módulos (la interfaz común no cambia).
+
+### Tema
+- **Oscuro por defecto aunque el sistema esté en claro** (pedido): ya no se mira `prefers-color-scheme`. Las variables de `:root` son las oscuras; `:root[data-theme="light"]` las claras. La elección va a `localStorage` (`cubo-solver:tema`) dentro de try/catch: si el navegador no deja, el tema dura la página. En `dist/index.html` un script de una línea en `<head>` aplica el claro antes de pintar (sin parpadeo); en el artifact lo aplica `main.js` al arrancar.
+- Colores exactos de la propuesta D. El resto (error, ok, lienzo, aviso) los elegí yo y los comprueba el test de contraste: **todos los pares texto/fondo ≥ 4,5:1** en los dos temas (los más justos, en claro: verde de «ok» sobre su fondo 4,71:1 y `--tenue` sobre el lienzo 5,02:1).
+- **Lienzo y contornos**: el cuerpo de las piezas es negro (`#1b1b1f` / `#111` en los dibujos de los puzzles, que no se tocan), así que en oscuro un fondo casi negro lo borraba. El lienzo oscuro es `#1d2230` y, solo en oscuro, la vista 2D y el lienzo 3D llevan un contorno claro muy fino (`filter: drop-shadow` con `--contorno`). Los colores de las pegatinas no cambian.
+- El botón: en escritorio icono + «Modo claro»/«Modo oscuro» (lo que hará); en el móvil solo el icono, 44×44, con `aria-label` «Cambiar a modo …».
+
+### Fuentes (decidido con números)
+| Opción | `dist/index.html` | gzip |
+|---|---|---|
+| Antes (Archivo/IBM Plex de Google Fonts por red, opcional) | 605,7 KB | 223,9 KB |
+| Pilas del sistema (sin incrustar) | 625,3 KB | 228,8 KB |
+| **Subconjuntos woff2 incrustados (elegida)** | **703,7 KB** | **289,8 KB** |
+
+- Incrustadas: Inter variable (35,2 KB), Bricolage Grotesque 800 (17,0 KB), JetBrains Mono 500 (7,7 KB) = 59,9 KB en woff2, **78,5 KB en base64** (+12,9 % del HTML; +61 KB comprimido, porque el base64 de un woff2 ya comprimido no se comprime más). Subconjunto: ASCII, Latin-1 (tildes, ñ, ¿¡, ·, ×), rayas, comillas, «…», la prima y las flechas de los reproductores (`scripts/fuentes.sh`, con fonttools, a partir de los paquetes de Fontsource; licencias OFL en `src/app/fuentes/LICENCIAS.txt`).
+- Por qué: el diseño D se apoya en la tipografía (titular de 64 px en Bricolage, notación en JetBrains Mono); con las pilas del sistema la portada se veía genérica y la notación cambiaba de ancho entre sistemas. 78 KB son ~1/8 del HTML, que ya pesa por las tablas y los solvers, y la app sigue sin **ninguna petición de red** (antes pedía Google Fonts; sin conexión caía a las del sistema). Inter variable (35 KB) sale más barata que tres estáticas (400/500/600: 48,7 KB).
+- `font-display: swap` y pilas de respaldo en las tres variables por si una fuente no carga. Comprobado en Chromium con toda la red bloqueada: las tres fuentes `loaded` y ninguna petición.
+- Nota: Inter dibuja «2x2» como «2×2» (alternativa contextual de la fuente); el texto sigue siendo «2x2».
+
+### Accesibilidad
+- Objetivos táctiles ≥ 44 px en todo lo interactivo visible (botones, chips, conmutadores 2D/3D, colores de la paleta, selects, desplegables, enlaces de la cabecera); lo mide `scripts/comprobar-diseno.py`. Foco visible global (`:focus-visible`, contorno de acento) y enlace «Saltar al contenido». Al navegar a una sección el foco va a su título.
+- Botones deshabilitados: antes `opacity: .45` (texto por debajo de 4,5:1); ahora borde discontinuo y texto `--tenue`, que sí pasa.
+- **No hecho**: los movimientos de la solución (`#movs li`) y los pasos de la explicación del modo aprender siguen siendo `<li>` con clic, no botones (cambiarlos afecta a muchos tests; se pueden usar igual con los botones del reproductor).
+
+### Qué cambió en los selectores (DOM) y en los tests
+- Ids de la herramienta: **ninguno cambia**. Nuevos: `app`, `contenido`, `portada`, `secciones-disponibles`, `secciones-bloqueadas`, `como-funciona`, `herramienta`, `t-seccion`, `intro-seccion`, `tema`, `tema-texto`. `#selector` ahora está dentro de la cabecera de la sección (oculto en Bandaged). El título del panel de bloques pasa de «Bloqueos» a «Tus bloques» (el id `t-bloqueos` sigue).
+- La clase `herramienta` ya existía (herramientas del editor: «Mover», «Rellenar cara»…): el contenedor de las secciones se llama `seccion-herramienta`. Lo vi en la primera captura (la cabecera de la sección salía con el borde y la altura de 44 px de un botón de herramienta).
+- `tests/app.test.mjs`: `abrir()` abre `#/wca` (antes `/`: ahora es la portada) y admite `esperarHerramienta: false` para la portada; `abrirSinEsperar()` (primer «Resolver») también `#/wca`; las pruebas de bloqueos abren `#/bandaged` y, en vez de pulsar el chip del 3x3, esperan a que la sección esté lista y comprueban que no hay selector. La de enlaces antiguos comprueba además la sección, la URL nueva y que el 3x3 de WCA no tiene bloques (y prueba también `?bloqueos=`, `#firma=` y el enlace nuevo). Ninguna comprobación se quita.
+- `scripts/comprobar-*.py`: la URL de los de WCA es `…index.html#/wca`; `comprobar-bloqueos.py` abre `#/bandaged` y, en vez del clic en el chip del 3x3, comprueba que no hay selector.
+
+### Lo que no funcionó / descartado
+- `window.scrollTo` al cambiar de sección: jsdom no lo implementa y llenaba la salida de los tests de avisos; se usa `scrollingElement.scrollTop = 0`.
+- Tarjetas con `auto-fill` (como el lienzo de diseño): en 1200 px dejaban una tercera columna vacía junto a las dos secciones disponibles; `auto-fit` las estira.

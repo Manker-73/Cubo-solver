@@ -1,128 +1,128 @@
 {
   "escritorio/3x3/principiantes": {
-    "pasos": 157,
-    "pasosConResalte3D": 156,
+    "pasos": 151,
+    "pasosConResalte3D": 150,
     "resaltadas2D": 2,
-    "resumen": "Método Principiantes (por capas): 150 giros (+ 7 giros del cubo entero) · solución óptima: 20 giros",
+    "resumen": "Método Principiantes (por capas): 144 giros (+ 7 giros del cubo entero) · solución óptima: 20 giros",
     "fallos": []
   },
   "escritorio/3x3/cfop": {
-    "pasos": 64,
-    "pasosConResalte3D": 63,
+    "pasos": 65,
+    "pasosConResalte3D": 64,
     "resaltadas2D": 8,
-    "resumen": "Método CFOP: 59 giros (+ 5 giros del cubo entero) · solución óptima: 19 giros",
+    "resumen": "Método CFOP: 60 giros (+ 5 giros del cubo entero) · solución óptima: 20 giros",
     "fallos": []
   },
   "escritorio/2x2/principiantes": {
-    "pasos": 75,
-    "pasosConResalte3D": 74,
+    "pasos": 54,
+    "pasosConResalte3D": 53,
     "resaltadas2D": 3,
-    "resumen": "Método Principiantes (por capas): 73 giros (+ 2 giros del cubo entero) · solución óptima: 8 giros",
+    "resumen": "Método Principiantes (por capas): 51 giros (+ 3 giros del cubo entero) · solución óptima: 9 giros",
     "fallos": []
   },
   "escritorio/2x2/ortega": {
-    "pasos": 22,
-    "pasosConResalte3D": 21,
+    "pasos": 28,
+    "pasosConResalte3D": 27,
     "resaltadas2D": 12,
-    "resumen": "Método Ortega: 22 giros · solución óptima: 8 giros",
+    "resumen": "Método Ortega: 28 giros · solución óptima: 10 giros",
     "fallos": []
   },
   "escritorio/4x4/cfop": {
-    "pasos": 195,
-    "pasosConResalte3D": 194,
+    "pasos": 176,
+    "pasosConResalte3D": 175,
     "resaltadas2D": 1,
-    "resumen": "Método Reducción (3x3 con CFOP): 189 giros (+ 6 giros del cubo entero) · solución óptima: 54 giros",
+    "resumen": "Método Reducción (3x3 con CFOP): 172 giros (+ 4 giros del cubo entero) · solución óptima: 53 giros",
     "fallos": []
   },
   "escritorio/5x5/cfop": {
-    "pasos": 350,
-    "pasosConResalte3D": 324,
-    "resaltadas2D": 1,
-    "resumen": "Método Reducción (3x3 con CFOP): 320 giros (+ 30 giros del cubo entero) · solución óptima: 108 giros",
+    "pasos": 386,
+    "pasosConResalte3D": 359,
+    "resaltadas2D": 2,
+    "resumen": "Método Reducción (3x3 con CFOP): 354 giros (+ 32 giros del cubo entero) · solución óptima: 108 giros",
     "fallos": []
   },
   "escritorio/Pyraminx/principiantes": {
-    "pasos": 24,
-    "pasosConResalte3D": 23,
-    "resaltadas2D": 6,
-    "resumen": "Método Principiantes (por capas): 24 giros · solución óptima: 12 giros",
-    "fallos": []
-  },
-  "escritorio/Skewb/principiantes": {
     "pasos": 26,
     "pasosConResalte3D": 25,
     "resaltadas2D": 3,
-    "resumen": "Método Principiantes (por capas): 26 giros · solución óptima: 8 giros",
+    "resumen": "Método Principiantes (por capas): 26 giros · solución óptima: 11 giros",
+    "fallos": []
+  },
+  "escritorio/Skewb/principiantes": {
+    "pasos": 19,
+    "pasosConResalte3D": 18,
+    "resaltadas2D": 3,
+    "resumen": "Método Principiantes (por capas): 19 giros · solución óptima: 8 giros",
     "fallos": []
   },
   "escritorio/Square-1/principiantes": {
-    "pasos": 39,
+    "pasos": 77,
     "pasosConResalte3D": 0,
     "resaltadas2D": 0,
-    "resumen": "Método Principiantes: 39 giros · solución óptima: 23 giros",
+    "resumen": "Método Principiantes: 77 giros · solución óptima: 23 giros",
     "fallos": []
   },
   "movil/3x3/principiantes": {
-    "pasos": 164,
-    "pasosConResalte3D": 163,
+    "pasos": 144,
+    "pasosConResalte3D": 143,
     "resaltadas2D": 2,
-    "resumen": "Método Principiantes (por capas): 157 giros (+ 7 giros del cubo entero) · solución óptima: 20 giros",
+    "resumen": "Método Principiantes (por capas): 137 giros (+ 7 giros del cubo entero) · solución óptima: 20 giros",
     "fallos": []
   },
   "movil/3x3/cfop": {
-    "pasos": 68,
-    "pasosConResalte3D": 67,
+    "pasos": 59,
+    "pasosConResalte3D": 58,
     "resaltadas2D": 8,
-    "resumen": "Método CFOP: 63 giros (+ 5 giros del cubo entero) · solución óptima: 20 giros",
+    "resumen": "Método CFOP: 54 giros (+ 5 giros del cubo entero) · solución óptima: 20 giros",
     "fallos": []
   },
   "movil/2x2/principiantes": {
-    "pasos": 65,
-    "pasosConResalte3D": 64,
+    "pasos": 85,
+    "pasosConResalte3D": 84,
     "resaltadas2D": 3,
-    "resumen": "Método Principiantes (por capas): 61 giros (+ 4 giros del cubo entero) · solución óptima: 9 giros",
+    "resumen": "Método Principiantes (por capas): 82 giros (+ 3 giros del cubo entero) · solución óptima: 9 giros",
     "fallos": []
   },
   "movil/2x2/ortega": {
-    "pasos": 22,
-    "pasosConResalte3D": 21,
+    "pasos": 21,
+    "pasosConResalte3D": 20,
     "resaltadas2D": 12,
-    "resumen": "Método Ortega: 21 giros (+ 1 giro del cubo entero) · solución óptima: 9 giros",
+    "resumen": "Método Ortega: 21 giros · solución óptima: 8 giros",
     "fallos": []
   },
   "movil/4x4/cfop": {
-    "pasos": 197,
-    "pasosConResalte3D": 196,
+    "pasos": 174,
+    "pasosConResalte3D": 173,
     "resaltadas2D": 1,
-    "resumen": "Método Reducción (3x3 con CFOP): 193 giros (+ 4 giros del cubo entero) · solución óptima: 57 giros",
+    "resumen": "Método Reducción (3x3 con CFOP): 171 giros (+ 3 giros del cubo entero) · solución óptima: 54 giros",
     "fallos": []
   },
   "movil/5x5/cfop": {
-    "pasos": 348,
-    "pasosConResalte3D": 326,
+    "pasos": 383,
+    "pasosConResalte3D": 350,
     "resaltadas2D": 1,
-    "resumen": "Método Reducción (3x3 con CFOP): 323 giros (+ 25 giros del cubo entero) · solución óptima: 110 giros",
+    "resumen": "Método Reducción (3x3 con CFOP): 346 giros (+ 37 giros del cubo entero) · solución óptima: 99 giros",
     "fallos": []
   },
   "movil/Pyraminx/principiantes": {
-    "pasos": 29,
-    "pasosConResalte3D": 28,
-    "resaltadas2D": 3,
-    "resumen": "Método Principiantes (por capas): 29 giros · solución óptima: 10 giros",
+    "pasos": 24,
+    "pasosConResalte3D": 23,
+    "resaltadas2D": 6,
+    "resumen": "Método Principiantes (por capas): 24 giros · solución óptima: 13 giros",
     "fallos": []
   },
   "movil/Skewb/principiantes": {
-    "pasos": 22,
-    "pasosConResalte3D": 21,
+    "pasos": 23,
+    "pasosConResalte3D": 22,
     "resaltadas2D": 3,
-    "resumen": "Método Principiantes (por capas): 22 giros · solución óptima: 8 giros",
+    "resumen": "Método Principiantes (por capas): 23 giros · solución óptima: 8 giros",
     "fallos": []
   },
   "movil/Square-1/principiantes": {
-    "pasos": 48,
+    "pasos": 35,
     "pasosConResalte3D": 0,
     "resaltadas2D": 0,
-    "resumen": "Método Principiantes: 48 giros · solución óptima: 21 giros",
+    "resumen": "Método Principiantes: 35 giros · solución óptima: 23 giros",
     "fallos": []
   },
   "erroresConsola": []
