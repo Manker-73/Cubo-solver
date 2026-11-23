@@ -12,6 +12,7 @@ import { execFileSync } from 'node:child_process';
 import { Worker as NodeWorker } from 'node:worker_threads';
 import { CENTROS as CENTROS_MEGA } from '../src/puzzles/megaminx-piezas.js';
 import { PALETA_MEGA } from '../src/puzzles/megaminx-geo.js';
+import { rngConSemilla } from '../src/core/rng.js';
 
 const raiz = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const espera = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -24,6 +25,17 @@ function construir() {
   return html;
 }
 
+// La app saca los scrambles de crypto.getRandomValues (rngSeguro): en jsdom se cambia por una
+// secuencia con semilla fija para que cada ejecución pruebe los mismos casos (APP_SEMILLA=n
+// para probar otros). Los Workers reales (worker_threads) siguen usando el crypto de Node.
+const SEMILLA_APP = parseInt(process.env.APP_SEMILLA || '20261123', 10);
+function cryptoConSemilla(win) {
+  const rng = rngConSemilla(SEMILLA_APP);
+  const original = win.crypto;
+  const getRandomValues = (buf) => { for (let i = 0; i < buf.length; i++) buf[i] = Math.floor(rng() * 4294967296) % 2 ** (8 * buf.BYTES_PER_ELEMENT); return buf; };
+  Object.defineProperty(win, 'crypto', { configurable: true, value: { getRandomValues, subtle: original && original.subtle, randomUUID: original && original.randomUUID && original.randomUUID.bind(original) } });
+}
+
 async function abrir(t, { beforeParse, url = 'https://localhost/' } = {}) {
   let JSDOM;
   try { ({ JSDOM } = await import('jsdom')); } catch { t.skip('jsdom no instalado'); return null; }
@@ -33,7 +45,7 @@ async function abrir(t, { beforeParse, url = 'https://localhost/' } = {}) {
   const vc = new VirtualConsole();
   vc.sendTo(console, { omitJSDOMErrors: true });
   vc.on('jsdomError', (e) => { if (!/HTMLCanvasElement/.test(e.message)) console.error(e); });
-  const dom = new JSDOM(construir(), { runScripts: 'dangerously', pretendToBeVisual: true, url, beforeParse, virtualConsole: vc });
+  const dom = new JSDOM(construir(), { runScripts: 'dangerously', pretendToBeVisual: true, url, beforeParse: (win) => { cryptoConSemilla(win); if (beforeParse) beforeParse(win); }, virtualConsole: vc });
   const w = dom.window;
   w.addEventListener('error', (e) => errores.push(e.message));
   const doc = w.document;
@@ -706,7 +718,7 @@ async function probarAprender(ctx, puzzle, metodo) {
   // el Square-1 no resalta piezas (su estado no es una lista de pegatinas)
   if (puzzle !== 'Square-1') assert.ok(conResalte > n / 2, `${puzzle}/${metodo}: piezas resaltadas en la mayoría de los pasos (${conResalte}/${n})`);
   assert.ok(etapas.size >= 2, 'recorre varias etapas');
-  if (puzzle !== 'Square-1') assert.ok(algoritmos > 0, 'muestra el nombre de algún algoritmo');
+  if (puzzle !== 'Square-1') assert.ok(algoritmos > 0, `${puzzle}/${metodo}: muestra el nombre de algún algoritmo`);
   // saltar al final de un paso desde la lista de la explicación
   doc.getElementById('r-inicio').click();
   const segundo = exp.querySelectorAll('li')[1] || exp.querySelectorAll('li')[0];

@@ -37,7 +37,11 @@ En GitHub (4 núcleos, más lentos): la primera versión de `test:rapido` tardó
 | Modo aprender: se pierden las etapas de un movimiento (`guion.js`) | ✔ (6 de 7 puzzles) | ✔ (`test:solo aprender`: 10 de 11 métodos; el Skewb no tiene etapas de un movimiento) | lo detectaba `aprender.test.mjs` |
 | App: la solución pierde su último giro (`main.js`) | ✔ (los dos tests de la app) | ✔ (mismos tests) | **no lo detectaba** (la prueba de humo solo miraba el texto «Resuelto») |
 
+### Test inestable arreglado
+«app: modo aprender» dependía del azar sin semilla (scrambles de `crypto.getRandomValues`) y falló una vez en GitHub (168/169). Ahora jsdom usa una semilla fija (ver DECISIONES.md).
+
 ### Pendiente
+- Los tests de la app con Workers reales siguen usando scrambles al azar (crypto de Node): no se ha visto que fallen, pero no son reproducibles caso a caso.
 - `test:rapido` está ~20 s por encima del objetivo de 8 min; el suelo es la app (~3,6 min). Bajarlo más exigiría acelerar la generación de tablas de la app (cambio en `src/`) o compartir una ventana de jsdom entre tests (cambia lo que se prueba).
 - Resultado de `npm test` completo: ver la ejecución manual en Actions (lanzada al terminar la sesión).
 

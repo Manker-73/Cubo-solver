@@ -507,6 +507,7 @@ Casi todo el tiempo es de **solvers con límite de tiempo**: cada caso consume (
 
 ## Comprobaciones nuevas (encontradas al sabotear)
 - **Huellas de los giros** (`tests/huellas.json`): un giro invertido (probado con R del Skewb) **no lo detectaba ningún test**, ni en la suite completa: scramble, validador, solver, vista 3D y modo aprender salen del mismo modelo y siguen siendo coherentes. Ahora se compara el estado tras cada giro básico con el guardado. `test:solo` las incluye siempre.
+- **Test inestable encontrado en GitHub**: «app: modo aprender» falló una vez (`muestra el nombre de algún algoritmo`) y pasó en la ejecución anterior con el mismo código. La app saca los scrambles de `crypto.getRandomValues`, así que cada ejecución probaba casos distintos, y alguno no usa ningún algoritmo con nombre. Ahora, en jsdom, `crypto.getRandomValues` es una secuencia con semilla fija (`APP_SEMILLA`, por defecto 20261123): todos los tests de la app sin Worker prueban siempre los mismos casos. Los que usan Workers reales (worker_threads) siguen con el crypto de Node; lo que comprueban no depende del caso.
 - La prueba de humo de la app solo miraba el texto «Resuelto» al final de la solución: una interfaz que perdiera el último giro pasaba (comprobado). Ahora también `cuboSolver.resuelto()`.
 
 ## Lo que no funcionó / descartado
