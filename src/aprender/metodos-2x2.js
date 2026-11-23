@@ -245,6 +245,7 @@ export const METODOS_2x2 = [
   { id: 'ortega', nombre: 'Ortega', descripcion: 'Ortega: la cara blanca (sin importar los lados), la cara amarilla con una OLL (7 casos) y las dos capas a la vez con una PBL.' },
 ];
 
+/** @param {number[]} estado @returns {import('../core/tipos.js').ResultadoAprender} */
 export function aprender2x2(estado, metodo = 'principiantes') {
   const t0 = Date.now();
   const g = crearGuion(M.aplicar, estado, { esRotacion });

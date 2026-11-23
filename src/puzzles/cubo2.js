@@ -1,3 +1,4 @@
+// @ts-check
 // 2x2: validador, solucionador óptimo (IDA* en <U, R, F>) y scramble de estado aleatorio.
 
 import { definirPuzzle } from '../core/puzzle.js';
@@ -9,6 +10,12 @@ import { baseNxN } from './nxn.js';
 import {
   piezasCubo, rotacionesColorCubo, NOMBRES_ESQUINAS, comprobarConteo, erroresDePiezas,
 } from './cubo-comun.js';
+
+/**
+ * Interfaz común: DefinicionPuzzle en src/core/tipos.d.ts (definirPuzzle la comprueba con npm run tipos).
+ * @import { EstadoPegatinas, ResultadoResolver, Rng } from '../core/tipos.js'
+ * @import { EstadoOrbita, Buscador } from '../core/piezas.js'
+ */
 
 const b = baseNxN(2);
 const { esquinas } = piezasCubo(2);
@@ -25,7 +32,12 @@ const modelo = crearModeloPiezas({
 const coloresPieza = esquinas.map((pz) => pz.map((f) => b.estadoResuelto()[f]));
 const sigmas = rotacionesColorCubo(2);
 
-let buscador = null;
+/**
+ * Tablas: null hasta inicializar(), y todo lo que las usa llama antes a inicializar()
+ * (estaInicializado lo comprueba). El tipo no sigue esa invariante entre funciones: se declara sin null.
+ * @type {Buscador}
+ */
+let buscador = /** @type {Buscador} */ (/** @type {unknown} */ (null));
 function inicializar() {
   if (buscador) return { ms: buscador.msInit, yaEstaba: true };
   buscador = crearBuscador({
@@ -38,7 +50,7 @@ function inicializar() {
   return { ms: buscador.msInit };
 }
 
-/** Reetiqueta los colores para que la esquina DBL quede en su sitio y bien orientada. */
+/** Reetiqueta los colores para que la esquina DBL quede en su sitio y bien orientada. @param {EstadoPegatinas} estado */
 function normalizar(estado) {
   const pos = esquinas[DBL];
   for (const s of sigmas) {
@@ -49,6 +61,8 @@ function normalizar(estado) {
 
 /**
  * Analiza un estado pintado. Devuelve { valido, errores, coords }.
+ * @param {EstadoPegatinas} estado
+ * @returns {{ valido: false, errores: string[] } | { valido: true, errores: string[], estadoPiezas: EstadoOrbita[] }}
  */
 function analizar(estado) {
   let errores = comprobarConteo(estado, 4);
@@ -67,6 +81,7 @@ function analizar(estado) {
   return { valido: true, errores: [], estadoPiezas: ident.orbitas };
 }
 
+/** @param {EstadoPegatinas} estado @returns {ResultadoResolver} */
 function resolver(estado) {
   inicializar();
   const t0 = performance.now();
@@ -79,6 +94,7 @@ function resolver(estado) {
 }
 
 /** Estado aleatorio uniforme (con DBL fija), como piezas. */
+/** @param {Rng} rng @returns {EstadoOrbita[]} */
 function estadoAleatorioPiezas(rng) {
   const otras = [0, 1, 2, 3, 4, 5, 7];
   const perm = barajar(rng, otras);
@@ -90,6 +106,7 @@ function estadoAleatorioPiezas(rng) {
   return [{ perm, ori }];
 }
 
+/** @param {Rng} rng @returns {EstadoPegatinas} */
 function estadoAleatorio(rng) {
   return modelo.aColores(estadoAleatorioPiezas(rng), b.estadoResuelto());
 }
@@ -99,7 +116,8 @@ function generarScramble(rng = rngSeguro()) {
   for (;;) {
     const est = estadoAleatorioPiezas(rng);
     const coords = [modelo.coordPerm(0).codificar(est), modelo.coordOri(0).codificar(est)];
-    const r = buscador.resolver(coords, 14);
+    // (un estado alcanzable siempre se resuelve en ≤ 11 giros: r nunca es null)
+    const r = /** @type {{ movimientos: string[] }} */ (buscador.resolver(coords, 14));
     if (r.movimientos.length < MIN_LONGITUD) continue;
     return r.movimientos.slice().reverse().map(b.invertirMovimiento);
   }
@@ -113,7 +131,7 @@ export default definirPuzzle({
   tipoScramble: 'estado aleatorio',
   costeScramble: 300, // ms aprox. del primer scramble (tablas); orden de las precargas
   paleta: b.paleta,
-  estadoResuelto: b.estadoResuelto,
+  estadoResuelto: /** @type {() => EstadoPegatinas} */ (b.estadoResuelto),
   aplicarMovimiento: b.aplicarMovimiento,
   estaResuelto: b.estaResuelto,
   invertirMovimiento: b.invertirMovimiento,
@@ -122,7 +140,7 @@ export default definirPuzzle({
   renderizar: b.renderizar,
   vista3D: b.vista3D,
   giro3D: b.giro3D,
-  pegatinasEditables: () => b.estadoResuelto().map((_, i) => i),
+  pegatinasEditables: () => b.estadoResuelto().map((/** @type {number} */ _, /** @type {number} */ i) => i),
   inicializar,
   estaInicializado: () => !!buscador,
   validar: (e) => { const a = analizar(e); return { valido: a.valido, errores: a.errores }; },

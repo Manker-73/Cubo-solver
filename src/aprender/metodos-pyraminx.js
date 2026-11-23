@@ -78,6 +78,7 @@ export function crearAprenderPyraminx({ geo, modelo, analizar, puntas, centros }
     return { orientadas, enSitio };
   }
 
+  /** @param {number[]} estado @returns {import('../core/tipos.js').ResultadoAprender} */
   return function aprenderPyraminx(estado) {
     const t0 = Date.now();
     const a = analizar(estado);

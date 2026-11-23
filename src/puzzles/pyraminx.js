@@ -1,3 +1,4 @@
+// @ts-check
 // Pyraminx: modelo geométrico, validador, solucionador óptimo y scramble de estado aleatorio.
 //
 // Orientación WCA: cara de abajo (D) horizontal y cara frontal (F) hacia ti.
@@ -15,21 +16,32 @@ import { barajar, entero, rngSeguro } from '../core/rng.js';
 import { paridad } from '../core/perm.js';
 import { crearAprenderPyraminx, METODOS_PYRAMINX } from '../aprender/metodos-pyraminx.js';
 
+/**
+ * Interfaz común: DefinicionPuzzle en src/core/tipos.d.ts (definirPuzzle la comprueba con npm run tipos).
+ * @import { EstadoPegatinas, ResultadoResolver, Rng, Movimiento, ColorPaleta } from '../core/tipos.js'
+ * @import { EstadoOrbita, Buscador } from '../core/piezas.js'
+ */
+
 const S6 = Math.sqrt(6), S2 = Math.sqrt(2);
+/** @type {Record<string, number[]>} */
 const VERT = { U: [0, 3, 0], L: [-S6, -1, S2], R: [S6, -1, S2], B: [0, -1, -2 * S2] };
 const VN = ['U', 'L', 'R', 'B'];
 // Caras: F (opuesta a B), L (opuesta a R), R (opuesta a L), D (opuesta a U)
 const CARAS_N = ['F', 'L', 'R', 'D'];
+/** @type {Record<string, string>} */
 const OPUESTO = { F: 'B', L: 'R', R: 'L', D: 'U' };
+/** @type {ColorPaleta[]} */
 export const PALETA_PYRA = [
   { nombre: 'verde', hex: '#2a9d4b' },
   { nombre: 'rojo', hex: '#d62828' },
   { nombre: 'azul', hex: '#1d5ad8' },
   { nombre: 'amarillo', hex: '#ffd60a' },
 ];
+/** @param {number} c */
 const nombreColor = (c) => (PALETA_PYRA[c] ? PALETA_PYRA[c].nombre : 'sin color');
 
 const caras = carasDesdeVertices(Object.values(VERT), CARAS_N.map((f) => esc(VERT[OPUESTO[f]], -1)));
+/** @type {Record<string, { eje: number[], ang: number, umbral: number }>} */
 const giros = {};
 const T = (2 * Math.PI) / 3;
 for (const v of VN) {
@@ -49,13 +61,17 @@ const geo = crearGeoPuzzle({
 if (geo.n !== 36) throw new Error('Pyraminx: se esperaban 36 pegatinas y hay ' + geo.n);
 
 // ---------- Piezas ----------
+/** @param {number[]} c */
 const capas = (c) => VN.filter((v) => dot(c, unit(VERT[v])) > 1 / 3 + 1e-9);
+/** @param {number[]} c */
 const esPunta = (c) => VN.find((v) => dot(c, unit(VERT[v])) > 5 / 3 + 1e-9);
-const ordenar = (lista, orden) => orden.map((k) => lista.find((p) => p.clave === k).pegatinas);
-const puntas = ordenar(geo.piezasPor((c) => { const v = esPunta(c); return v ? v : null; }), VN);
-const centros = ordenar(geo.piezasPor((c) => (!esPunta(c) && capas(c).length === 1 ? capas(c)[0] : null)), VN);
+/** @typedef {{ clave: string, pegatinas: number[] }} PiezaGeo */
+/** @type {(lista: PiezaGeo[], orden: string[]) => number[][]} */
+const ordenar = (lista, orden) => orden.map((k) => /** @type {PiezaGeo} */ (lista.find((p) => p.clave === k)).pegatinas);
+const puntas = ordenar(geo.piezasPor((/** @type {number[]} */ c) => { const v = esPunta(c); return v ? v : null; }), VN);
+const centros = ordenar(geo.piezasPor((/** @type {number[]} */ c) => (!esPunta(c) && capas(c).length === 1 ? capas(c)[0] : null)), VN);
 const ARISTAS_N = ['UL', 'UR', 'UB', 'LR', 'LB', 'RB'];
-const aristas = ordenar(geo.piezasPor((c) => (capas(c).length === 2 ? capas(c).join('') : null)), ARISTAS_N);
+const aristas = ordenar(geo.piezasPor((/** @type {number[]} */ c) => (capas(c).length === 2 ? capas(c).join('') : null)), ARISTAS_N);
 
 const MOVS = ['U', "U'", 'L', "L'", 'R', "R'", 'B', "B'"];
 const EJES = [0, 0, 1, 1, 2, 2, 3, 3];
@@ -68,7 +84,7 @@ const modelo = crearModeloPiezas({
     { nombre: 'centros', piezas: centros },
     { nombre: 'aristas', piezas: aristas },
   ],
-  movimientos: Object.fromEntries([...MOVS, ...PUNTAS_MOV].map((m) => [m, geo.perms[m]])),
+  movimientos: Object.fromEntries([...MOVS, ...PUNTAS_MOV].map((m) => [m, /** @type {Record<string, number[]>} */ (geo.perms)[m]])),
   coloresResuelto: geo.resuelto,
 });
 const coloresPieza = modelo.orbitas.map((o) => o.piezas.map((pz) => pz.map((f) => geo.resuelto[f])));
@@ -76,7 +92,12 @@ const coloresPieza = modelo.orbitas.map((o) => o.piezas.map((pz) => pz.map((f) =
 const rep = CARAS_N.map((_, f) => geo.pegatinas.findIndex((p) => p.cara === f));
 const sigmas = permutacionesDeColor(geo.rotaciones, geo.resuelto, rep);
 
-let buscador = null;
+/**
+ * Tablas: null hasta inicializar(), y todo lo que las usa llama antes a inicializar()
+ * (estaInicializado lo comprueba). El tipo no sigue esa invariante entre funciones: se declara sin null.
+ * @type {Buscador}
+ */
+let buscador = /** @type {Buscador} */ (/** @type {unknown} */ (null));
 function inicializar() {
   if (buscador) return { ms: buscador.msInit, yaEstaba: true };
   buscador = crearBuscador({
@@ -89,12 +110,20 @@ function inicializar() {
   return { ms: buscador.msInit };
 }
 
+/** @type {Record<string, string>} */
 const NOMBRE_VERTICE = { U: 'de arriba (U)', L: 'izquierdo (L)', R: 'derecho (R)', B: 'de atrás (B)' };
 const TIPO = ['punta', 'pieza central', 'arista'];
 const POS = [VN.map((v) => 'vértice ' + NOMBRE_VERTICE[v]), VN.map((v) => 'vértice ' + NOMBRE_VERTICE[v]), ARISTAS_N.map((a) => a[0] + '-' + a[1])];
+/** @param {number[]} cs */
 const lista = (cs) => cs.map(nombreColor).join('-');
 
+/**
+ * @param {EstadoPegatinas} estado
+ * @returns {{ valido: false, errores: string[] }
+ *   | { valido: true, errores: string[], norm: EstadoPegatinas, piezas: EstadoOrbita[], sigma: number[] }}
+ */
 function analizar(estado) {
+  /** @type {string[]} */
   const errores = [];
   const cuenta = [0, 0, 0, 0];
   let vacias = 0;
@@ -141,10 +170,13 @@ function analizar(estado) {
   return { valido: true, errores: [], norm, piezas: id.orbitas, sigma };
 }
 
+/** @param {EstadoOrbita[]} piezas */
 const coordsDe = (piezas) => [modelo.coordOri(1).codificar(piezas), modelo.coordPerm(2).codificar(piezas), modelo.coordOri(2).codificar(piezas)];
 
 /** Movimientos de punta que dejan las puntas orientadas. */
+/** @param {EstadoOrbita[]} piezas */
 function movsPuntas(piezas) {
+  /** @type {Movimiento[]} */
   const res = [];
   VN.forEach((v, p) => {
     const o = piezas[0].ori[p];
@@ -156,6 +188,7 @@ function movsPuntas(piezas) {
   return res;
 }
 
+/** @param {EstadoPegatinas} estado @returns {ResultadoResolver} */
 function resolver(estado) {
   inicializar();
   const t0 = performance.now();
@@ -171,6 +204,7 @@ function resolver(estado) {
   return { ok: true, movimientos: movs, ms: performance.now() - t0 };
 }
 
+/** @param {Rng} rng @returns {EstadoOrbita[]} */
 function piezasAleatorias(rng) {
   let perm = barajar(rng, [0, 1, 2, 3, 4, 5]);
   if (paridad(perm)) [perm[0], perm[1]] = [perm[1], perm[0]];
@@ -189,10 +223,12 @@ function generarScramble(rng = rngSeguro()) {
   inicializar();
   for (;;) {
     const pz = piezasAleatorias(rng);
-    const r = buscador.resolver(coordsDe(pz), 14);
+    // (un estado alcanzable siempre se resuelve en ≤ 11 giros: r nunca es null)
+    const r = /** @type {{ movimientos: Movimiento[] }} */ (buscador.resolver(coordsDe(pz), 14));
     if (r.movimientos.length < MIN_LONGITUD) continue;
     const inv = r.movimientos.slice().reverse().map(invertirMovimiento);
     // puntas al final (conmutan con todo): las que dejan cada punta como en el estado aleatorio
+    /** @type {Movimiento[]} */
     const puntasAl = [];
     VN.forEach((v, p) => {
       const o = pz[0].ori[p];
@@ -205,6 +241,7 @@ function generarScramble(rng = rngSeguro()) {
   }
 }
 
+/** @param {Movimiento} m */
 function invertirMovimiento(m) {
   return m.endsWith("'") ? m.slice(0, -1) : m + "'";
 }
@@ -220,9 +257,9 @@ export default definirPuzzle({
   tipoScramble: 'estado aleatorio',
   costeScramble: 250, // ms aprox. del primer scramble (tablas); orden de las precargas
   paleta: PALETA_PYRA,
-  estadoResuelto: () => geo.resuelto.slice(),
+  estadoResuelto: () => /** @type {EstadoPegatinas} */ (geo.resuelto.slice()),
   aplicarMovimiento(e, m) {
-    if (!geo.perms[m]) throw new Error(`Movimiento no válido: "${m}"`);
+    if (!/** @type {Record<string, number[]>} */ (geo.perms)[m]) throw new Error(`Movimiento no válido: "${m}"`);
     return geo.aplicar(e, m);
   },
   estaResuelto(e) {
