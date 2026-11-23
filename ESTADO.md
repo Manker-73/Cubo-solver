@@ -1,6 +1,6 @@
 # Estado del proyecto (noche 11 — rediseño visual — 23/11/2026)
 
-> Progreso del paso 0 de TypeScript (tipos con JSDoc, sin renombrar ficheros): infraestructura (TypeScript 7, `tsconfig.json`, `npm run tipos`) ✔ · contratos en `src/core/tipos.d.ts` ✔ · `@ts-check` en `puzzle.js`, `piezas.js`, `modelo3d.js`, `bloqueos.js`, `guion.js`, `index.js`, `servicio.js` y `secciones.js` ✔ · y en los puzzles Skewb, Pyraminx y 2x2 ✔ · demás puzzles ✘ (paso 1) · `tipos` en `test:humo` y en la Action ✔ · bundle idéntico byte a byte ✔ · sabotajes ✔ · `test:humo` ✔ (39/39) · `test:rapido` ✔ (174/174) · `npm test` (completo en GitHub) ⏳ · documentación y plan del paso 1 ✔ · push y GitHub Pages ✔.
+> Progreso del paso 0 de TypeScript (tipos con JSDoc, sin renombrar ficheros): infraestructura (TypeScript 7, `tsconfig.json`, `npm run tipos`) ✔ · contratos en `src/core/tipos.d.ts` ✔ · `@ts-check` en `puzzle.js`, `piezas.js`, `modelo3d.js`, `bloqueos.js`, `guion.js`, `index.js`, `servicio.js` y `secciones.js` ✔ · y en los puzzles Skewb, Pyraminx y 2x2 ✔ · demás puzzles ✘ (paso 1) · `tipos` en `test:humo` y en la Action ✔ · bundle idéntico byte a byte ✔ · sabotajes ✔ · `test:humo` ✔ (39/39) · `test:rapido` ✔ (174/174) · `npm test` ✔ (completo en GitHub, ejecución 45266099655, 1 h 14 min) · documentación y plan del paso 1 ✔ · push y GitHub Pages ✔.
 
 ## Paso 0 de TypeScript: tipos con JSDoc
 
@@ -16,7 +16,7 @@ Sabotajes (deshechos):
 - Sin `estaResuelto` en el Skewb → `src/puzzles/skewb.js(233,30): error TS2345: … Property 'estaResuelto' is missing in type '{ … }' but required in type 'DefinicionPuzzle<any>'.`
 - `fasses` en lugar de `fases` en el resultado de `resolver` (envoltorio de bloqueos) → `src/core/bloqueos.js(1301,7): error TS2561: Object literal may only specify known properties, but 'fasses' does not exist in type 'ResolverOk'. Did you mean to write 'fases'?` (lo mismo en el `resolver` del Skewb).
 
-Tests: `test:humo` 39/39 (2 min 22 s, con los tipos); `test:rapido` 174/174 (9 min 37 s, 2 núcleos).
+Tests: `test:humo` 39/39 (2 min 22 s, con los tipos); `test:rapido` 174/174 (9 min 37 s, 2 núcleos; también en la Action del último push, con el paso «Tipos»); `npm test` completo en GitHub ✔ (ejecución manual 45266099655).
 
 > Progreso de la noche 11 (rediseño visual): navegación por hash y lista de secciones ✔ · enlaces antiguos (#bloqueos=, #firma=, ?bloqueos=, ?firma=) ✔ · portada (propuesta D) ✔ · WCA Puzzles con el estilo nuevo y «FTO · pronto» ✔ · Bandaged Cubes como página propia ✔ · tema oscuro por defecto con botón y persistencia ✔ · fuentes incrustadas sin red ✔ · accesibilidad (contraste, 44 px, foco, sin scroll horizontal a 390 px) ✔ · tests (humo, contraste, comprobar-diseno.py y los scripts de Chromium) ✔ · `test:rapido` ✔ (174/174, 12 min en local; también en la Action) · `npm test` ✔ (suite completa en GitHub, ejecución manual «completo» 45093708015) · documentación ✔ · push y GitHub Pages ✔ · artifact republicado ✔ · movimientos de la solución como botones ✘ (pendiente).
 
