@@ -1,4 +1,6 @@
-# Estado del proyecto (noche 11 — rediseño visual — 23/11/2026)
+# Estado del proyecto (noche 12 — FTO — en curso — 23/11/2026)
+
+> Progreso de la noche 12 (FTO): en curso.
 
 > Progreso del paso 0 de TypeScript (tipos con JSDoc, sin renombrar ficheros): infraestructura (TypeScript 7, `tsconfig.json`, `npm run tipos`) ✔ · contratos en `src/core/tipos.d.ts` ✔ · `@ts-check` en `puzzle.js`, `piezas.js`, `modelo3d.js`, `bloqueos.js`, `guion.js`, `index.js`, `servicio.js` y `secciones.js` ✔ · y en los puzzles Skewb, Pyraminx y 2x2 ✔ · demás puzzles ✘ (paso 1) · `tipos` en `test:humo` y en la Action ✔ · bundle idéntico byte a byte ✔ · sabotajes ✔ · `test:humo` ✔ (39/39) · `test:rapido` ✔ (174/174) · `npm test` ✔ (completo en GitHub, ejecución 45266099655, 1 h 14 min) · documentación y plan del paso 1 ✔ · push y GitHub Pages ✔.
 
