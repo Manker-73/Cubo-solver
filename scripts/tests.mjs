@@ -29,6 +29,7 @@ const AREAS = {
   skewb: { ficheros: ['skewb'], patron: 'Skewb' },
   square1: { ficheros: ['square1'], patron: 'Square-1' },
   megaminx: { ficheros: ['megaminx', 'megaminx-pochmann'], patron: 'Megaminx' },
+  fto: { ficheros: ['fto'], patron: 'FTO' },
   vendado: { ficheros: ['bloqueos'], patron: 'vendado|bloqueos' },
   aprender: { ficheros: ['aprender', 'oll-numeros'], patron: 'aprender' },
   '3d': { ficheros: ['vista3d'], patron: '3D' },

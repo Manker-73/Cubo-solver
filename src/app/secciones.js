@@ -12,7 +12,7 @@
 
 /** @type {Seccion[]} */
 export const SECCIONES = [
-  { id: 'wca', nombre: 'WCA Puzzles', descripcion: '2x2–7x7 · Pyraminx · Skewb · Square-1 · Megaminx · FTO pronto', descripcionCorta: '2x2–7x7 · Pyraminx · Skewb · Square-1 · Megaminx', estado: 'disponible', estilo: 'acento' },
+  { id: 'wca', nombre: 'WCA Puzzles', descripcion: '2x2–7x7 · Pyraminx · Skewb · Square-1 · Megaminx · FTO', descripcionCorta: '2x2–7x7 · Pyraminx · Skewb · Square-1 · Megaminx · FTO', estado: 'disponible', estilo: 'acento' },
   { id: 'bandaged', nombre: 'Bandaged Cubes', descripcion: '3x3 con tus bloques · firmas de la comunidad', descripcionCorta: '3x3 con tus bloques', estado: 'disponible', estilo: 'suave' },
   { id: 'shape-mods', nombre: 'Shape Mods', descripcion: 'Mirror, Axis, Fisher…', estado: 'bloqueada' },
   { id: 'cuboids', nombre: 'Cuboids', descripcion: '2x2x3, 3x3x2, 3x3x4…', estado: 'bloqueada' },

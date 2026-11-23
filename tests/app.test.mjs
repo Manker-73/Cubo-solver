@@ -960,11 +960,12 @@ test('app: navegación entre secciones (portada, WCA Puzzles con #/wca/<id>, Ban
   assert.equal(doc.getElementById('t-seccion').textContent, 'WCA Puzzles');
   assert.equal(doc.getElementById('panel-bloqueos').hidden, true);
   assert.equal(doc.querySelector('#selector .chip[aria-pressed="true"]').textContent, '3x3');
-  // FTO: chip bloqueado, no es un botón
-  const fto = doc.querySelector('#selector .chip-pronto');
-  assert.equal(fto.textContent, 'FTO · pronto');
-  assert.equal(fto.tagName, 'SPAN');
-  assert.equal(doc.querySelector('#selector button[data-pronto]'), null);
+  // FTO (noche 12): ya no está bloqueado; es un chip normal, como los demás
+  assert.equal(doc.querySelector('#selector .chip-pronto'), null);
+  assert.equal(doc.querySelector('#selector [data-pronto]'), null);
+  const fto = chipDe(doc, 'FTO');
+  assert.equal(fto.tagName, 'BUTTON');
+  assert.doesNotMatch(fto.textContent, /pronto/);
   // Elegir un puzzle cambia la URL (#/wca/<id>)
   chipDe(doc, 'Pyraminx').click();
   await herramientaLista(ctx, 'wca', 'pyraminx');
@@ -973,12 +974,16 @@ test('app: navegación entre secciones (portada, WCA Puzzles con #/wca/<id>, Ban
   w.location.hash = '#/wca/skewb';
   await herramientaLista(ctx, 'wca', 'skewb');
   assert.equal(doc.querySelector('#selector .chip[aria-pressed="true"]').textContent, 'Skewb');
-  // Un puzzle que no existe o aún no se puede usar (FTO): se queda en WCA Puzzles con el actual
-  for (const h of ['#/wca/fto', '#/wca/nada']) {
-    w.location.hash = h;
-    await esperaHash(ctx, /^#\/wca\/skewb$/);
-    assert.equal(w.cuboSolver.estado().puzzle, 'skewb', h);
-  }
+  // #/wca/fto abre el FTO (hasta la noche 11 estaba bloqueado)
+  w.location.hash = '#/wca/fto';
+  await herramientaLista(ctx, 'wca', 'fto');
+  assert.equal(doc.querySelector('#selector .chip[aria-pressed="true"]').textContent, 'FTO');
+  w.location.hash = '#/wca/skewb';
+  await herramientaLista(ctx, 'wca', 'skewb');
+  // Un puzzle que no existe: se queda en WCA Puzzles con el actual
+  w.location.hash = '#/wca/nada';
+  await esperaHash(ctx, /^#\/wca\/skewb$/);
+  assert.equal(w.cuboSolver.estado().puzzle, 'skewb', '#/wca/nada');
   // "Inicio" vuelve a la portada
   doc.querySelector('.volver').click();
   await hasta(() => w.cuboSolver.estado().seccion === 'portada');
@@ -1063,7 +1068,7 @@ async function reproducirHastaElFinal(ctx, nombre) {
   assert.equal(w.cuboSolver.resuelto(), true, `${nombre}: la reproducción deja el puzzle resuelto`);
 }
 
-test('app: recorrido completo (scramble → resolver → reproducir) en WCA Puzzles y en Bandaged Cubes', async (t) => {
+test('app: recorrido completo (scramble → resolver → reproducir) en WCA Puzzles (3x3 y FTO) y en Bandaged Cubes', async (t) => {
   const ctx = await abrir(t, { url: 'https://localhost/', esperarHerramienta: false });
   if (!ctx) return;
   const { w, doc, hasta, errores } = ctx;
@@ -1077,6 +1082,18 @@ test('app: recorrido completo (scramble → resolver → reproducir) en WCA Puzz
   await hasta(() => !doc.getElementById('solucion').hidden || doc.querySelector('#mensajes .mensaje.error'), 60000);
   assert.equal(doc.querySelector('#mensajes .mensaje.error'), null, doc.getElementById('mensajes').textContent);
   await reproducirHastaElFinal(ctx, 'WCA 3x3');
+  // FTO (noche 12): elegirlo, scramble, cargar, resolver y reproducir hasta el final
+  chipDe(doc, 'FTO').click();
+  await herramientaLista(ctx, 'wca', 'fto');
+  assert.equal(w.location.hash, '#/wca/fto');
+  await hasta(() => !doc.getElementById('cargar').disabled, 60000);
+  const scrFto = doc.getElementById('scramble').textContent.trim().split(/\s+/);
+  assert.ok(scrFto.length >= 2 && scrFto.every((m) => /^(U|F|R|L|B|D|BR|BL)'?$/.test(m)), scrFto.join(' '));
+  doc.getElementById('cargar').click();
+  doc.getElementById('resolver').click();
+  await hasta(() => !doc.getElementById('solucion').hidden || doc.querySelector('#mensajes .mensaje.error'), 60000);
+  assert.equal(doc.querySelector('#mensajes .mensaje.error'), null, doc.getElementById('mensajes').textContent);
+  await reproducirHastaElFinal(ctx, 'WCA FTO');
   // Bandaged Cubes: una pareja (UFR + UF) por la URL, scramble legal, resolver y reproducir
   w.location.hash = '#/bandaged?bloqueos=UFR.UF';
   await hasta(() => w.cuboSolver.estado().seccion === 'bandaged' && w.cuboSolver.estado().bloqueos === 1);

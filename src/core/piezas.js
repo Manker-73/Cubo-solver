@@ -186,9 +186,14 @@ export function crearModeloPiezas({ orbitas, movimientos, coloresResuelto }) {
  * movs: nombres de movimientos; ejes: eje de cada movimiento (no se repite eje seguido)
  * podas: listas de índices de coordenadas; para cada lista se genera una tabla BFS.
  * objetivo: valores de las coordenadas en el estado resuelto.
- * @param {{ coords: Coordenada[], movs: string[], ejes: ArrayLike<number>, podas: number[][], objetivo: number[] }} datos
+ * cierre (opcional): índices de movimientos (de `movs`) que generan un subgrupo; el objetivo
+ *   pasa a ser todo lo que se alcanza desde `objetivo` con ellos (como la fase 1 de Kociemba,
+ *   que acaba en un subgrupo). Cada tabla de poda empieza con distancia 0 en la proyección de
+ *   ese conjunto, y un estado es objetivo si todas sus tablas dan 0 (lo que dice cada tabla por
+ *   separado: quien lo use debe comprobar que basta, ver el FTO). Sin cierre, nada cambia.
+ * @param {{ coords: Coordenada[], movs: string[], ejes: ArrayLike<number>, podas: number[][], objetivo: number[], cierre?: number[] | null }} datos
  */
-export function crearBuscador({ coords, movs, ejes, podas, objetivo }) {
+export function crearBuscador({ coords, movs, ejes, podas, objetivo, cierre = null }) {
   const nM = movs.length;
   const t0 = Date.now();
   const tablas = coords.map((c) => {
@@ -208,6 +213,20 @@ export function crearBuscador({ coords, movs, ejes, podas, objetivo }) {
     prof[idxDe(lista.map((ci) => objetivo[ci]))] = 0;
     const vals = new Int32Array(L);
     let d = 0, hechos = 1;
+    if (cierre) {
+      // distancia 0 en todo lo que se alcanza desde el objetivo con los movimientos del cierre
+      const cola = [idxDe(lista.map((ci) => objetivo[ci]))];
+      for (let q = 0; q < cola.length; q++) {
+        let r = cola[q];
+        for (let k = L - 1; k >= 0; k--) { const t = tams[k]; const v = r % t; vals[k] = v; r = (r - v) / t; }
+        for (const m of cierre) {
+          let j = 0;
+          for (let k = 0; k < L; k++) j = j * tams[k] + tabs[k][vals[k] * nM + m];
+          if (prof[j] === -1) { prof[j] = 0; cola.push(j); }
+        }
+      }
+      hechos = cola.length;
+    }
     for (;;) {
       // hacia delante mientras haya pocos visitados; después hacia atrás
       const atras = hechos > total / 2;
@@ -265,6 +284,7 @@ export function crearBuscador({ coords, movs, ejes, podas, objetivo }) {
     /** @param {number[]} vals @param {number} g @param {number} limite @param {number} ultimoEje @returns {boolean} */
     function dfs(vals, g, limite, ultimoEje) {
       const h = heuristica(vals);
+      if (h === 0 && cierre) return true;
       if (h === 0) {
         let ok = true;
         for (let k = 0; k < nC; k++) if (vals[k] !== objetivo[k]) { ok = false; break; }

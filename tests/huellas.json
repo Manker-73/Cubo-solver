@@ -58,5 +58,11 @@
   "total": "45b1068df7d8efbf",
   "giros": { "D++": "519f648c7fbaccee", "D--": "7eadbdf86b428a43", "R++": "eb172caef39085bf", "R--": "b5525dcb7024bb10", "U": "51550806a9900dcd", "U'": "3e2ba0b08171e5bc"
   }
+ },
+ "fto": {
+  "secuencia": [ "B", "L", "D'", "B", "L", "D", "L'", "B", "U'", "R", "U'", "B'", "U'", "D", "L'", "U", "L'", "D'", "R", "B'", "L'", "U'", "D", "BL'", "D", "BR", "U", "F'", "R'", "U'" ],
+  "total": "a4681dcc82c01439",
+  "giros": { "B": "731ab88cdcb357be", "B'": "4908680400391aeb", "BL": "84718c728e474317", "BL'": "cf6151da601c60f0", "BR": "cb18a1daf3f4c55a", "BR'": "67afb70de848bc14", "D": "ceacab2c6d1275b8", "D'": "93acfd7e8739fed2", "F": "58e2864a2e5cff4b", "F'": "22d738e2620a5ffd", "L": "134390cae76f2cb3", "L'": "1412283fc9e547a5", "R": "9ff7c2c88d5ae01b", "R'": "8a7c1310279d8208", "U": "ee0c6d1d6a5c3b25", "U'": "d12cf3898337474e"
+  }
  }
 }

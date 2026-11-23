@@ -15,6 +15,7 @@ import pyraminx from './pyraminx.js';
 import skewb from './skewb.js';
 import square1 from './square1.js';
 import megaminx from './megaminx.js';
+import fto from './fto.js';
 
 /** @import { Categoria, PuzzleRegistrado, PuzzlePronto } from '../core/tipos.js' */
 
@@ -35,13 +36,12 @@ export const PUZZLES = conCategoria('wca', [
   skewb,
   square1,
   megaminx,
+  fto,
 ]);
 
 /** Puzzles anunciados que aún no existen: el selector los muestra bloqueados ("pronto"). */
 /** @type {PuzzlePronto[]} */
-export const PUZZLES_PRONTO = [
-  { id: 'fto', nombre: 'FTO', categoria: 'wca' },
-];
+export const PUZZLES_PRONTO = [];
 
 /** @param {string} id @returns {PuzzleRegistrado | undefined} */
 export const obtenerPuzzle = (id) => PUZZLES.find((p) => p.id === id);
