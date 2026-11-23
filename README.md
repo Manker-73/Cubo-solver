@@ -81,10 +81,11 @@ npm run build
 
 ## Tests
 
-Tres niveles (tiempos con 2 núcleos):
+Tres niveles (tiempos con 2 núcleos), más la comprobación de tipos:
 
 ```
-npm run test:humo     # ~3 min: humo de cada puzzle, registro, diseño (rutas y contraste) y humo de la app (sin Worker, con Worker,
+npm run tipos         # < 1 s: TypeScript (tsc --noEmit) comprueba los ficheros con // @ts-check contra src/core/tipos.d.ts
+npm run test:humo     # ~3 min: tipos, humo de cada puzzle, registro, diseño (rutas y contraste) y humo de la app (sin Worker, con Worker,
                       # navegación entre secciones, tema, enlaces antiguos y recorrido completo en WCA y Bandaged)
 npm run test:rapido   # ~8 min 20 s: las mismas comprobaciones que npm test, con menos casos en los tests caros
 npm test              # suite completa (1000 casos por puzzle; 500 en 4x4, 5x5, Megaminx, el modo aprender
@@ -104,7 +105,9 @@ npm run bench         # benchmark de los solvers (N=200 npm run bench para más 
 - Variables: `HILOS=n` (hilos de los tests largos), `CASOS_NXN`, `CASOS_MEGA`, `CASOS_BLOQUEOS`, `CASOS_APRENDER` (casos de esos tests), `TAMANOS=4,5` (cubos grandes), `BLOQUEOS=pareja,cab` (configuraciones vendadas).
 - Los resultados (porcentajes, longitudes, tiempos) de `npm test` se guardan en `tests/resultados/`; los de los niveles con menos casos van a `tests/.resultados-parciales/` (ignorado por git), para no pisar los de la suite completa (`GUARDAR=1` lo fuerza).
 
-**En GitHub**: `.github/workflows/tests.yml` ejecuta `npm run test:rapido` en cada push a `main` y en cada pull request, aparte de la publicación en Pages (que no espera a los tests). El resultado se ve en la pestaña **Actions** del repositorio → *Tests (rápido)*, o en el icono ✔/✘ junto a cada commit (en la portada y en *Commits*); al pulsarlo se ve el registro de la ejecución.
+- **`npm run tipos`**: el código es JavaScript; TypeScript solo comprueba los tipos (no genera nada ni cambia lo que se ejecuta). Los contratos (interfaz de un puzzle, bloqueos, modo aprender, vista 3D, secciones, mensajes con el Worker) están en `src/core/tipos.d.ts`; qué ficheros se comprueban y cómo tipar un puzzle nuevo, en ARQUITECTURA.md («Tipos»).
+
+**En GitHub**: `.github/workflows/tests.yml` ejecuta `npm run tipos` y `npm run test:rapido` en cada push a `main` y en cada pull request, aparte de la publicación en Pages (que no espera a los tests). El resultado se ve en la pestaña **Actions** del repositorio → *Tests (rápido)*, o en el icono ✔/✘ junto a cada commit (en la portada y en *Commits*); al pulsarlo se ve el registro de la ejecución.
 
 ## Documentación
 

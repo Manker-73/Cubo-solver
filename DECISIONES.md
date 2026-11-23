@@ -559,3 +559,49 @@ Casi todo el tiempo es de **solvers con límite de tiempo**: cada caso consume (
 ### Lo que no funcionó / descartado
 - `window.scrollTo` al cambiar de sección: jsdom no lo implementa y llenaba la salida de los tests de avisos; se usa `scrollingElement.scrollTop = 0`.
 - Tarjetas con `auto-fill` (como el lienzo de diseño): en 1200 px dejaban una tercera columna vacía junto a las dos secciones disponibles; `auto-fit` las estira.
+
+# TypeScript, paso 0: tipos con JSDoc sin renombrar ficheros (23/11/2026)
+
+### JSDoc + `.d.ts` frente a pasar a `.ts`
+- **Ahora, JSDoc**: los ficheros siguen siendo `.js`, Node y esbuild los ejecutan sin cambios, y los tipos son comentarios (`@param`, `@returns`, `@type`, `@import`). Se puede tipar fichero a fichero (`// @ts-check`) y nada de lo que se ejecuta cambia: **el bundle minificado sale idéntico byte a byte** (comprobado en cada hito comparando `dist/index.html` y `dist/artifact.html` con una copia hecha antes de empezar).
+- **Los contratos en un `.d.ts` (`src/core/tipos.d.ts`), no en `@typedef`**: la sintaxis de TypeScript es más clara para interfaces con métodos opcionales, genéricos (`Puzzle<E>`), uniones discriminadas (`Peticion`, `ResultadoResolver`) y tipos indexados (`RespuestasPorOperacion[op]`); está todo en un sitio, y en el paso 1 ese fichero sirve tal cual (pasaría a `tipos.ts`). Los tipos internos de un módulo (numéricos) se quedan en ese módulo con `@typedef`.
+- **TypeScript 7** (el compilador nativo, estable desde julio de 2026): `npm run tipos` tarda ≈ 0,3–0,5 s con 11 ficheros comprobados (el proyecto entero se lee igualmente).
+- **`strict` con `noImplicitAny`**: no se puede activar por fichero, así que cada fichero con `@ts-check` lleva sus firmas anotadas. Sin `noImplicitAny`, casi todo lo que viene de fuera del literal de un puzzle sería `any` y no se comprobaría nada.
+
+### Reglas que se han seguido
+- Ningún `any` escrito ni ningún `@ts-ignore`/`@ts-expect-error` (0 y 0).
+- **Casts** (`/** @type {X} */ (expr)`): ~100 en los 11 ficheros (65 en `bloqueos.js`). La mayoría son el tipo de un literal vacío (`/** @type {number[]} */ ([])`) o un `Map.get` justo después de comprobar `has`. Los que afirman algo que el comprobador no puede ver llevan un comentario al lado; son de cuatro clases:
+  1. **Tablas que son null hasta `inicializar()`** (`buscador` del Skewb, Pyraminx y 2x2; el análisis `A` de `puzzleConBloqueos`): se declaran sin null (cast vía `unknown`, 10 en total). Todo lo que las usa llama antes a `inicializar()`.
+  2. **`capacidades.validar` ⇒ existe `validar()`** (y lo mismo con `resolver`) en `servicio.js`: lo comprueba `definirPuzzle` en ejecución; el tipo no relaciona las dos cosas.
+  3. **El puzzle con bloqueos tiene estado de pegatinas y vista 3D** (el 3x3): `servicio.js` y `bloqueos.js`.
+  4. **Narrowing que TypeScript no ve**: dentro de funciones de un closure (`sop` tras el `throw`, `nueva` tras `unir()`), con índices variables (`b[j].fija`), y que `r.res.B` existe con la estrategia B.
+- **Nunca se cambia código para contentar al comprobador**: dos veces lo hice sin darme cuenta (una desestructuración en `caminoBFS` y una constante nueva en `idaGenerico`) y la comparación del bundle lo detectó (el minificador renombraba variables y salían 14 caracteres más); se deshicieron y quedaron como casts.
+
+### Lo que no funcionó
+- **esbuild lee `tsconfig.json` por su cuenta**: con `strict` añadía `"use strict"` al IIFE de la app (cambia lo que se ejecuta: el código de la página no estaba en modo estricto). `scripts/construir.mjs` le pasa ahora un tsconfig vacío (`tsconfigRaw: '{}'`): la build no depende de la configuración de los tipos.
+- **`definirPuzzle<E, D extends DefinicionPuzzle<E>>(def: D & DefinicionPuzzle<E>): D & Puzzle<E>`** (la primera firma): si faltaba un obligatorio, la inferencia de `D` caía a la restricción y el error era engañoso (`'obtenerBuscador' does not exist in type 'DefinicionPuzzle<any>'` al quitar `estaResuelto`). La firma buena es `definirPuzzle<E, X extends object>(def: DefinicionPuzzle<E> & X & { [extra: string]: unknown }): Puzzle<E> & X`: deduce `E`, permite los campos propios del puzzle, los conserva en el resultado y el error dice `Property 'estaResuelto' is missing`. Precio: un nombre mal escrito de un campo **opcional** (`metodosAprendr`) no se detecta.
+- **Un campo mal escrito en lo que devuelve `resolver`** (`fasses`) no lo detecta la firma de `definirPuzzle` si `resolver` es una función aparte (TypeScript no comprueba propiedades de más en un objeto que no es un literal en ese punto). Se detecta anotando la función con `@returns {ResultadoResolver}`; por eso los puzzles tipados lo llevan.
+- **El estado de un puzzle salía `any`** cuando venía de un módulo sin tipar (`geo.resuelto` de `geopuzzle.js`): se fija con un cast en `estadoResuelto`.
+
+### Qué encontró el comprobador (ningún bug real)
+- `aprender(estado)` también devuelve `{ ok: false, errores }` si el estado no es válido (Skewb, Pyraminx, 2x2…); la tabla de ARQUITECTURA.md no lo decía. Ahora `ResultadoAprender` es la unión y está documentado.
+- El envoltorio de bloqueos añade `estrategia: 'sin bloqueos'` también a un resultado con `ok: false`.
+- `puzzleConBloqueos` define siempre `vista3D`, aunque el puzzle de debajo no tenga vista 3D (fallaría al llamarla). Hoy solo se venda el 3x3, que la tiene: no es un bug, pero lo será si se vende un puzzle sin 3D.
+- `enB[dib.indice[k]]` con `indice` null: da `undefined` y la comparación sale `false`, que es lo correcto.
+- `capacidades` está en la tabla de campos obligatorios de ARQUITECTURA.md, pero `definirPuzzle` lo rellena si falta. En los tipos es obligatorio (todos los puzzles lo dan).
+
+### Plan del paso 1: pasar a `.ts` (no hecho)
+**Cómo se ejecutaría**: Node 22.23 (el de la Action y el de esta máquina) ya ejecuta `.ts` por defecto quitando los tipos («type stripping», `process.features.typescript === 'strip'`), sin compilar. Así que los tests (`node --test`, los `worker_threads` de `tests/trabajador.mjs`) importarían los `.ts` directamente, y esbuild empaqueta `.ts` sin configuración. **No haría falta un paso de compilación.** Condiciones: solo sintaxis «borrable» (nada de `enum`, `namespace` ni propiedades en parámetros de constructor; `tsconfig`: `erasableSyntaxOnly`, `verbatimModuleSyntax`), `import type` para los tipos, e imports con la extensión `.ts` (`allowImportingTsExtensions` + `rewriteRelativeImportExtensions` para que `tsc` lo acepte). Alternativa si algo falla: compilar con esbuild a una carpeta temporal antes de los tests (más lento y con mapas de código).
+
+**Orden** (de lo más estable y más usado a lo más grande; un hito con push cada vez, y en cada uno: tipos, `test:humo`, bundle idéntico salvo nombres):
+1. `core/tipos.d.ts` → `core/tipos.ts`; `core/puzzle.ts`, `core/perm.ts`, `core/rng.ts`, `aprender/guion.ts`, `app/secciones.ts`, `puzzles/index.ts`, `app/servicio.ts` + `app/worker.ts` (pequeños y ya tipados: casi solo mover las anotaciones a la sintaxis de TS).
+2. `core/piezas.ts`, `core/modelo3d.ts`, `core/geometria.ts`, `core/geopuzzle.ts` (con `geopuzzle` tipado desaparecen los casts de `geo.perms` y `geo.resuelto` de los puzzles).
+3. Puzzles pequeños: `skewb`, `pyraminx`, `cubo2` (ya tipados), y sus métodos de `aprender/`.
+4. `core/bloqueos.ts` + `puzzles/nxn-bloqueos.ts` + `cubo3-bloqueos.ts`.
+5. `nxn.ts`, `cubo3.ts`, `kociemba.ts`, `cubo-grande.ts` y los del 4x4–7x7; `square1*`; `megaminx*`.
+6. `app/main.ts`, `motor.ts`, `vista3d.ts`, `escena3d.ts`, `reproductor.ts`, `bloqueos-ui.ts`, `tema.ts` (el DOM: el más largo de tipar bien).
+7. Tests: pueden seguir en `.mjs` (importan los `.ts`); tiparlos es opcional.
+
+**Riesgos**: (1) los imports con extensión: cada `import './x.js'` pasa a `./x.ts` y un olvido solo se ve al ejecutar (lo detectaría `tsc` con `allowImportingTsExtensions`); (2) `tests/trabajador.mjs` y `tests/util.mjs` importan los módulos por ruta: hay que cambiar las rutas; (3) el bundle ya no saldrá idéntico byte a byte si se cambia sintaxis (p. ej. `satisfies`); la comprobación pasa a ser «mismo código salvo nombres» (comparar la build con `minifyIdentifiers: false`, como se hizo aquí para encontrar las dos diferencias); (4) los `@typedef` con `ReturnType<typeof f>` hay que convertirlos en interfaces explícitas si se quieren mensajes de error legibles; (5) la «type stripping» de Node sigue siendo experimental en algunas versiones: fijar la versión de Node en la Action (hoy `node-version: 22`).
+
+**Estimación**: pasos 1–3, una sesión (~3 h); paso 4, media sesión; paso 5, una o dos sesiones (los solvers grandes tienen mucho código numérico: tipos mínimos); paso 6, una sesión. Total ≈ 4–5 sesiones.

@@ -1,6 +1,22 @@
 # Estado del proyecto (noche 11 — rediseño visual — 23/11/2026)
 
-> Progreso del paso 0 de TypeScript (tipos con JSDoc, sin renombrar ficheros): en curso.
+> Progreso del paso 0 de TypeScript (tipos con JSDoc, sin renombrar ficheros): infraestructura (TypeScript 7, `tsconfig.json`, `npm run tipos`) ✔ · contratos en `src/core/tipos.d.ts` ✔ · `@ts-check` en `puzzle.js`, `piezas.js`, `modelo3d.js`, `bloqueos.js`, `guion.js`, `index.js`, `servicio.js` y `secciones.js` ✔ · y en los puzzles Skewb, Pyraminx y 2x2 ✔ · demás puzzles ✘ (paso 1) · `tipos` en `test:humo` y en la Action ✔ · bundle idéntico byte a byte ✔ · sabotajes ✔ · `test:humo` ✔ (39/39) · `test:rapido` ✔ (174/174) · `npm test` (completo en GitHub) ⏳ · documentación y plan del paso 1 ✔ · push y GitHub Pages ✔.
+
+## Paso 0 de TypeScript: tipos con JSDoc
+
+El código sigue siendo JavaScript; TypeScript solo comprueba (`npm run tipos`). Detalles en ARQUITECTURA.md («Tipos») y DECISIONES.md (decisiones, lo que no funcionó y el plan del paso 1).
+
+- **Tipado**: la interfaz común de un puzzle (`DefinicionPuzzle<E>` / `Puzzle<E>`, con todos los campos de las dos tablas), `soporteBloqueos` y `PuzzleVendado`, el guion del modo aprender, la geometría 3D, secciones y registro, y los mensajes con el Worker. Ficheros comprobados: 11 (8 del núcleo y la app, y Skewb, Pyraminx y 2x2).
+- **`npm run tipos`**: ≈ 0,3–0,5 s (TypeScript 7 nativo). Está en `test:humo` (primer paso) y como paso «Tipos» de la Action de tests, en todos los niveles.
+- **0 `any` y 0 `@ts-ignore`**. Unos 100 casts JSDoc; los que afirman algo que el comprobador no ve llevan comentario (clases en DECISIONES.md).
+- **Bugs reales**: ninguno. Sí cosas que la documentación no decía (`aprender` devuelve `{ ok: false, errores }` con un estado no válido) y una trampa latente (el envoltorio de bloqueos siempre define `vista3D`).
+- **Bundle**: `dist/index.html` y `dist/artifact.html` idénticos byte a byte a los de antes de la sesión (sin republicar el artifact). Para lograrlo, esbuild ya no lee `tsconfig.json` (con `strict` añadía `"use strict"`).
+
+Sabotajes (deshechos):
+- Sin `estaResuelto` en el Skewb → `src/puzzles/skewb.js(233,30): error TS2345: … Property 'estaResuelto' is missing in type '{ … }' but required in type 'DefinicionPuzzle<any>'.`
+- `fasses` en lugar de `fases` en el resultado de `resolver` (envoltorio de bloqueos) → `src/core/bloqueos.js(1301,7): error TS2561: Object literal may only specify known properties, but 'fasses' does not exist in type 'ResolverOk'. Did you mean to write 'fases'?` (lo mismo en el `resolver` del Skewb).
+
+Tests: `test:humo` 39/39 (2 min 22 s, con los tipos); `test:rapido` 174/174 (9 min 37 s, 2 núcleos).
 
 > Progreso de la noche 11 (rediseño visual): navegación por hash y lista de secciones ✔ · enlaces antiguos (#bloqueos=, #firma=, ?bloqueos=, ?firma=) ✔ · portada (propuesta D) ✔ · WCA Puzzles con el estilo nuevo y «FTO · pronto» ✔ · Bandaged Cubes como página propia ✔ · tema oscuro por defecto con botón y persistencia ✔ · fuentes incrustadas sin red ✔ · accesibilidad (contraste, 44 px, foco, sin scroll horizontal a 390 px) ✔ · tests (humo, contraste, comprobar-diseno.py y los scripts de Chromium) ✔ · `test:rapido` ✔ (174/174, 12 min en local; también en la Action) · `npm test` ✔ (suite completa en GitHub, ejecución manual «completo» 45093708015) · documentación ✔ · push y GitHub Pages ✔ · artifact republicado ✔ · movimientos de la solución como botones ✘ (pendiente).
 

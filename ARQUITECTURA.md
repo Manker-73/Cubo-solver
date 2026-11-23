@@ -7,6 +7,7 @@ en `src/`; `npm run build` los empaqueta en un único fichero `dist/index.html`.
 src/
   core/           piezas reutilizables, no saben de ningún puzzle concreto
     puzzle.js       definirPuzzle(): interfaz común + métodos por defecto
+    tipos.d.ts      TIPOS de los contratos (solo tipos, no se ejecuta): puzzle, bloqueos, modo aprender, 3D, secciones, Worker
     perm.js         permutaciones, índices de Lehmer, paridad
     rng.js          aleatorios (con semilla para tests, criptográficos en la app)
     geometria.js    vectores, corte de polígonos, permutación de un giro, despliegue 2D
@@ -137,14 +138,17 @@ Opcional (según `capacidades`):
 | `vista3D(estado)`, `giro3D(estado, mov)`, `reorientar3D(estado)` | geometría 3D y giros para la vista 3D (ver "Vista 3D" más abajo) |
 | `aplicarSecuencia`, `invertir` | se rellenan automáticamente |
 | `tipoScramble`, `descripcion`, `avisoInicializacion`, `describirLongitud(movs)` | textos para la interfaz |
-| `metodosAprender`, `aprender(estado, metodo)` | modo aprender: `[{id, nombre, descripcion}]` y la solución por ese método humano (ver "Modo aprender") |
+| `metodosAprender`, `aprender(estado, metodo)` | modo aprender: `[{id, nombre, descripcion}]` y la solución por ese método humano (ver "Modo aprender"); si el estado no es válido, `{ ok: false, errores }` |
 | `costeScramble` | ms aproximados del primer scramble (las tablas que necesita generarScramble; 0 en los de movimientos aleatorios): ordena las precargas |
+
+Estas dos tablas están, como tipos, en `src/core/tipos.d.ts` (`DefinicionPuzzle<E>` y `Puzzle<E>`; ver "Tipos"). En los tipos `capacidades` es obligatorio (todos los puzzles lo dan), aunque en ejecución `definirPuzzle` lo rellena si falta.
 
 ## Cómo añadir un puzzle
 
-1. Crear `src/puzzles/mipuzzle.js` que exporte `definirPuzzle({...})`.
+1. Crear `src/puzzles/mipuzzle.js` que exporte `definirPuzzle({...})`, con `// @ts-check` en la primera línea (ver "Tipos").
 2. Añadir una línea en `src/puzzles/index.js`.
 3. Crear `tests/mipuzzle.test.mjs` usando `probarScrambles`, `probarSolver` y `debeRechazar` de `tests/util.mjs`.
+4. `npm run tipos` (menos de 1 s) y `npm run test:solo -- <área>`.
 
 La interfaz (`src/app/main.js`) solo usa la interfaz común: no hay que tocarla. Las tablas se
 generan donde las pida `servicio.js` (Worker o hilo principal) llamando a `inicializar()`; un
@@ -174,6 +178,53 @@ puzzle no necesita saber nada del Worker, pero su estado debe poder copiarse con
 - `megaminx-busqueda.js`: una etapa = caras permitidas + piezas objetivo. Los huecos (posición·orientación) se numeran dentro de la región de la etapa; tablas de poda exactas de grupos de ≤ 3 piezas que cubren todos los pares; IDA* con la heurística del máximo, que puede devolver varias soluciones de la longitud mínima.
 - `megaminx-solver.js`: 10 etapas que van retirando caras (Base 1–4, Anillo 1–3, F2L 1–3; ver DECISIONES.md), última capa con `megaminx-ultima.js` (dos macros de una biblioteca de ~10.800, encontradas al inicializar por colisiones de secuencias de U, F, R), todo en varias de las 60 orientaciones mientras quede tiempo; simplificación con conmutación de caras no vecinas.
 - Restricciones y cota inferior: `megaminx-grupo.js` (los tests las comprueban).
+
+## Tipos
+
+El código sigue siendo JavaScript (módulos ES que Node y esbuild ejecutan tal cual). TypeScript 7 solo
+**comprueba**: `npm run tipos` = `tsc --noEmit` (≈ 0,4 s), dentro de `test:humo` y como paso de la
+Action de tests. No genera nada ni cambia el bundle (esbuild recibe un tsconfig vacío, ver
+`scripts/construir.mjs`).
+
+- **Dónde están**: los contratos, en `src/core/tipos.d.ts` (un solo sitio): `DefinicionPuzzle<E>` / `Puzzle<E>`
+  (la interfaz común, con el estado como tipo genérico `E`; `EstadoPegatinas = number[]` en casi todos),
+  `ResultadoResolver` y `Fase`, `Herramienta`/`AccionEditor`/`OpcionesRender`, la vista 3D (`Vista3D`,
+  `Geometria3D`, `Pegatina3D`, `ParteGiro3D`), el modo aprender (`ResultadoAprender`, `EtapaGuion`,
+  `BloqueGuion`, `Guion<E>`), los bloqueos (`SoporteBloqueos<E>`, `DefinicionBloqueos`, `InfoBloqueos`,
+  `PuzzleVendado<E>`), el registro y las secciones (`Categoria`, `PuzzleRegistrado`, `Seccion`, `Ruta`) y los
+  mensajes con el Worker (`Peticion`, `RespuestasPorOperacion`, `MensajeAlWorker`, `MensajeDelWorker`). Los
+  tipos internos de un módulo (numéricos, mínimos) van en ese módulo con `@typedef` (`EstadoOrbita` y
+  `Buscador` en `piezas.js`; `ModeloBloqueos`, `Analisis`… en `bloqueos.js`).
+- **Qué se comprueba**: solo los ficheros que empiezan con `// @ts-check` (`tsconfig.json`: `allowJs`,
+  `checkJs: false`, `strict`). Hoy: `core/puzzle.js`, `core/piezas.js`, `core/modelo3d.js`, `core/bloqueos.js`,
+  `aprender/guion.js`, `puzzles/index.js`, `app/servicio.js`, `app/secciones.js` y los puzzles `skewb.js`,
+  `pyraminx.js` y `cubo2.js`. Los demás se leen para conocer sus tipos, pero no dan errores.
+- **Cómo se usan desde JavaScript**: `/** @import { Puzzle, EstadoPegatinas } from '../core/tipos.js' */` y
+  comentarios `@param`, `@returns`, `@type`, `@typedef`. Un cast es `/** @type {X} */ (expresión)`: los
+  paréntesis no cambian nada al ejecutar. **Nunca** se cambia código para contentar al comprobador (ni
+  variables nuevas ni desestructuraciones distintas): el bundle minificado tiene que salir idéntico.
+- **Lo que comprueba `definirPuzzle`**: su parámetro es `DefinicionPuzzle<E> & X`, con `E` deducido de
+  `estadoResuelto()` y `X` = los campos propios del puzzle (geo, modelo…), que se permiten y se conservan en
+  el resultado. Si falta un obligatorio sale `Property 'estaResuelto' is missing … required in type
+  'DefinicionPuzzle<…>'`. Las funciones que devuelven un resultado de la interfaz se anotan
+  (`@returns {ResultadoResolver}`), así un campo mal escrito da `'fasses' does not exist in type 'ResolverOk'.
+  Did you mean to write 'fases'?`. Un nombre mal escrito de un campo **opcional** de la definición
+  (`metodosAprendr`) no se detecta: cae en `X`.
+
+**Cómo añadir un puzzle tipado** (lo que se hizo con el Skewb, el Pyraminx y el 2x2):
+1. `// @ts-check` en la primera línea y, debajo de los imports,
+   `/** @import { EstadoPegatinas, ResultadoResolver, Rng, Movimiento } from '../core/tipos.js' */`
+   (y `EstadoOrbita`, `Buscador` de `../core/piezas.js` si los usa).
+2. Fijar el estado: `estadoResuelto: () => /** @type {EstadoPegatinas} */ (geo.resuelto.slice())`. Sin esto,
+   un estado que viene de un módulo sin tipar (`geopuzzle.js`, `nxn.js`) sería `any` y no se comprobaría nada.
+3. `@param`/`@returns` en las funciones de fuera del literal (`analizar`, `resolver`, `generarScramble`…):
+   `analizar` con su resultado como unión (`{ valido: false, … } | { valido: true, …, piezas }`) para que
+   `if (!a.valido)` estreche el tipo.
+4. Las tablas que son `null` hasta `inicializar()` se declaran sin `null` con un cast explicado en un
+   comentario (el tipo no puede seguir esa invariante entre funciones).
+5. Si el modo aprender lo hace una fábrica de `src/aprender/`, poner `@returns {ResultadoAprender}` en la
+   función que devuelve (aunque ese fichero aún no tenga `@ts-check`, el tipo declarado se usa).
+6. `npm run tipos`, y que el bundle no cambie: `npm run build` y comparar `dist/index.html` con el de antes.
 
 ## Vista 3D
 
@@ -345,7 +396,7 @@ wings) en el estado, en vez de deducirla de los colores: es lo único que no es 
 ### Niveles (`scripts/tests.mjs`)
 | Nivel | Qué ejecuta | Tiempo (2 núcleos) |
 |---|---|---|
-| `npm run test:humo` | `humo.test.mjs`, `registro.test.mjs`, `diseno.test.mjs` y seis tests de `app.test.mjs` (sin Worker, con Worker, navegación, tema, enlaces antiguos y recorrido completo), con `--test-name-pattern` | ~3 min 15 s |
+| `npm run test:humo` | `npm run tipos`, `humo.test.mjs`, `registro.test.mjs`, `diseno.test.mjs` y seis tests de `app.test.mjs` (sin Worker, con Worker, navegación, tema, enlaces antiguos y recorrido completo), con `--test-name-pattern` | ~3 min 15 s |
 | `npm run test:rapido` | todos los ficheros con `NIVEL=rapido CASOS=100` | ~8 min 20 s |
 | `npm test` | todos los ficheros con `CASOS=1000` (el comando de siempre) | ~1 h |
 | `npm run test:solo -- <áreas>` | los ficheros de esas áreas y, en los compartidos, los tests que las nombran (nivel rápido) | según el área |
@@ -361,7 +412,7 @@ El solver, el scramble y la vista 3D de un puzzle salen del mismo modelo: si un 
 `tests/paralelo.mjs` (`resolverEnParalelo`) reparte los casos de un test de solver entre worker_threads con una cola dinámica. El hilo principal genera los estados (con la misma semilla que antes) y comprueba cada solución; cada hilo (`tests/trabajador.mjs`) importa el módulo del puzzle, genera sus tablas y llama a `resolver`. Los ficheros de tests se ejecutan de uno en uno (`--test-concurrency=1`) para no tener más hilos que núcleos: varios solvers tienen límites de tiempo.
 
 ### Integración continua
-`.github/workflows/tests.yml`: `npm run test:rapido` en cada push a `main` y en los PR, independiente de `pages.yml`.
+`.github/workflows/tests.yml`: `npm run tipos` y `npm run test:rapido` en cada push a `main` y en los PR, independiente de `pages.yml` (a mano se elige el nivel; `tipos` se ejecuta en todos).
 
 ## Plan para las próximas noches
 - Modo aprender en Megaminx (por capas) y 6x6/7x7 (reducción como el 5x5, más los centros oblicuos).
