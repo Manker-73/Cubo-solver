@@ -1,0 +1,20 @@
+{
+  // Solo comprobación de tipos (npm run tipos = tsc --noEmit): no genera nada y no cambia lo que se ejecuta.
+  // allowJs + checkJs: false -> TypeScript lee todos los .js de src/ (para conocer sus tipos), pero solo
+  // informa de errores en los que empiezan con "// @ts-check". Los tipos de los contratos están en
+  // src/core/tipos.d.ts. Ver ARQUITECTURA.md, "Tipos".
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": false,
+    "noEmit": true,
+    "strict": true,
+    "target": "es2022",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "lib": ["es2022", "dom"],
+    "types": [],
+    "skipLibCheck": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": ["src/**/*.js", "src/**/*.d.ts"]
+}

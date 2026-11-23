@@ -1,3 +1,4 @@
+// @ts-check
 // Registro de puzzles. Para añadir un puzzle nuevo: crear su módulo (que
 // exporte un objeto hecho con definirPuzzle) y añadirlo a esta lista.
 // La interfaz y los tests no necesitan ningún otro cambio.
@@ -15,6 +16,12 @@ import skewb from './skewb.js';
 import square1 from './square1.js';
 import megaminx from './megaminx.js';
 
+/** @import { Categoria, PuzzleRegistrado, PuzzlePronto } from '../core/tipos.js' */
+
+/**
+ * Cada puzzle de la lista tiene que cumplir la interfaz común (Puzzle, en src/core/tipos.d.ts).
+ * @type {(categoria: Categoria, lista: Array<Omit<PuzzleRegistrado, 'categoria'>>) => PuzzleRegistrado[]}
+ */
 const conCategoria = (categoria, lista) => lista.map((p) => Object.assign(p, { categoria }));
 
 export const PUZZLES = conCategoria('wca', [
@@ -31,8 +38,10 @@ export const PUZZLES = conCategoria('wca', [
 ]);
 
 /** Puzzles anunciados que aún no existen: el selector los muestra bloqueados ("pronto"). */
+/** @type {PuzzlePronto[]} */
 export const PUZZLES_PRONTO = [
   { id: 'fto', nombre: 'FTO', categoria: 'wca' },
 ];
 
+/** @param {string} id @returns {PuzzleRegistrado | undefined} */
 export const obtenerPuzzle = (id) => PUZZLES.find((p) => p.id === id);

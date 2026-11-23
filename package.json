@@ -9,11 +9,13 @@
     "test:rapido": "node scripts/tests.mjs rapido",
     "test:humo": "node scripts/tests.mjs humo",
     "test:solo": "node scripts/tests.mjs solo",
+    "tipos": "tsc --noEmit",
     "build": "node scripts/build.mjs",
     "bench": "node scripts/bench.mjs"
   },
   "devDependencies": {
     "esbuild": "^0.24.0",
-    "jsdom": "^24.1.3"
+    "jsdom": "^24.1.3",
+    "typescript": "^7.0.2"
   }
 }

@@ -1,3 +1,4 @@
+// @ts-check
 // Bloqueos (puzzles "vendados"): capa genérica sobre la interfaz común.
 //
 // El usuario agrupa piezas que quedan pegadas. Un movimiento es LEGAL solo si,
@@ -28,6 +29,25 @@
 import { crearCadena, permProducto, permInversa } from './schreier.js';
 import { crearTablaEstados } from './tabla-estados.js';
 
+/**
+ * Tipos de los contratos (soporte, definición, análisis, puzzle vendado) en ./tipos.d.ts;
+ * aquí, los internos (mínimos: es código numérico). Un giro de búsqueda es su índice en mod.movs.
+ * @import { SoporteBloqueos, DefinicionBloqueos, InfoBloqueos, Puzzle, PuzzleVendado, Movimiento, Rng, ResultadoResolver,
+ *   OpcionesResolver, Fase, Vista3D, OpcionesRender, Identificacion, EstadoPegatinas, ResolverOk } from './tipos.js'
+ * @typedef {SoporteBloqueos<unknown>} Soporte
+ * @typedef {{ piezas: number[], puntos: number[], clase: number }} Bloque  piezas (índices) y punto seguido de cada una
+ * @typedef {{ id: number, rep: Bloque, bloques: number[] }} ClaseBloques  bloques congruentes (misma forma por una rotación)
+ * @typedef {ReturnType<typeof crearModeloBloqueos>} ModeloBloqueos
+ * @typedef {ReturnType<typeof bfsGeometrias>} Geometrias
+ * @typedef {ReturnType<typeof grupoFase2>} GrupoFase2
+ * @typedef {NonNullable<ReturnType<typeof bfsEstados>>} BFSEstados
+ * @typedef {ReturnType<typeof tablasProyeccion>} Proyecciones
+ * @typedef {{ mod: ModeloBloqueos, info: InfoBloqueos, ok: true, geo: Geometrias, distGeo: Map<string, number>, g2: GrupoFase2,
+ *   bfs: BFSEstados | null, proy: Proyecciones | null }} Analisis  análisis de una configuración válida
+ * @typedef {{ movs: number[], optima?: boolean, metodo: string, ms?: number, fase1?: number, fase2?: number }} SolucionEstrategia
+ * @typedef {{ rng?: Rng, limiteGeometrias?: number, limiteEstados?: number }} OpcionesAnalisis
+ */
+
 export const LIMITES = {
   geometrias: 400000,   // BFS de geometrías (fase 1 de la estrategia B)
   estadosBFS: 2000000,  // BFS completo (scramble uniforme y solución óptima)
@@ -41,20 +61,25 @@ export const LIMITES = {
 /**
  * Comprueba una definición de bloqueos ([[clave, ...], ...]) contra un soporte.
  * Devuelve { bloques: [[índices de pieza]], errores, avisos }.
+ * @param {Soporte} soporte
+ * @param {DefinicionBloqueos | null | undefined} definicion
  */
 export function comprobarBloqueos(soporte, definicion) {
-  const errores = [], avisos = [];
+  const errores = /** @type {string[]} */ ([]), avisos = /** @type {string[]} */ ([]);
   const indice = new Map(soporte.piezas.map((p, i) => [p.clave, i]));
+  /** @type {Map<number, number>} */
   const usada = new Map();
+  /** @type {number[][]} */
   const bloques = [];
   (definicion || []).forEach((grupo, gi) => {
     const nombre = `El bloque ${gi + 1}`;
+    /** @type {number[]} */
     const ks = [];
     for (const c of grupo) {
       const k = indice.get(c);
       if (k === undefined) { errores.push(`${nombre} tiene una pieza que no existe: "${c}".`); return; }
       if (ks.includes(k)) continue;
-      if (usada.has(k)) { errores.push(`La pieza ${c} está en dos bloques (${usada.get(k) + 1} y ${gi + 1}).`); return; }
+      if (usada.has(k)) { errores.push(`La pieza ${c} está en dos bloques (${/** @type {number} */ (usada.get(k)) + 1} y ${gi + 1}).`); return; }
       ks.push(k);
     }
     if (ks.length < 2) {
@@ -65,7 +90,7 @@ export function comprobarBloqueos(soporte, definicion) {
     const visto = new Set([ks[0]]);
     const cola = [ks[0]];
     while (cola.length) {
-      const a = cola.pop();
+      const a = /** @type {number} */ (cola.pop());
       for (const b of ks) if (!visto.has(b) && soporte.adyacentes(a, b)) { visto.add(b); cola.push(b); }
     }
     if (visto.size !== ks.length) {
@@ -79,7 +104,7 @@ export function comprobarBloqueos(soporte, definicion) {
   return { bloques, errores, avisos };
 }
 
-/** Texto canónico de una configuración (para cachés, URL y comparar). */
+/** Texto canónico de una configuración (para cachés, URL y comparar). @param {DefinicionBloqueos | null | undefined} definicion */
 export function claveBloqueos(definicion) {
   return (definicion || [])
     .filter((g) => g.length >= 2)
@@ -92,6 +117,7 @@ export function claveBloqueos(definicion) {
 // Modelo: piezas, bloques, clases, legalidad y geometría
 // ---------------------------------------------------------------------------
 
+/** @param {Soporte} soporte @param {DefinicionBloqueos | null | undefined} definicion */
 export function crearModeloBloqueos(soporte, definicion) {
   const { bloques: grupos, errores, avisos } = comprobarBloqueos(soporte, definicion);
   const P = soporte.puntos;
@@ -112,9 +138,11 @@ export function crearModeloBloqueos(soporte, definicion) {
    * también con bloques, porque la legalidad de uno no depende del otro). Así nunca
    * sale U U ni U D U.
    */
+  /** @param {number} m @param {number} ultima */
   const prohibido = (m, ultima) => ultima >= 0 && (famIdx[m] === famIdx[ultima] ||
     (ejeFam[famIdx[m]] === ejeFam[famIdx[ultima]] && famIdx[m] < famIdx[ultima]));
   /** Redundante de verdad (la misma cara seguida, o tres del mismo eje: U D U). */
+  /** @param {number} m @param {number} u1 @param {number} u2 */
   const redundante = (m, u1, u2) => u1 >= 0 && (famIdx[m] === famIdx[u1] ||
     (u2 >= 0 && ejeFam[famIdx[m]] === ejeFam[famIdx[u1]] && ejeFam[famIdx[u1]] === ejeFam[famIdx[u2]]));
 
@@ -124,7 +152,9 @@ export function crearModeloBloqueos(soporte, definicion) {
 
   // Clases de bloques congruentes y punto que sigue cada pieza de cada bloque
   const rot = soporte.rotaciones;
+  /** @type {Bloque[]} */
   const bloques = [];
+  /** @type {ClaseBloques[]} */
   const clases = [];
   for (const ks of grupos) {
     const conj = new Set(ks);
@@ -160,6 +190,7 @@ export function crearModeloBloqueos(soporte, definicion) {
     return b.puntos[b.piezas.indexOf(k)];
   });
   // Piezas que se mueven con los giros de búsqueda: forman el estado S
+  /** @type {number[]} */
   const moviles = [];
   piezas.forEach((pz, k) => { if (!fijo[seguido[k]]) moviles.push(k); });
   const idxMovil = new Int16Array(piezas.length).fill(-1);
@@ -167,7 +198,8 @@ export function crearModeloBloqueos(soporte, definicion) {
   const nS = moviles.length;
 
   // Ranuras de los bloques (bloque a bloque, pieza a pieza): índice en S o -1 (fija)
-  const ranuraS = [], ranuraFija = [];
+  const ranuraS = /** @type {number[]} */ ([]), ranuraFija = /** @type {number[]} */ ([]);
+  /** @type {number[]} */
   const inicioBloque = [];
   for (const b of bloques) {
     inicioBloque.push(ranuraS.length);
@@ -183,12 +215,13 @@ export function crearModeloBloqueos(soporte, definicion) {
   const puntosDe = moviles.map((k) => {
     const pts = piezas[k].puntos;
     const iSeg = pts.indexOf(seguido[k]);
+    /** @type {Map<number, Int16Array>} */
     const mapa = new Map();
     const ini = Int16Array.from(pts);
     mapa.set(ini[iSeg], ini);
     const cola = [ini];
     while (cola.length) {
-      const t = cola.pop();
+      const t = /** @type {Int16Array} */ (cola.pop());
       for (const M of MAPA) {
         const u = t.map((p) => M[p]);
         if (!mapa.has(u[iSeg])) { mapa.set(u[iSeg], u); cola.push(u); }
@@ -197,8 +230,8 @@ export function crearModeloBloqueos(soporte, definicion) {
     return mapa;
   });
   // Códigos de posición (para empaquetar estados): órbita del punto seguido
-  const codigo = puntosDe.map((mp) => { const m = new Map(); [...mp.keys()].sort((a, b) => a - b).forEach((p, i) => m.set(p, i)); return m; });
-  const posDeCodigo = codigo.map((m) => { const a = []; for (const [p, c] of m) a[c] = p; return a; });
+  const codigo = puntosDe.map((mp) => { /** @type {Map<number, number>} */ const m = new Map(); [...mp.keys()].sort((a, b) => a - b).forEach((p, i) => m.set(p, i)); return m; });
+  const posDeCodigo = codigo.map((m) => { /** @type {number[]} */ const a = []; for (const [p, c] of m) a[c] = p; return a; });
   const bits = codigo.map((m) => Math.max(1, Math.ceil(Math.log2(m.size))));
   const codigoArr = codigo.map((m) => { const a = new Int16Array(P).fill(0); for (const [p, c] of m) a[p] = c; return a; });
   const totalBits = bits.reduce((a, b) => a + b, 0);
@@ -207,20 +240,24 @@ export function crearModeloBloqueos(soporte, definicion) {
   const resuelto = new Int16Array(nS);
   moviles.forEach((k, i) => { resuelto[i] = seguido[k]; });
 
-  // ----- estados S -----
+  // ----- estados S (Int16Array: posición del punto seguido de cada pieza móvil) -----
+  /** @param {Int16Array} S @param {number} m */
   function aplicar(S, m) {
     const M = MAPA[m];
     const r = new Int16Array(nS);
     for (let i = 0; i < nS; i++) r[i] = M[S[i]];
     return r;
   }
+  /** @param {Int16Array} S @param {number} m @param {Int16Array} r */
   function aplicarEn(S, m, r) {
     const M = MAPA[m];
     for (let i = 0; i < nS; i++) r[i] = M[S[i]];
     return r;
   }
   /** Posición de la ranura j de los bloques en el estado S. */
+  /** @type {(S: Int16Array, j: number) => number} */
   const posRanura = (S, j) => (ranuraS[j] >= 0 ? S[ranuraS[j]] : ranuraFija[j]);
+  /** @param {Int16Array} S @param {number} m */
   function legal(S, m) {
     const C = CAPA[m];
     for (let b = 0; b < bloques.length; b++) {
@@ -230,6 +267,7 @@ export function crearModeloBloqueos(soporte, definicion) {
     }
     return true;
   }
+  /** @param {Int16Array} S */
   function esResuelto(S) {
     for (let i = 0; i < nS; i++) if (S[i] !== resuelto[i]) return false;
     return true;
@@ -239,6 +277,7 @@ export function crearModeloBloqueos(soporte, definicion) {
   // G: posiciones de las ranuras (bloque a bloque); canónica = bloques de la misma
   // clase ordenados, porque bloques de la misma forma no se distinguen.
   const clasesMultiples = clases.filter((c) => c.bloques.length > 1);
+  /** @param {Int16Array} G */
   function canonica(G) {
     for (const cl of clasesMultiples) {
       const tuplas = cl.bloques.map((b) => Array.from(G.subarray(inicioBloque[b], inicioBloque[b + 1])));
@@ -247,12 +286,15 @@ export function crearModeloBloqueos(soporte, definicion) {
     }
     return G;
   }
+  /** @param {Int16Array} S */
   function geometriaDe(S) {
     const G = new Int16Array(nR);
     for (let j = 0; j < nR; j++) G[j] = posRanura(S, j);
     return canonica(G);
   }
-  const claveG = (G) => String.fromCharCode.apply(null, G);
+  /** @param {Int16Array} G @returns {string} */
+  const claveG = (G) => String.fromCharCode.apply(null, /** @type {number[]} */ (/** @type {unknown} */ (G)));
+  /** @param {Int16Array} G @param {number} m */
   function legalG(G, m) {
     const C = CAPA[m];
     for (let b = 0; b < bloques.length; b++) {
@@ -262,6 +304,7 @@ export function crearModeloBloqueos(soporte, definicion) {
     }
     return true;
   }
+  /** @param {Int16Array} G @param {number} m */
   function aplicarG(G, m) {
     const M = MAPA[m];
     const r = new Int16Array(nR);
@@ -271,21 +314,24 @@ export function crearModeloBloqueos(soporte, definicion) {
 
   // ----- conversión con el estado del puzzle -----
   /** donde (todas las posiciones) -> S */
+  /** @param {ArrayLike<number>} donde */
   const SDesdeDonde = (donde) => { const S = new Int16Array(nS); moviles.forEach((k, i) => { S[i] = donde[seguido[k]]; }); return S; };
+  /** @param {Int16Array} S */
   function dondeDesdeS(S) {
     const donde = new Int16Array(P);
     for (let p = 0; p < P; p++) donde[p] = p; // fijas
     moviles.forEach((k, i) => {
-      const pos = puntosDe[i].get(S[i]);
+      const pos = /** @type {Int16Array} */ (puntosDe[i].get(S[i]));
       piezas[k].puntos.forEach((p, j) => { donde[p] = pos[j]; });
     });
     return donde;
   }
+  /** @param {Int16Array} S @param {Uint32Array} destino */
   function empaquetar(S, destino) {
     destino.fill(0);
     let w = 0, b = 0;
     for (let i = 0; i < nS; i++) {
-      let c = codigo[i].get(S[i]);
+      let c = /** @type {number} */ (codigo[i].get(S[i]));
       let nb = bits[i];
       while (nb > 0) {
         const cabe = Math.min(nb, 32 - b);
@@ -296,6 +342,7 @@ export function crearModeloBloqueos(soporte, definicion) {
     }
     return destino;
   }
+  /** @param {Uint32Array} k */
   function desempaquetar(k) {
     const S = new Int16Array(nS);
     let w = 0, b = 0;
@@ -326,11 +373,12 @@ export function crearModeloBloqueos(soporte, definicion) {
 
 const ahora = () => (globalThis.performance || Date).now();
 
-/** BFS sobre las geometrías desde la resuelta. */
+/** BFS sobre las geometrías desde la resuelta. @param {ModeloBloqueos} mod @param {number} limite */
 function bfsGeometrias(mod, limite) {
   const G0 = mod.geometriaDe(mod.resuelto);
   const nodos = [{ G: G0, d: 0, padre: -1, mov: -1 }];
   const indice = new Map([[mod.claveG(G0), 0]]);
+  /** @type {number[]} */
   const aristas = []; // [u, m, v] que no son del árbol
   let completo = true;
   for (let i = 0; i < nodos.length; i++) {
@@ -357,12 +405,16 @@ function bfsGeometrias(mod, limite) {
 /**
  * Grupo de la fase 2 (lazos en la geometría resuelta): se genera con los
  * lazos camino(u) · m · camino(v)⁻¹ de las aristas que no son del árbol del BFS.
+ * @param {ModeloBloqueos} mod
+ * @param {Geometrias} geo
+ * @param {Rng} rng
  */
 function grupoFase2(mod, geo, rng) {
   const P = mod.soporte.puntos;
   const MAPA = mod.MAPA;
   const nodos = geo.nodos;
   // mapa del camino del árbol de cada geometría (puntos)
+  /** @type {Int16Array[]} */
   const camino = new Array(nodos.length);
   const id = new Int16Array(P); for (let i = 0; i < P; i++) id[i] = i;
   camino[0] = id;
@@ -388,14 +440,15 @@ function grupoFase2(mod, geo, rng) {
   return { cadena, camino, orden: cadena.orden(), exacto: exacto && geo.completo };
 }
 
-/** BFS completo de los estados (solo si caben). */
+/** BFS completo de los estados (solo si caben). @param {ModeloBloqueos} mod @param {number} limite */
 function bfsEstados(mod, limite) {
   const tabla = crearTablaEstados(mod.palabras, 1 << 12);
   const k = new Uint32Array(mod.palabras);
   tabla.insertar(mod.empaquetar(mod.resuelto, k), 0);
   const tmp = new Int16Array(mod.nS);
-  let d = 0, frontera = [mod.resuelto];
+  let d = 0, frontera = /** @type {Int16Array[]} */ ([mod.resuelto]);
   while (frontera.length) {
+    /** @type {Int16Array[]} */
     const sig = [];
     for (const S of frontera) {
       for (let m = 0; m < mod.nM; m++) {
@@ -413,6 +466,7 @@ function bfsEstados(mod, limite) {
   return { tabla, diametro: d - 1 };
 }
 
+/** 1234567 -> "1.234.567" (también números grandes como texto o BigInt). @param {number | string | bigint} n */
 export function formatearNumero(n) {
   const s = BigInt(n).toString();
   return s.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
@@ -422,18 +476,21 @@ export function formatearNumero(n) {
 // Búsquedas
 // ---------------------------------------------------------------------------
 
-/** Tablas de poda por proyecciones (grupos de ≤ 4 piezas móviles), respetando la legalidad. */
+/** Tablas de poda por proyecciones (grupos de ≤ 4 piezas móviles), respetando la legalidad. @param {ModeloBloqueos} mod */
 function tablasProyeccion(mod, msMax = 4000) {
   const t0 = ahora();
   // grupos de piezas: por tipo, de 4 en 4 (o menos)
+  /** @type {Map<string, number[]>} */
   const porTipo = new Map();
   mod.moviles.forEach((k, i) => {
     const t = mod.piezas[k].tipo;
     if (!porTipo.has(t)) porTipo.set(t, []);
-    porTipo.get(t).push(i);
+    /** @type {number[]} */ (porTipo.get(t)).push(i);
   });
+  /** @type {number[][]} */
   const grupos = [];
   for (const lista of porTipo.values()) for (let i = 0; i < lista.length; i += 4) grupos.push(lista.slice(i, i + 4));
+  /** @type {Array<{ g: number[], dist: Int8Array, R: number[], cod: Int16Array[] }>} */
   const tablas = [];
   for (const g of grupos) {
     if (ahora() - t0 > msMax) break;
@@ -442,20 +499,24 @@ function tablasProyeccion(mod, msMax = 4000) {
     if (total > 12e6) continue;
     const dist = new Int8Array(total).fill(-1);
     const cod = g.map((i) => mod.codigoArr[i]);
+    /** @param {ArrayLike<number>} pos */
     const idx = (pos) => { let x = 0; for (let j = 0; j < g.length; j++) x = x * R[j] + cod[j][pos[j]]; return x; };
     // estado proyectado: posiciones de las piezas del grupo; legalidad relajada:
     // un bloque es un problema solo si sus piezas conocidas (del grupo o fijas) se separan
     const conocidas = new Set(g);
-    const bloquesRel = mod.bloques.map((b) => b.piezas.map((k, j) => {
+    /** @typedef {{ fija?: number, i?: number }} RanuraRel  posición fija o índice en el grupo */
+    const bloquesRel = mod.bloques.map((b) => /** @type {RanuraRel[]} */ (b.piezas.map((k, j) => {
       const i = mod.moviles.indexOf(k);
       if (i < 0) return { fija: b.puntos[j] };
       return conocidas.has(i) ? { i: g.indexOf(i) } : null;
-    }).filter(Boolean)).filter((x) => x.length >= 2);
+    }).filter(Boolean))).filter((x) => x.length >= 2);
+    /** @param {number[]} pos @param {number} m */
     const legalRel = (pos, m) => {
       const C = mod.CAPA[m];
       for (const b of bloquesRel) {
-        const v = C[b[0].fija !== undefined ? b[0].fija : pos[b[0].i]];
-        for (let j = 1; j < b.length; j++) if (C[b[j].fija !== undefined ? b[j].fija : pos[b[j].i]] !== v) return false;
+        // (una ranura tiene fija o i: ver arriba)
+        const v = C[b[0].fija !== undefined ? b[0].fija : pos[/** @type {number} */ (b[0].i)]];
+        for (let j = 1; j < b.length; j++) if (C[/** @type {number} */ (b[j].fija !== undefined ? b[j].fija : pos[/** @type {number} */ (b[j].i)])] !== v) return false;
       }
       return true;
     };
@@ -464,6 +525,7 @@ function tablasProyeccion(mod, msMax = 4000) {
     dist[idx(ini)] = 0;
     let d = 0;
     while (frontera.length) {
+      /** @type {number[][]} */
       const sig = [];
       for (const pos of frontera) {
         for (let m = 0; m < mod.nM; m++) {
@@ -481,6 +543,7 @@ function tablasProyeccion(mod, msMax = 4000) {
   return { tablas, ms: ahora() - t0 };
 }
 
+/** @param {Proyecciones} proy @param {Int16Array} S */
 function hProyeccion(proy, S) {
   let h = 0;
   for (const t of proy.tablas) {
@@ -499,15 +562,21 @@ function hProyeccion(proy, S) {
  * Envoltorio: el mismo puzzle, pero con los movimientos filtrados por los
  * bloques. El estado es el del puzzle (en el 3x3, colores); las piezas se
  * identifican por sus colores (soporte.identificar).
+ * @param {Soporte} soporte
+ * @param {DefinicionBloqueos} definicion
+ * @param {OpcionesAnalisis} [opciones]
+ * @returns {Analisis | { mod: ModeloBloqueos, info: InfoBloqueos, ok: false }}
  */
 export function crearAnalisisBloqueos(soporte, definicion, opciones = {}) {
   const t0 = ahora();
   const mod = crearModeloBloqueos(soporte, definicion);
+  /** @type {InfoBloqueos} */
   const info = { errores: mod.errores.slice(), avisos: mod.avisos.slice(), bloques: mod.bloques.length };
   if (info.errores.length) return { mod, info, ok: false };
   const rngInterno = opciones.rng || (() => Math.random());
 
   // legalidad en el resuelto
+  /** @type {Movimiento[]} */
   const legalesResuelto = [];
   for (let m = 0; m < mod.nM; m++) if (mod.legal(mod.resuelto, m)) legalesResuelto.push(mod.movs[m]);
   info.legalesResuelto = legalesResuelto;
@@ -571,7 +640,7 @@ export function crearAnalisisBloqueos(soporte, definicion, opciones = {}) {
   return { mod, info, ok: true, geo, distGeo, g2, bfs, proy };
 }
 
-/** Distancia a la geometría resuelta (exacta, de la tabla). */
+/** Distancia a la geometría resuelta (exacta, de la tabla). @param {Analisis} A @param {Int16Array} S */
 function dGeo(A, S) {
   const d = A.distGeo.get(A.mod.claveG(A.mod.geometriaDe(S)));
   return d === undefined ? 99 : d;
@@ -580,18 +649,25 @@ function dGeo(A, S) {
 /**
  * Camino óptimo por el BFS completo. `previos` = los dos giros anteriores (fase 1),
  * para que la unión no sea redundante; null si no hay camino óptimo que lo cumpla.
+ * Solo con el BFS completo (A.bfs).
+ * @param {Analisis} A
+ * @param {Int16Array} S
+ * @returns {number[] | null}
  */
 function caminoBFS(A, S, previos = [-1, -1]) {
   let [u1, u2] = previos;
-  const { mod, bfs } = A;
+  const { mod, bfs } = /** @type {Analisis & { bfs: BFSEstados }} */ (A);
   const k = new Uint32Array(mod.palabras);
   let d = bfs.tabla.distancia(mod.empaquetar(S, k));
   if (d < 0) return null;
   // IDA* con la distancia exacta del BFS como cota: sin giros previos es el descenso
   // directo (camino óptimo); con ellos, el camino más corto que no empieza deshaciéndolos.
+  /** @param {Int16Array} T @returns {number} */
   const dist = (T) => bfs.tabla.distancia(mod.empaquetar(T, k));
+  /** @type {number[]} */
   const cam = [];
   let nodos = 0;
+  /** @param {Int16Array} T @param {number} togo @param {number} a1 @param {number} a2 @returns {boolean} */
   function dfs(T, togo, a1, a2) {
     if (togo === 0) return mod.esResuelto(T);
     if (++nodos > 2000000) return false;
@@ -611,15 +687,18 @@ function caminoBFS(A, S, previos = [-1, -1]) {
   return null;
 }
 
-/** Soluciones de la fase 1 (geometría): las más cortas y algo más largas. */
+/** Soluciones de la fase 1 (geometría): las más cortas y algo más largas. @param {Analisis} A @param {Int16Array} S @returns {number[][]} */
 export function solucionesFase1(A, S, { maxSol = 12, holgura = 2, msMax = 300 } = {}) {
   const { mod } = A;
   const G = mod.geometriaDe(S);
   const d0 = A.distGeo.get(mod.claveG(G));
   if (d0 === undefined) return [];
+  /** @type {number[][]} */
   const sols = [];
   const t0 = ahora();
+  /** @type {number[]} */
   const cam = [];
+  /** @param {Int16Array} G @param {number} togo @param {number} ultima */
   function dfs(G, togo, ultima) {
     if (sols.length >= maxSol || ahora() - t0 > msMax) return;
     if (togo === 0) { if (A.distGeo.get(mod.claveG(G)) === 0) sols.push(cam.slice()); return; }
@@ -640,14 +719,22 @@ export function solucionesFase1(A, S, { maxSol = 12, holgura = 2, msMax = 300 } 
   return sols;
 }
 
-/** IDA* genérico con poda max(distancia a la geometría, proyecciones). */
+/**
+ * IDA* genérico con poda max(distancia a la geometría, proyecciones).
+ * @param {Analisis} A
+ * @param {Int16Array} S
+ * @returns {{ movs: number[], optima: boolean } | null}
+ */
 function idaGenerico(A, S, { msMax = 1000, maxProf = 30, conGeo = true, ultima = -1 } = {}) {
   const { mod } = A;
   if (!A.proy) A.proy = tablasProyeccion(mod);
   const t0 = ahora();
+  /** @type {number[]} */
   const cam = [];
   let nodos = 0, agotado = false;
-  const h = (T) => Math.max(hProyeccion(A.proy, T), conGeo ? dGeo(A, T) : 0);
+  /** @param {Int16Array} T */
+  const h = (T) => Math.max(hProyeccion(/** @type {Proyecciones} */ (A.proy), T), conGeo ? dGeo(A, T) : 0);
+  /** @param {Int16Array} T @param {number} g @param {number} lim @param {number} ultima @returns {boolean} */
   function dfs(T, g, lim, ultima) {
     const hh = h(T);
     if (g + hh > lim) return false;
@@ -675,6 +762,10 @@ function idaGenerico(A, S, { msMax = 1000, maxProf = 30, conGeo = true, ultima =
  * corta (o la de opciones.estrategia, 'A' o 'B'), con los datos de cada una. opciones: { msMax (límite de tiempo; se
  * devuelve la mejor encontrada), msDuro (si en msMax no hay ninguna solución, se
  * sigue buscando con más tiempo hasta este límite), solucionesFase1, sinIDA }.
+ * @param {Analisis} A
+ * @param {Int16Array} S
+ * @param {{ msMax?: number, msDuro?: number, objetivo?: number, sinIDA?: boolean, solucionesFase1?: number, estrategia?: 'A' | 'B' }} [opciones]
+ * @returns {{ movs: number[], estrategia: 'A' | 'B', fases: Fase[], res: { A: SolucionEstrategia | null, B: SolucionEstrategia | null }, ms?: number } | null}
  */
 export function resolverBloqueos(A, S, opciones = {}) {
   const { mod } = A;
@@ -682,12 +773,14 @@ export function resolverBloqueos(A, S, opciones = {}) {
   const msDuro = opciones.msDuro ?? Math.max(30000, 10 * msMax);
   const t0 = ahora();
   const pasado = () => ahora() - t0;
+  /** @type {{ A: SolucionEstrategia | null, B: SolucionEstrategia | null }} */
   const res = { A: null, B: null };
   if (mod.esResuelto(S)) return { movs: [], estrategia: 'A', fases: [], res };
   const rapida = mod.soporte.busquedaRapida;
 
   // ---- Estrategia A: búsqueda directa ----
   const tA = ahora();
+  /** @param {number} ms */
   const directa = (ms) => {
     if (A.bfs) {
       const c = caminoBFS(A, S);
@@ -711,6 +804,7 @@ export function resolverBloqueos(A, S, opciones = {}) {
   // ---- Estrategia B: geometría y luego permutación ----
   const tB = ahora();
   const f1 = solucionesFase1(A, S, { maxSol: opciones.solucionesFase1 ?? 12, msMax: Math.min(300, msMax * 0.1) });
+  /** @param {number[]} s1 @param {number} ms */
   const fase2 = (s1, ms) => {
     let T = S;
     for (const m of s1) T = mod.aplicar(T, m);
@@ -747,24 +841,29 @@ export function resolverBloqueos(A, S, opciones = {}) {
   }
   if (res.A && !res.A.ms) res.A.ms = ahora() - tA;
 
-  let mejor = null, estrategia = null;
-  for (const e of ['A', 'B']) {
+  /** @type {SolucionEstrategia | null} */
+  let mejor = null;
+  /** @type {'A' | 'B' | null} */
+  let estrategia = null;
+  for (const e of /** @type {const} */ (['A', 'B'])) {
     if (res[e] && (!mejor || res[e].movs.length < mejor.movs.length)) { mejor = res[e]; estrategia = e; }
   }
   // opciones.estrategia = 'A' | 'B': esa, si la hay (para ver la otra en la interfaz)
   if (opciones.estrategia && res[opciones.estrategia]) { mejor = res[opciones.estrategia]; estrategia = opciones.estrategia; }
   if (!mejor) return null;
+  /** @type {Fase[]} */
   let fases = [];
   if (estrategia === 'B') {
     if (mejor.fase1) fases.push({ nombre: 'Geometría', inicio: 0, fin: mejor.fase1, grupo: 'geometria' });
-    if (mejor.fase2) fases.push({ nombre: 'Permutación', inicio: mejor.fase1, fin: mejor.movs.length, grupo: 'permutacion' });
+    if (mejor.fase2) fases.push({ nombre: 'Permutación', inicio: /** @type {number} */ (mejor.fase1), fin: mejor.movs.length, grupo: 'permutacion' });
   }
-  return { movs: mejor.movs, estrategia, fases, res, ms: ahora() - t0 };
+  return { movs: mejor.movs, estrategia: /** @type {'A' | 'B'} */ (estrategia), fases, res, ms: ahora() - t0 };
 }
 
-/** Tramos de una secuencia que empieza en la geometría resuelta: fin de cada vuelta a ella. */
+/** Tramos de una secuencia que empieza en la geometría resuelta: fin de cada vuelta a ella. @param {Analisis} A @param {Int16Array} S @param {number[]} movs */
 export function vueltasAGeometria(A, S, movs) {
   const { mod } = A;
+  /** @type {number[]} */
   const vueltas = [];
   let T = S;
   movs.forEach((m, i) => {
@@ -774,7 +873,13 @@ export function vueltasAGeometria(A, S, movs) {
   return vueltas;
 }
 
-/** Scramble: estado uniforme (espacio pequeño) o movimientos legales al azar. */
+/**
+ * Scramble: estado uniforme (espacio pequeño) o movimientos legales al azar.
+ * @param {Analisis} A
+ * @param {Rng} rng
+ * @param {{ pasos?: number }} [opciones]
+ * @returns {number[]}
+ */
 export function scrambleBloqueos(A, rng, opciones = {}) {
   const { mod } = A;
   if (A.bfs) {
@@ -784,10 +889,10 @@ export function scrambleBloqueos(A, rng, opciones = {}) {
     for (let intento = 0; intento < 100; intento++) {
       const t = 1 + Math.floor(rng() * (n - 1)); // nunca el resuelto (índice 0)
       const d = A.bfs.tabla.nesimo(t, k);
-      if (d < Math.min(2, A.info.diametro)) continue;
+      if (d < Math.min(2, /** @type {number} */ (A.info.diametro))) continue;
       const S = mod.desempaquetar(k);
       const sol = caminoBFS(A, S);
-      return invertirSecuencia(mod, sol);
+      return invertirSecuencia(mod, /** @type {number[]} */ (sol));
     }
   }
   const T = opciones.pasos ?? longitudScramble(A);
@@ -804,6 +909,7 @@ export function scrambleBloqueos(A, rng, opciones = {}) {
  * con d el diámetro del grafo de geometrías (un paseo al azar tarda del orden de d²
  * en recorrerlo). Medido con scripts/mezcla-bloqueos.mjs (ver DECISIONES.md): hacen
  * falta 50, 50, 100 y 1.600 pasos con d = 1, 3, 7 y 24; esto da 80, 80, 196 y 2.304.
+ * @param {{ info: InfoBloqueos }} A
  */
 export function longitudScramble(A) {
   const d = A.info.diametroGeometria || 0;
@@ -819,16 +925,24 @@ export function longitudScramble(A) {
  * U + U' = nada), y en U D U el segundo U se une al primero (conmutan). El estado
  * al que se llega no cambia por escribirlo así; la legalidad de la palabra
  * reducida se comprueba de nuevo.
+ * @param {{ mod: ModeloBloqueos }} A
+ * @param {Rng} rng
+ * @param {number} L
+ * @returns {number[]}
  */
 export function paseoAleatorio(A, rng, L, maxPasos = 200 * L, { pasosFijos = false } = {}) {
   const { mod } = A;
   const veces = mod.movs.map((n) => (n.endsWith("'") ? 3 : n.endsWith('2') ? 2 : 1));
+  /** @type {Map<string, number[]>} */
   const deFamilia = new Map();
-  mod.movs.forEach((n, i) => { const f = mod.caraDe[i]; if (!deFamilia.has(f)) deFamilia.set(f, [0, 0, 0, 0]); deFamilia.get(f)[veces[i]] = i; });
+  mod.movs.forEach((n, i) => { const f = mod.caraDe[i]; if (!deFamilia.has(f)) deFamilia.set(f, [0, 0, 0, 0]); /** @type {number[]} */ (deFamilia.get(f))[veces[i]] = i; });
+  /** @param {number} m */
   const eje = (m) => (mod.soporte.ejeDe ? mod.soporte.ejeDe(mod.caraDe[m]) : mod.caraDe[m]);
+  /** @type {number[]} */
   let res = [];
   let estados = [mod.resuelto]; // estados[i] = estado antes de res[i]
   let S = mod.resuelto;
+  /** @param {number} desde @param {number[]} nueva */
   const rehacer = (desde, nueva) => {
     // recalcula los estados desde la posición `desde`; null si algún giro es ilegal
     const est = estados.slice(0, desde + 1);
@@ -846,11 +960,14 @@ export function paseoAleatorio(A, rng, L, maxPasos = 200 * L, { pasosFijos = fal
     const m = Math.floor(rng() * mod.nM);
     if (!mod.legal(S, m)) continue;
     const n = res.length;
-    let nueva = null, desde = n;
+    /** @type {number[] | null} */
+    let nueva = null;
+    let desde = n;
+    /** @param {number} j */
     const unir = (j) => {
       const v = (veces[res[j]] + veces[m]) % 4;
       nueva = res.slice();
-      if (v === 0) nueva.splice(j, 1); else nueva[j] = deFamilia.get(mod.caraDe[m])[v];
+      if (v === 0) nueva.splice(j, 1); else nueva[j] = /** @type {number[]} */ (deFamilia.get(mod.caraDe[m]))[v];
       desde = j;
     };
     if (n && mod.caraDe[res[n - 1]] === mod.caraDe[m]) unir(n - 1);
@@ -862,13 +979,15 @@ export function paseoAleatorio(A, rng, L, maxPasos = 200 * L, { pasosFijos = fal
       estados.push(S);
       continue;
     }
-    const r = rehacer(Math.min(desde, n), nueva);
+    // (unir() acaba de dar valor a nueva; el tipo no lo ve a través de la función)
+    const r = rehacer(Math.min(desde, n), /** @type {number[]} */ (/** @type {unknown} */ (nueva)));
     if (!r) continue; // no debería pasar (ver arriba); por si acaso, se descarta el paso
-    res = nueva; estados = r.est; S = r.T;
+    res = /** @type {number[]} */ (/** @type {unknown} */ (nueva)); estados = r.est; S = r.T;
   }
   return res;
 }
 
+/** @param {ModeloBloqueos} mod @param {number[]} movs */
 function invertirSecuencia(mod, movs) {
   return movs.slice().reverse().map((m) => {
     const nombre = mod.movs[m];
@@ -882,13 +1001,26 @@ function invertirSecuencia(mod, movs) {
 // del dibujo 2D da a la vecina. Se calcula una vez por puzzle.
 // ---------------------------------------------------------------------------
 
+/**
+ * @typedef {{ i: number, j: number, lado: number, dx: number, dy: number }} Par2D
+ * @typedef {{ indice: Array<number | null>, vecinos3D: number[][], pares2D: Par2D[] | null }} Dibujo
+ * @type {WeakMap<object, Dibujo>}
+ */
 const cacheDibujo = new WeakMap();
+/**
+ * @template E
+ * @param {Puzzle<E> & { vista3D(e: E): Vista3D }} puzzle
+ * @param {SoporteBloqueos<E>} sop
+ * @returns {Dibujo}
+ */
 function prepararDibujo(puzzle, sop) {
-  if (cacheDibujo.has(puzzle)) return cacheDibujo.get(puzzle);
+  if (cacheDibujo.has(puzzle)) return /** @type {Dibujo} */ (cacheDibujo.get(puzzle));
   const geo = puzzle.vista3D(puzzle.estadoResuelto()).geometria;
   const peg = geo.pegatinas;
   const indice = peg.map((q) => q.indice);
+  /** @param {number[]} v */
   const clave = (v) => v.map((x) => Math.round(x * 1000)).join(',');
+  /** @type {Map<string, Array<[number, number]>>} */
   const porLado = new Map(); // "a|b" -> [ [k, lado], ... ]
   peg.forEach((q, k) => {
     const n = q.puntos.length;
@@ -896,9 +1028,10 @@ function prepararDibujo(puzzle, sop) {
       const a = clave(q.puntos[i]), b = clave(q.puntos[(i + 1) % n]);
       const kl = a < b ? a + '|' + b : b + '|' + a;
       if (!porLado.has(kl)) porLado.set(kl, []);
-      porLado.get(kl).push([k, i]);
+      /** @type {Array<[number, number]>} */ (porLado.get(kl)).push([k, i]);
     }
   });
+  /** @param {number[]} x @param {number[]} y */
   const mismaNormal = (x, y) => Math.abs(x[0] - y[0]) + Math.abs(x[1] - y[1]) + Math.abs(x[2] - y[2]) < 1e-6;
   const vecinos3D = peg.map((q) => q.puntos.map(() => -1));
   for (const lista of porLado.values()) {
@@ -907,10 +1040,12 @@ function prepararDibujo(puzzle, sop) {
     }
   }
   // 2D (si el soporte da los polígonos de la red): lado del polígono que mira a la vecina
+  /** @type {Par2D[] | null} */
   let pares2D = null;
   if (sop.pegatinas2D) {
     pares2D = [];
     const pol = sop.pegatinas2D.map((x) => x.poligono);
+    /** @param {number[][]} P @returns {number[]} */
     const centro = (P) => P.reduce((s, [x, y]) => [s[0] + x / P.length, s[1] + y / P.length], [0, 0]);
     vecinos3D.forEach((vec, k) => vec.forEach((n) => {
       if (n < 0) return;
@@ -934,7 +1069,7 @@ function prepararDibujo(puzzle, sop) {
         hueco = Math.min(hueco, Math.hypot(m[0] - (a2[0] + b2[0]) / 2, m[1] - (a2[1] + b2[1]) / 2));
       }
       const len = Math.hypot(dx, dy) || 1;
-      pares2D.push({ i, j, lado: mejor, dx: (dx / len) * hueco / 2, dy: (dy / len) * hueco / 2 });
+      /** @type {Par2D[]} */ (pares2D).push({ i, j, lado: mejor, dx: (dx / len) * hueco / 2, dy: (dy / len) * hueco / 2 });
     }));
   }
   const r = { indice, vecinos3D, pares2D };
@@ -948,29 +1083,46 @@ function prepararDibujo(puzzle, sop) {
 
 import { definirPuzzle } from './puzzle.js';
 
-/** Analiza un movimiento cualquiera ("R'", "M2", "x"): familia y potencia. */
+/** Analiza un movimiento cualquiera ("R'", "M2", "x"): familia y potencia. @param {Movimiento} mov */
 function partesMov(mov) {
-  const m = /^(.*?)(2'|2|')?$/.exec(mov);
+  // (la expresión acepta cualquier texto: nunca es null)
+  const m = /** @type {RegExpExecArray} */ (/^(.*?)(2'|2|')?$/.exec(mov));
   return { fam: m[1], veces: m[2] === "'" ? 3 : m[2] ? 2 : 1 };
 }
+/** @param {Movimiento} n */
 const invertirNombre = (n) => (n.endsWith("2'") ? n.slice(0, -1) : n.endsWith('2') ? n : n.endsWith("'") ? n.slice(0, -1) : n + "'");
 
 /**
  * El puzzle `puzzle` con los bloques de `definicion` ([[clave, ...]]). Necesita
  * `puzzle.soporteBloqueos`. Sin bloques válidos se comporta como el puzzle de
  * siempre salvo en que los movimientos se comprueban.
+ * El estado es el del puzzle: un array de pegatinas (soporte.identificar lo lee por colores).
+ * @param {Puzzle<EstadoPegatinas>} puzzle
+ * @param {DefinicionBloqueos} definicion
+ * @param {OpcionesAnalisis} [opcionesAnalisis]
+ * @returns {PuzzleVendado<EstadoPegatinas>}
  */
 export function puzzleConBloqueos(puzzle, definicion, opcionesAnalisis = {}) {
-  const sop = puzzle.soporteBloqueos;
+  // (comprobado en la línea siguiente; el cast es para las funciones de dentro, que el tipo no ve narrowed)
+  const sop = /** @type {SoporteBloqueos<EstadoPegatinas>} */ (puzzle.soporteBloqueos);
   if (!sop) throw new Error(`${puzzle.nombre} no admite bloqueos`);
   const mod = crearModeloBloqueos(sop, definicion);
-  let A = null;
+  /**
+   * Análisis de la configuración. Es null hasta inicializar(), y todas las funciones que lo
+   * usan llaman antes a inicializar() (estaInicializado lo comprueba): el tipo no puede seguir
+   * esa invariante entre funciones, así que se declara sin null.
+   * @type {Analisis | { mod: ModeloBloqueos, info: InfoBloqueos, ok: false }}
+   */
+  let A = /** @type {Analisis} */ (/** @type {unknown} */ (null));
+  /** @type {{ tablas?: number }} */
   const msBase = {};
+  /** @type {number[]} */
   const fijos = [];
   for (let p = 0; p < sop.puntos; p++) if (mod.fijo[p]) fijos.push(p);
   // piezas de cada bloque: un punto de cada una (para comprobar la legalidad en cualquier estado)
   const puntosBloque = mod.bloques.map((bq) => bq.piezas.map((k) => sop.piezas[k].puntos[0]));
 
+  /** @param {EstadoPegatinas} estado @returns {Identificacion} */
   function identificar(estado) {
     const r = sop.identificar(estado);
     if (r.errores) return r;
@@ -982,16 +1134,24 @@ export function puzzleConBloqueos(puzzle, definicion, opcionesAnalisis = {}) {
    * entero está siempre en la posición resuelta movida por una de las 24
    * rotaciones del cubo entero.
    */
+  /** @param {ArrayLike<number>} donde */
   function bloquesRotos(donde) {
+    /** @type {number[]} */
     const rotos = [];
     mod.bloques.forEach((bq, bi) => {
       if (!rigido(bq.piezas.flatMap((k) => sop.piezas[k].puntos), donde)) rotos.push(bi);
     });
     return rotos;
   }
+  /** @param {number[]} pts @param {ArrayLike<number>} donde */
   function rigido(pts, donde) { return sop.rotaciones.some((Q) => pts.every((p) => donde[p] === Q[p])); }
 
-  /** ¿Es legal `mov` en el estado (colores)? { legal, bloque } */
+  /**
+   * ¿Es legal `mov` en el estado (colores)? { legal, bloque }
+   * @param {ArrayLike<number>} donde
+   * @param {Movimiento} mov
+   * @returns {{ legal: true, bloque?: undefined } | { legal: false, bloque: number }}
+   */
   function comprobarMovimiento(donde, mov) {
     const C = sop.enCapa(mov);
     for (let bi = 0; bi < puntosBloque.length; bi++) {
@@ -1001,8 +1161,10 @@ export function puzzleConBloqueos(puzzle, definicion, opcionesAnalisis = {}) {
     }
     return { legal: true };
   }
+  /** @param {number} bi */
   const nombreBloque = (bi) => mod.bloques[bi].piezas.map((k) => sop.piezas[k].clave).join('+');
 
+  /** @param {EstadoPegatinas} estado @param {Movimiento} mov */
   function aplicarMovimiento(estado, mov) {
     const M = sop.mapa(mov); // lanza un error si el movimiento no existe
     if (puntosBloque.length) {
@@ -1017,11 +1179,15 @@ export function puzzleConBloqueos(puzzle, definicion, opcionesAnalisis = {}) {
     return nuevo;
   }
 
-  /** Normaliza (rotación del cubo entero que deja las piezas fijas en su sitio). */
+  /**
+   * Normaliza (rotación del cubo entero que deja las piezas fijas en su sitio).
+   * @param {EstadoPegatinas} estado
+   * @returns {{ donde: Int16Array, r: number, errores?: undefined } | { errores: string[] }}
+   */
   function normalizar(estado) {
     const id = identificar(estado);
     if (id.errores) return id;
-    const d = id.donde;
+    const d = /** @type {Int16Array} */ (id.donde);
     for (let r = 0; r < sop.rotaciones.length; r++) {
       const Q = sop.rotaciones[r];
       if (fijos.every((p) => Q[d[p]] === p)) {
@@ -1032,14 +1198,20 @@ export function puzzleConBloqueos(puzzle, definicion, opcionesAnalisis = {}) {
     }
     return { errores: ['Las piezas fijas (centros) no están colocadas como en un cubo real.'] };
   }
+  /** @type {Map<number, Movimiento>} */
   const traducciones = new Map();
-  /** Nombre en el marco original del giro m (índice) del marco normalizado por la rotación r. */
+  /**
+   * Nombre en el marco original del giro m (índice) del marco normalizado por la rotación r.
+   * (Siempre hay uno: las rotaciones llevan giros de cara a giros de cara.)
+   * @param {number} r @param {number} m @returns {Movimiento}
+   */
   function traducir(r, m) {
     const clave = r * 64 + m;
-    if (traducciones.has(clave)) return traducciones.get(clave);
+    if (traducciones.has(clave)) return /** @type {Movimiento} */ (traducciones.get(clave));
     const Q = sop.rotaciones[r];
     const Qi = new Int16Array(Q.length); Q.forEach((x, i) => { Qi[x] = i; });
     const M = mod.MAPA[m];
+    /** @type {Movimiento | null} */
     let nombre = null;
     for (let j = 0; j < mod.nM && !nombre; j++) {
       const X = mod.MAPA[j];
@@ -1047,8 +1219,8 @@ export function puzzleConBloqueos(puzzle, definicion, opcionesAnalisis = {}) {
       for (let p = 0; p < Q.length; p++) if (Qi[M[Q[p]]] !== X[p]) { igual = false; break; }
       if (igual) nombre = mod.movs[j];
     }
-    traducciones.set(clave, nombre);
-    return nombre;
+    traducciones.set(clave, /** @type {Movimiento} */ (nombre));
+    return /** @type {Movimiento} */ (nombre);
   }
 
   // Sin ningún bloque (y sin errores) el puzzle es el de siempre: se delega todo en él
@@ -1061,7 +1233,8 @@ export function puzzleConBloqueos(puzzle, definicion, opcionesAnalisis = {}) {
       const r = puzzle.inicializar();
       const c = crearCadena(sop.puntos);
       for (const m of sop.busqueda) c.incluir(sop.mapa(m));
-      A = { ok: true, mod, info: { errores: [], avisos: mod.avisos.slice(), bloques: 0, legalesResuelto: sop.busqueda.slice(), geometrias: 1, geometriasExacto: true, diametroGeometria: 0, grupoFase2: c.orden().toString(), estados: c.orden().toString(), estadosExacto: true, espacio: 'grande', sinBloques: true } };
+      // sin bloques solo se usan mod e info (todo lo demás se delega en el puzzle)
+      A = /** @type {Analisis} */ (/** @type {unknown} */ ({ ok: true, mod, info: { errores: [], avisos: mod.avisos.slice(), bloques: 0, legalesResuelto: sop.busqueda.slice(), geometrias: 1, geometriasExacto: true, diametroGeometria: 0, grupoFase2: c.orden().toString(), estados: c.orden().toString(), estadosExacto: true, espacio: 'grande', sinBloques: true } }));
       A.info.msTablas = Math.round(ahora() - t0);
       return { ms: (r && r.ms) || ahora() - t0 };
     }
@@ -1071,6 +1244,11 @@ export function puzzleConBloqueos(puzzle, definicion, opcionesAnalisis = {}) {
     return { ms: msBase.tablas };
   }
 
+  /**
+   * Validación con los bloques; si es válido, también S (normalizado) y la rotación r.
+   * @param {EstadoPegatinas} estado
+   * @returns {{ valido: boolean, errores: string[], S?: Int16Array, r?: number }}
+   */
   function analizar(estado) {
     inicializar();
     if (!A.ok) return { valido: false, errores: A.info.errores.slice() };
@@ -1100,14 +1278,23 @@ export function puzzleConBloqueos(puzzle, definicion, opcionesAnalisis = {}) {
     return { valido: true, errores: [], S, r: n.r };
   }
 
+  /**
+   * (Los casts: si analizar() dice válido, ha devuelto S y r y A es un análisis correcto;
+   * con la estrategia B, res.B existe.)
+   * @param {EstadoPegatinas} estado
+   * @param {OpcionesResolver} [opciones]
+   * @returns {ResultadoResolver}
+   */
   function resolver(estado, opciones = {}) {
     const t0 = ahora();
-    if (sinBloques) { inicializar(); return { ...puzzle.resolver(estado, opciones), estrategia: 'sin bloqueos' }; }
+    // (los puzzles con soporteBloqueos tienen solucionador: el 3x3)
+    if (sinBloques) { inicializar(); return { ...(/** @type {Required<Puzzle<EstadoPegatinas>>['resolver']} */ (puzzle.resolver))(estado, opciones), estrategia: 'sin bloqueos' }; }
     const a = analizar(estado);
     if (!a.valido) return { ok: false, errores: a.errores };
-    const r = resolverBloqueos(A, a.S, opciones);
+    const r = resolverBloqueos(/** @type {Analisis} */ (A), /** @type {Int16Array} */ (a.S), opciones);
     if (!r) return { ok: false, errores: ['No se encontró solución en el tiempo disponible.'] };
-    const movimientos = r.movs.map((m) => traducir(a.r, m));
+    const movimientos = r.movs.map((m) => traducir(/** @type {number} */ (a.r), m));
+    /** @type {ResolverOk} */
     const res = {
       ok: true, movimientos, ms: ahora() - t0,
       estrategia: r.estrategia,
@@ -1115,8 +1302,8 @@ export function puzzleConBloqueos(puzzle, definicion, opcionesAnalisis = {}) {
       detalle: {
         A: r.res.A ? { longitud: r.res.A.movs.length, metodo: r.res.A.metodo, optima: !!r.res.A.optima, ms: r.res.A.ms } : null,
         B: r.res.B ? {
-          longitud: r.res.B.movs.length, fase1: r.res.B.fase1, fase2: r.res.B.fase2, metodo: r.res.B.metodo, ms: r.res.B.ms,
-          movimientos: r.res.B.movs.map((m) => traducir(a.r, m)),
+          longitud: r.res.B.movs.length, fase1: /** @type {number} */ (r.res.B.fase1), fase2: /** @type {number} */ (r.res.B.fase2), metodo: r.res.B.metodo, ms: r.res.B.ms,
+          movimientos: r.res.B.movs.map((m) => traducir(/** @type {number} */ (a.r), m)),
         } : null,
       },
     };
@@ -1125,14 +1312,16 @@ export function puzzleConBloqueos(puzzle, definicion, opcionesAnalisis = {}) {
       if (s) res.sinBloqueos = { longitud: s.movimientos.length, optima: s.optima };
     }
     // Fase 2 (estrategia B): dónde vuelve a la geometría resuelta
-    if (r.estrategia === 'B' && r.res.B.fase2) {
-      let T = a.S;
-      for (const m of r.movs.slice(0, r.res.B.fase1)) T = A.mod.aplicar(T, m);
-      res.vueltasGeometria = vueltasAGeometria(A, T, r.movs.slice(r.res.B.fase1)).map((i) => i + r.res.B.fase1);
+    if (r.estrategia === 'B' && /** @type {SolucionEstrategia} */ (r.res.B).fase2) {
+      let T = /** @type {Int16Array} */ (a.S);
+      for (const m of r.movs.slice(0, /** @type {Required<SolucionEstrategia>} */ (r.res.B).fase1)) T = A.mod.aplicar(T, m);
+      res.vueltasGeometria = vueltasAGeometria(/** @type {Analisis} */ (A), T, r.movs.slice(/** @type {Required<SolucionEstrategia>} */ (r.res.B).fase1))
+        .map((i) => i + /** @type {Required<SolucionEstrategia>} */ (r.res.B).fase1);
     }
     return res;
   }
 
+  /** @param {Rng} rng */
   function generarScramble(rng) {
     if (sinBloques) return puzzle.generarScramble(rng);
     inicializar();
@@ -1140,11 +1329,13 @@ export function puzzleConBloqueos(puzzle, definicion, opcionesAnalisis = {}) {
     return scrambleBloqueos(A, rng).map((m) => mod.movs[m]);
   }
 
+  /** @param {string} fam */
   const ejeDe = (fam) => (sop.ejeDe ? sop.ejeDe(fam) : fam);
 
   // ----- Dibujo: piezas pegadas unidas (sin la separación negra) -----
-  const dib = puzzle.vista3D ? prepararDibujo(puzzle, sop) : null;
-  /** bloque de cada posición de pegatina (o -1) en un estado. */
+  /** @typedef {Puzzle<EstadoPegatinas> & { vista3D(e: EstadoPegatinas): Vista3D }} PuzzleCon3D */
+  const dib = puzzle.vista3D ? prepararDibujo(/** @type {PuzzleCon3D} */ (puzzle), sop) : null;
+  /** bloque de cada posición de pegatina (o -1) en un estado. @param {EstadoPegatinas} estado */
   function bloqueEnPosicion(estado) {
     const res = new Int16Array(sop.nPegatinas).fill(-1);
     if (!mod.bloques.length) return res;
@@ -1153,12 +1344,21 @@ export function puzzleConBloqueos(puzzle, definicion, opcionesAnalisis = {}) {
     mod.bloques.forEach((bq, bi) => bq.piezas.forEach((k) => sop.piezas[k].puntos.forEach((p) => { if (p < sop.nPegatinas) res[id.donde[p]] = bi; })));
     return res;
   }
+  /** @type {Map<string, import('./tipos.js').Geometria3D>} */
   const cacheGeo3D = new Map();
+  /**
+   * (Solo la usa la interfaz si el puzzle tiene vista 3D: el 3x3.)
+   * @param {EstadoPegatinas} estado
+   * @param {{ bloqueEnPosicion?: Int16Array }} [opciones]
+   * @returns {Vista3D}
+   */
   function vista3D(estado, opciones = {}) {
-    const v = puzzle.vista3D(estado);
+    const v = /** @type {PuzzleCon3D} */ (puzzle).vista3D(estado);
     if (!dib || !mod.bloques.length) return v;
     const enB = opciones.bloqueEnPosicion || bloqueEnPosicion(estado);
-    const marcas = dib.vecinos3D.map((vec, k) => vec.map((n) => n >= 0 && enB[dib.indice[k]] >= 0 && enB[dib.indice[k]] === enB[dib.indice[n]]));
+    // (indice null = pegatina que no se edita: enB[null] es undefined y la comparación da false, que es lo que se quiere)
+    const marcas = dib.vecinos3D.map((vec, k) => vec.map((n) => n >= 0 && enB[/** @type {number} */ (dib.indice[k])] >= 0
+      && enB[/** @type {number} */ (dib.indice[k])] === enB[/** @type {number} */ (dib.indice[n])]));
     const clave = marcas.map((m) => m.map((x) => (x ? 1 : 0)).join('')).join('');
     let geometria = cacheGeo3D.get(clave);
     if (!geometria) {
@@ -1168,14 +1368,16 @@ export function puzzleConBloqueos(puzzle, definicion, opcionesAnalisis = {}) {
     }
     return { ...v, geometria };
   }
+  /** @param {EstadoPegatinas} estado @param {OpcionesRender} [opciones] */
   function renderizar(estado, opciones = {}) {
     if (!dib || !dib.pares2D || !mod.bloques.length) return puzzle.renderizar(opciones.colores || estado, opciones);
     const enB = opciones.bloqueEnPosicion || bloqueEnPosicion(estado);
+    /** @type {Map<number, Array<{ dx: number, dy: number }>>} */
     const expandir = new Map();
     for (const { i, j, lado, dx, dy } of dib.pares2D) {
       if (enB[i] < 0 || enB[i] !== enB[j]) continue;
       if (!expandir.has(i)) expandir.set(i, []);
-      expandir.get(i)[lado] = { dx, dy };
+      /** @type {Array<{ dx: number, dy: number }>} */ (expandir.get(i))[lado] = { dx, dy };
     }
     return puzzle.renderizar(opciones.colores || estado, { ...opciones, expandir });
   }

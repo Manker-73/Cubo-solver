@@ -1,3 +1,4 @@
+// @ts-check
 // Guion de una solución por un método humano (modo aprender): etapas con nombre
 // y objetivo, y dentro de cada etapa bloques de movimientos con lo que consigue
 // cada uno, el algoritmo (si es uno conocido) y las piezas en las que se trabaja.
@@ -8,11 +9,24 @@
 //                bloques: [{ inicio, fin, texto, algoritmo, piezas }] }] }
 // `piezas` = índices de las pegatinas de esas piezas AL EMPEZAR el bloque (la
 // interfaz las sigue movimiento a movimiento para resaltarlas).
+// Tipos: Guion, GuionAprender, EtapaGuion y BloqueGuion en src/core/tipos.d.ts.
 
+/** @import { Guion, GuionAprender, EtapaGuion, Movimiento } from '../core/tipos.js' */
+
+/**
+ * @template E
+ * @param {(estado: E, mov: Movimiento) => E} aplicar
+ * @param {E} estado
+ * @param {{ esRotacion?: (mov: Movimiento) => boolean }} [opciones]
+ * @returns {Guion<E>}
+ */
 export function crearGuion(aplicar, estado, { esRotacion = () => false } = {}) {
+  /** @type {Movimiento[]} */
   const movimientos = [];
+  /** @type {EtapaGuion[]} */
   const etapas = [];
   let e = estado;
+  /** @type {Guion<E>} */
   const g = {
     get estado() { return e; },
     etapa(nombre, objetivo, grupo = null) {

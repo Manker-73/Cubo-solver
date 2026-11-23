@@ -1,3 +1,4 @@
+// @ts-check
 // Servicio de cálculo: genera tablas, scrambles, valida y resuelve.
 // Lo usan el Web Worker (worker.js) y, si no hay Worker, el hilo principal
 // (motor.js). Solo usa la interfaz común de los puzzles.
@@ -6,14 +7,25 @@ import { PUZZLES } from '../puzzles/index.js';
 import { rngSeguro } from '../core/rng.js';
 import { puzzleConBloqueos, claveBloqueos } from '../core/bloqueos.js';
 
+/**
+ * Mensajes con el Worker: Peticion, RespuestasPorOperacion, MensajeAlWorker y MensajeDelWorker
+ * en src/core/tipos.d.ts.
+ * @import { Peticion, Respuesta, PuzzleServicio, PuzzleVendado, Puzzle, EstadoPegatinas } from '../core/tipos.js'
+ */
+
 const rng = rngSeguro();
 const ahora = () => (globalThis.performance || Date).now();
 
 // Puzzles con bloqueos (cubos vendados): uno por configuración, con sus tablas.
 // Se guardan los últimos (las tablas de un espacio pequeño pueden ocupar decenas de MB).
 const CONFIGS_GUARDADAS = 3;
+/** @type {Map<string, PuzzleVendado<EstadoPegatinas>>} */
 const conBloqueos = new Map();
-/** El puzzle de la petición: el del registro o, si trae bloqueos, su versión vendada. */
+/**
+ * El puzzle de la petición: el del registro o, si trae bloqueos, su versión vendada.
+ * @param {Exclude<Peticion, { op: 'ping' }>} msg
+ * @returns {PuzzleServicio}
+ */
 export function puzzleDePeticion(msg) {
   const p = PUZZLES.find((x) => x.id === msg.puzzle);
   if (!p) throw new Error(`Puzzle desconocido: ${msg.puzzle}`);
@@ -22,9 +34,10 @@ export function puzzleDePeticion(msg) {
   const k = p.id + '#' + claveBloqueos(def);
   let q = conBloqueos.get(k);
   if (q) { conBloqueos.delete(k); conBloqueos.set(k, q); return q; }
-  q = puzzleConBloqueos(p, def);
+  // (los puzzles con soporteBloqueos tienen estado de pegatinas: el 3x3)
+  q = puzzleConBloqueos(/** @type {Puzzle<EstadoPegatinas>} */ (p), def);
   conBloqueos.set(k, q);
-  while (conBloqueos.size > CONFIGS_GUARDADAS) conBloqueos.delete(conBloqueos.keys().next().value);
+  while (conBloqueos.size > CONFIGS_GUARDADAS) conBloqueos.delete(/** @type {string} */ (conBloqueos.keys().next().value));
   return q;
 }
 
@@ -39,6 +52,9 @@ export function puzzleDePeticion(msg) {
  *   validar   (estado)        -> { valido, errores }
  *   resolver  (estado)        -> { ok, movimientos, errores, ms, fases }
  *   aprender  (estado, opciones.metodo) -> guion del método humano (ver src/aprender/guion.js)
+ * (Tipos de cada petición y su respuesta: Peticion y RespuestasPorOperacion en src/core/tipos.d.ts.)
+ * @param {Peticion} msg
+ * @returns {Respuesta}
  */
 export function atender(msg) {
   if (msg.op === 'ping') return 'ok';
@@ -58,12 +74,14 @@ export function atender(msg) {
     }
     case 'validar': {
       if (!p.capacidades.validar) throw new Error(`${p.nombre} no tiene validador`);
-      const v = p.validar(msg.estado);
+      // capacidades.validar => validar existe (lo comprueba definirPuzzle al cargar; el tipo no lo sabe)
+      const v = /** @type {Required<Puzzle<unknown>>['validar']} */ (p.validar)(msg.estado);
       return { valido: v.valido, errores: v.errores };
     }
     case 'resolver': {
       if (!p.capacidades.resolver) throw new Error(`${p.nombre} no tiene solucionador`);
-      const r = p.resolver(msg.estado, msg.opciones || {});
+      // capacidades.resolver => resolver existe (como arriba)
+      const r = /** @type {Required<Puzzle<unknown>>['resolver']} */ (p.resolver)(msg.estado, msg.opciones || {});
       return { ...r, ok: r.ok, movimientos: r.movimientos || [], errores: r.errores || [], ms: r.ms, fases: r.fases || null };
     }
     case 'aprender': {
@@ -73,6 +91,7 @@ export function atender(msg) {
       return { ...r, ms: ahora() - t0 };
     }
     default:
-      throw new Error(`Operación desconocida: ${msg.op}`);
+      // solo con un mensaje que no cumple Peticion (para el tipo, msg aquí es `never`)
+      throw new Error(`Operación desconocida: ${/** @type {{ op: string }} */ (msg).op}`);
   }
 }

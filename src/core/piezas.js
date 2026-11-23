@@ -1,3 +1,4 @@
+// @ts-check
 // Modelo de piezas genérico construido a partir de permutaciones de pegatinas.
 //
 // Una "órbita" es un conjunto de piezas que intercambian posiciones entre sí
@@ -12,8 +13,23 @@
 
 import { indicePerm, permDeIndice, factorial } from './perm.js';
 
+/**
+ * Tipos (mínimos: es código numérico).
+ * @typedef {{ nombre: string, piezas: number[][] }} Orbita  piezas[p] = pegatinas de la pieza p, en orden cíclico
+ * @typedef {{ perm: number[], ori: number[] }} EstadoOrbita  pieza y orientación en cada posición
+ * @typedef {{ tipo: 'inexistente' | 'espejo', orbita: string, oi: number, pos: number, colores: number[] }} ErrorPieza
+ * @typedef {{ nombre: string, tam: number, codificar(est: EstadoOrbita[]): number, mover(idx: number, mov: string): number }} Coordenada
+ * @typedef {ReturnType<typeof crearModeloPiezas>} ModeloPiezas
+ * @typedef {ReturnType<typeof crearBuscador>} Buscador
+ */
+
+/**
+ * @param {{ orbitas: Orbita[], movimientos: Record<string, ArrayLike<number>>, coloresResuelto: ArrayLike<number> }} datos
+ *   movimientos: permutación de pegatinas de cada movimiento (P[i] = a dónde va la pegatina i)
+ */
 export function crearModeloPiezas({ orbitas, movimientos, coloresResuelto }) {
   // Hueco -> (posición, índice) para cada órbita
+  /** @type {Map<number, { oi: number, p: number, t: number }>} */
   const huecoDe = new Map();
   orbitas.forEach((orb, oi) => {
     orb.piezas.forEach((pz, p) => pz.forEach((f, t) => huecoDe.set(f, { oi, p, t })));
@@ -23,6 +39,7 @@ export function crearModeloPiezas({ orbitas, movimientos, coloresResuelto }) {
   const coloresPieza = orbitas.map((orb) => orb.piezas.map((pz) => pz.map((f) => coloresResuelto[f])));
 
   // Efecto de cada movimiento a nivel de piezas
+  /** @type {Record<string, Array<{ orig: number[], delta: number[] }>>} */
   const movPiezas = {};
   for (const [nombre, P] of Object.entries(movimientos)) {
     movPiezas[nombre] = orbitas.map((orb, oi) => {
@@ -53,11 +70,13 @@ export function crearModeloPiezas({ orbitas, movimientos, coloresResuelto }) {
    * tipo: 'inexistente' (combinación de colores imposible) o 'espejo' (colores
    * correctos pero en orden imposible).
    */
+  /** @param {ArrayLike<number>} colores */
   function identificar(colores) {
+    /** @type {ErrorPieza[]} */
     const errores = [];
     const res = orbitas.map((orb, oi) => {
       const m = orb.piezas[0].length;
-      const perm = [], ori = [];
+      const perm = /** @type {number[]} */ ([]), ori = /** @type {number[]} */ ([]);
       orb.piezas.forEach((pz, p) => {
         const c = pz.map((f) => colores[f]);
         let encontrada = -1, o = 0;
@@ -83,7 +102,11 @@ export function crearModeloPiezas({ orbitas, movimientos, coloresResuelto }) {
     return { orbitas: res, errores };
   }
 
-  /** Pegatinas a partir de un estado de piezas (solo rellena las pegatinas de las órbitas). */
+  /**
+   * Pegatinas a partir de un estado de piezas (solo rellena las pegatinas de las órbitas).
+   * @param {EstadoOrbita[]} estadoPiezas
+   * @param {number[]} base
+   */
   function aColores(estadoPiezas, base) {
     const colores = base.slice();
     orbitas.forEach((orb, oi) => {
@@ -97,6 +120,7 @@ export function crearModeloPiezas({ orbitas, movimientos, coloresResuelto }) {
     return colores;
   }
 
+  /** @param {EstadoOrbita[]} estadoPiezas @param {string} nombre @returns {EstadoOrbita[]} */
   function aplicarPiezas(estadoPiezas, nombre) {
     return movPiezas[nombre].map(({ orig, delta }, oi) => {
       const m = orbitas[oi].piezas[0].length;
@@ -109,6 +133,7 @@ export function crearModeloPiezas({ orbitas, movimientos, coloresResuelto }) {
   }
 
   // ---------- Coordenadas ----------
+  /** @param {number} oi @returns {Coordenada} */
   function coordPerm(oi) {
     const n = orbitas[oi].piezas.length;
     return {
@@ -122,15 +147,18 @@ export function crearModeloPiezas({ orbitas, movimientos, coloresResuelto }) {
       },
     };
   }
+  /** @param {number} oi @returns {Coordenada} */
   function coordOri(oi) {
     const n = orbitas[oi].piezas.length;
     const m = orbitas[oi].piezas[0].length;
     const tam = m ** n;
+    /** @param {number} idx */
     const dec = (idx) => {
       const o = new Array(n);
       for (let i = n - 1; i >= 0; i--) { o[i] = idx % m; idx = Math.floor(idx / m); }
       return o;
     };
+    /** @param {number[]} o */
     const cod = (o) => o.reduce((a, x) => a * m + x, 0);
     return {
       nombre: orbitas[oi].nombre + ':ori',
@@ -158,6 +186,7 @@ export function crearModeloPiezas({ orbitas, movimientos, coloresResuelto }) {
  * movs: nombres de movimientos; ejes: eje de cada movimiento (no se repite eje seguido)
  * podas: listas de índices de coordenadas; para cada lista se genera una tabla BFS.
  * objetivo: valores de las coordenadas en el estado resuelto.
+ * @param {{ coords: Coordenada[], movs: string[], ejes: ArrayLike<number>, podas: number[][], objetivo: number[] }} datos
  */
 export function crearBuscador({ coords, movs, ejes, podas, objetivo }) {
   const nM = movs.length;
@@ -174,6 +203,7 @@ export function crearBuscador({ coords, movs, ejes, podas, objetivo }) {
     const tabs = lista.map((ci) => tablas[ci]);
     const total = tams.reduce((a, b) => a * b, 1);
     const prof = new Int8Array(total).fill(-1);
+    /** @param {number[]} vals */
     const idxDe = (vals) => vals.reduce((a, v, k) => a * tams[k] + v, 0);
     prof[idxDe(lista.map((ci) => objetivo[ci]))] = 0;
     const vals = new Int32Array(L);
@@ -204,8 +234,10 @@ export function crearBuscador({ coords, movs, ejes, podas, objetivo }) {
   const msInit = Date.now() - t0;
 
   /** ¿Es alcanzable cada coordenada por separado? (para el validador) */
+  /** @param {number[]} vals */
   const alcanzable = (vals) => tablasPoda.every((tp) => tp.prof[tp.idxDe(tp.lista.map((ci) => vals[ci]))] >= 0);
 
+  /** @param {ArrayLike<number>} vals */
   function heuristica(vals) {
     let h = 0;
     for (const tp of tablasPoda) {
@@ -218,13 +250,19 @@ export function crearBuscador({ coords, movs, ejes, podas, objetivo }) {
     return h;
   }
 
-  /** Devuelve la lista de movimientos (óptima con respecto a `movs`) o null. */
+  /**
+   * Devuelve la lista de movimientos (óptima con respecto a `movs`) o null.
+   * @param {number[]} vals0
+   * @returns {{ movimientos: string[], nodos: number } | null}
+   */
   function resolver(vals0, maxProf = 30) {
     const h0 = heuristica(vals0);
     if (h0 === Infinity) return null;
+    /** @type {number[]} */
     const camino = [];
     const nC = coords.length;
     let nodos = 0;
+    /** @param {number[]} vals @param {number} g @param {number} limite @param {number} ultimoEje @returns {boolean} */
     function dfs(vals, g, limite, ultimoEje) {
       const h = heuristica(vals);
       if (h === 0) {

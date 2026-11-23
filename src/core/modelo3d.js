@@ -1,3 +1,4 @@
+// @ts-check
 // Modelo 3D genérico de un puzzle, sin dibujar nada (lo dibuja src/app/vista3d.js).
 //
 // Interfaz común (ver ARQUITECTURA.md, "Vista 3D"): cada puzzle da
@@ -21,6 +22,10 @@
 import { dot, unit, res, esc, sum, cruz, norma, centroide, rotacion } from './geometria.js';
 
 /**
+ * Tipos de la vista 3D en ./tipos.d.ts (Geometria3D, Pegatina3D, Vista3D, ParteGiro3D…).
+ * @import { Vec3, Corte, Camara3D, Etiqueta3D, Geometria3D, Pegatina3D, Vista3D, ParteGiro3D, Modelo3D, EstadoPegatinas, Movimiento } from './tipos.js'
+ */
+/**
  * Modelo 3D de un puzzle cuyo estado es un array de colores por pegatina, con
  * geometría fija.
  *   poligonos[i]: polígono 3D de la pegatina i (índice del estado)
@@ -28,8 +33,12 @@ import { dot, unit, res, esc, sum, cruz, norma, centroide, rotacion } from './ge
  *   giro(mov):    [{ eje, angulo, pegatinas }] o null si el movimiento no existe
  *   cortes:       [{ n, h }] planos de corte (para agrupar pegatinas en piezas)
  *   camara:       { desde: [x, y, z], arriba: [x, y, z] }
+ * @param {{ poligonos: Vec3[][], normales?: Vec3[] | null, giro: (mov: Movimiento) => ParteGiro3D[] | null,
+ *   cortes?: Corte[], camara?: Camara3D, radio?: number, etiquetas?: Etiqueta3D[] | null }} datos
+ * @returns {Modelo3D<EstadoPegatinas>}
  */
 export function modelo3DPegatinas({ poligonos, normales, giro, cortes = [], camara, radio, etiquetas = null }) {
+  /** @type {Pegatina3D[]} */
   const pegatinas = poligonos.map((puntos, i) => {
     const c = centroide(puntos);
     let n = normales ? normales[i] : normalPoligono(puntos);
@@ -38,7 +47,9 @@ export function modelo3DPegatinas({ poligonos, normales, giro, cortes = [], cama
   });
   asignarPiezas(pegatinas, cortes);
   const r = radio || Math.max(...poligonos.flat().map((p) => norma(p)));
+  /** @type {Geometria3D} */
   const geometria = { pegatinas, radio: r, camara: camara || CAMARA_CUBO, cortes, etiquetas };
+  /** @type {Map<Movimiento, ParteGiro3D[]>} */
   const cacheGiros = new Map();
   return {
     vista3D(estado) {
@@ -50,21 +61,26 @@ export function modelo3DPegatinas({ poligonos, normales, giro, cortes = [], cama
         if (!g) throw new Error(`Movimiento no válido: "${mov}"`);
         cacheGiros.set(mov, g);
       }
-      return cacheGiros.get(mov);
+      return /** @type {ParteGiro3D[]} */ (cacheGiros.get(mov));
     },
   };
 }
 
+/** @type {Camara3D} */
 export const CAMARA_CUBO = { desde: [0.62, 0.72, 1], arriba: [0, 1, 0] };
 
-/** Normal de un polígono plano (sin normalizar el sentido). */
+/** Normal de un polígono plano (sin normalizar el sentido). @param {Vec3[]} puntos @returns {Vec3} */
 export function normalPoligono(puntos) {
   let acc = [0, 0, 0];
   for (let i = 1; i + 1 < puntos.length; i++) acc = sum(acc, cruz(res(puntos[i], puntos[0]), res(puntos[i + 1], puntos[0])));
   return unit(acc);
 }
 
-/** Agrupa las pegatinas en piezas: misma pieza = mismo lado de todos los planos de corte. */
+/**
+ * Agrupa las pegatinas en piezas: misma pieza = mismo lado de todos los planos de corte.
+ * @param {Pegatina3D[]} pegatinas
+ * @param {Corte[]} cortes
+ */
 export function asignarPiezas(pegatinas, cortes) {
   for (const p of pegatinas) {
     if (p.pieza != null) continue;
@@ -75,9 +91,11 @@ export function asignarPiezas(pegatinas, cortes) {
   }
 }
 
-/** Pegatinas (índices de la geometría) de las piezas dadas. */
+/** Pegatinas (índices de la geometría) de las piezas dadas. @param {Geometria3D} geometria @param {Iterable<string>} piezas */
 export function pegatinasDePiezas(geometria, piezas) {
+  /** @type {Set<string | null>} */
   const s = new Set(piezas);
+  /** @type {number[]} */
   const r = [];
   geometria.pegatinas.forEach((p, k) => { if (s.has(p.pieza)) r.push(k); });
   return r;
@@ -86,6 +104,9 @@ export function pegatinasDePiezas(geometria, piezas) {
 /**
  * Aplica (sin dibujar) un giro 3D completo: devuelve, para cada pegatina de la
  * geometría, su centro tras el giro. Es lo que hace la vista al acabar la animación.
+ * @param {Geometria3D} geometria
+ * @param {ParteGiro3D[]} partes
+ * @returns {Vec3[]}
  */
 export function centrosTrasGiro(geometria, partes, fraccion = 1) {
   const centros = geometria.pegatinas.map((p) => p.centro || centroide(p.puntos));
@@ -99,6 +120,10 @@ export function centrosTrasGiro(geometria, partes, fraccion = 1) {
 /**
  * Compara dos "fotos" 3D: { centros, colores } y { geometria, colores }.
  * Devuelve null si cada posición tiene el mismo color, o un texto con la primera diferencia.
+ * @param {Vec3[]} centrosA
+ * @param {number[]} coloresA
+ * @param {Vista3D} vistaB
+ * @returns {string | null}
  */
 export function compararFotos(centrosA, coloresA, vistaB, tol = 1e-6) {
   const pegB = vistaB.geometria.pegatinas;
@@ -118,7 +143,13 @@ export function compararFotos(centrosA, coloresA, vistaB, tol = 1e-6) {
   return null;
 }
 
-/** Comprueba la regla de la interfaz para un movimiento (lo usan los tests). */
+/**
+ * Comprueba la regla de la interfaz para un movimiento (lo usan los tests).
+ * @template E
+ * @param {{ vista3D(e: E): Vista3D, giro3D(e: E, m: Movimiento): ParteGiro3D[], aplicarMovimiento(e: E, m: Movimiento): E }} puzzle
+ * @param {E} estado
+ * @param {Movimiento} mov
+ */
 export function comprobarGiro3D(puzzle, estado, mov) {
   const antes = puzzle.vista3D(estado);
   const partes = puzzle.giro3D(estado, mov);
@@ -127,16 +158,21 @@ export function comprobarGiro3D(puzzle, estado, mov) {
   return compararFotos(centros, antes.colores, despues);
 }
 
-/** Matriz 3x3 (por filas) de la rotación de `ang` radianes alrededor de `eje`. */
+/**
+ * @typedef {number[][]} Matriz3  matriz 3x3 por filas
+ */
+/** Matriz 3x3 (por filas) de la rotación de `ang` radianes alrededor de `eje`. @param {Vec3} eje @param {number} ang @returns {Matriz3} */
 export function matrizRotacion(eje, ang) {
   const r = rotacion(eje, ang);
   const c = [r([1, 0, 0]), r([0, 1, 0]), r([0, 0, 1])]; // columnas
   return [[c[0][0], c[1][0], c[2][0]], [c[0][1], c[1][1], c[2][1]], [c[0][2], c[1][2], c[2][2]]];
 }
+/** @type {(A: Matriz3, B: Matriz3) => Matriz3} */
 export const mulMat = (A, B) => A.map((f) => [0, 1, 2].map((j) => f[0] * B[0][j] + f[1] * B[1][j] + f[2] * B[2][j]));
+/** @type {(A: Matriz3, v: Vec3) => Vec3} */
 export const mulMatVec = (A, v) => A.map((f) => f[0] * v[0] + f[1] * v[1] + f[2] * v[2]);
 
-/** Eje y ángulo (en (−π, π]) de una matriz de rotación. */
+/** Eje y ángulo (en (−π, π]) de una matriz de rotación. @param {Matriz3} M @returns {{ eje: Vec3, angulo: number }} */
 export function ejeAngulo(M) {
   const tr = M[0][0] + M[1][1] + M[2][2];
   const cos = Math.max(-1, Math.min(1, (tr - 1) / 2));
