@@ -1,6 +1,36 @@
 # Estado del proyecto (noche 11 — rediseño visual — 23/11/2026)
 
-> Progreso de la noche 11 (rediseño visual): en curso.
+> Progreso de la noche 11 (rediseño visual): navegación por hash y lista de secciones ✔ · enlaces antiguos (#bloqueos=, #firma=, ?bloqueos=, ?firma=) ✔ · portada (propuesta D) ✔ · WCA Puzzles con el estilo nuevo y «FTO · pronto» ✔ · Bandaged Cubes como página propia ✔ · tema oscuro por defecto con botón y persistencia ✔ · fuentes incrustadas sin red ✔ · accesibilidad (contraste, 44 px, foco, sin scroll horizontal a 390 px) ✔ · tests (humo, contraste, comprobar-diseno.py y los scripts de Chromium) ✔ · `test:rapido` ✔ (174/174, 12 min en local; también en la Action) · `npm test` (completo, lanzado en GitHub: Actions → ejecución manual «completo» 45093708015) · documentación ✔ · push y GitHub Pages ✔ · artifact republicado ✔ · movimientos de la solución como botones ✘ (pendiente).
+
+## Noche 11: rediseño visual
+
+### Qué se ve distinto
+- **Portada** (`#/`): cabecera con el logo (cuadrícula 3x3 en el color de acento), «Cómo funciona», GitHub y el botón de tema; el titular «Mezcla. Comprueba. Resuelve. Aprende.»; dos bloques grandes (WCA Puzzles en acento, Bandaged Cubes en acento suave con borde) y las secciones bloqueadas (Shape Mods, Cuboids, Others) rayadas con candado, más «Más en camino»; debajo, «Cómo funciona» en cuatro pasos.
+- **WCA Puzzles** (`#/wca/<id>`): la misma herramienta (scramble, editor, resolver, 3D, modo aprender) con Inter / Bricolage Grotesque / JetBrains Mono, paneles de radio 18 px, botones y chips de 44 px, chip elegido y conmutadores 2D/3D en el acento, etiquetas en mono; el FTO como chip bloqueado «FTO · pronto».
+- **Bandaged Cubes** (`#/bandaged`): «Tus bloques» arriba (todo lo de antes: crear y editar en 2D/3D, ejemplos, firmas, guardar, enlace, estrategia A/B, análisis) y, debajo, el scramble y el solucionador del 3x3 vendado. En WCA Puzzles el 3x3 ya no tiene bloques.
+- **Tema oscuro por defecto** (aunque el sistema esté en claro); el botón cambia a claro y se recuerda.
+
+Capturas antes (`docs/capturas/antes-{escritorio,movil}-{oscuro,claro}.jpg`; antes el tema seguía al sistema) y después (`docs/capturas/diseno-{escritorio,movil}-{oscuro,claro}-{portada,wca,bandaged}.jpg`).
+
+### Tamaño del HTML
+| | `dist/index.html` | gzip |
+|---|---|---|
+| Antes de la noche 11 | 605,7 KB | 223,9 KB |
+| Después (fuentes incrustadas: 78,5 KB) | 703,7 KB | 289,8 KB |
+| Después sin fuentes (pilas del sistema, para comparar) | 625,3 KB | 228,8 KB |
+
+(La tarea decía «~345 KB»; medido sobre el último `dist/index.html` publicado antes de esta noche son 605,7 KB.) Decisión y números de las fuentes en DECISIONES.md.
+
+### Tests
+- **Nuevos** en `test:humo`: `tests/diseno.test.mjs` (rutas `leerRuta`/`hashDe` y **contraste ≥ 4,5:1** de cada par texto/fondo en los dos temas, leído del CSS; comprobado que falla con un gris más claro) y en `app.test.mjs`: navegación entre secciones (tarjetas, `#/wca/<id>`, chips, FTO bloqueado, «Inicio», bloqueadas no navegables ni por clic ni por URL, «Cómo funciona»), tema (oscuro con el sistema en claro, cambio, persistencia, sin almacenamiento), enlaces antiguos (`#bloqueos=`, `?firma=`, `?bloqueos=`, `#firma=` y el nuevo `#/bandaged?bloqueos=`; la URL pasa a la forma nueva y el 3x3 de WCA no tiene bloques) y recorrido completo (scramble → resolver → reproducir con ▶ hasta «Resuelto») en WCA y en Bandaged.
+- **Cambiados** (sin quitar comprobaciones; detalle en DECISIONES.md): `abrir()` abre `#/wca` (la raíz es ahora la portada); las pruebas de bloqueos abren `#/bandaged` y comprueban que no hay selector en vez de pulsar el chip del 3x3; los scripts de Chromium usan `#/wca` o `#/bandaged`.
+- `test:rapido`: 174/174 en 12 min en local (2 núcleos; antes 169 en 8 min 20 s) y pasa en la Action de cada push.
+- `test:humo`: 39/39 (antes 33), 3 min 16 s en local (antes 2 min 35 s en esta máquina; ya no baja de 2 min por los cuatro tests nuevos de la app).
+- Chromium real: `comprobar-diseno.py` (nuevo: 4 combinaciones × portada/WCA/Bandaged, toda la red bloqueada: 0 peticiones, las 3 fuentes cargadas, 0 errores, sin scroll horizontal, objetivos ≥ 44 px, foco visible, oscuro por defecto con el sistema en claro, el claro se conserva al recargar), `comprobar-bloqueos.py`, `comprobar-3d.py`, `comprobar-aprender.py`, `comprobar-cambios.py` y `comprobar-primer-resolver.py`: todo pasa. Una ejecución de `comprobar-diseno.py` (la primera tras un cambio, con los demás scripts esperando) agotó un tiempo de 90 s en una espera; las dos siguientes pasaron enteras. Desde entonces el script apunta en qué parte falla y guarda una captura.
+
+### Pendiente
+- Los movimientos de la solución (`#movs li`) y los pasos de la explicación del modo aprender siguen siendo elementos de lista con clic, no botones (se recorren igual con los botones del reproductor).
+- En el artifact de claude.ai solo pasan a la URL los hash simples (`#nombre`), así que un enlace `#/wca/megaminx` abre en la portada; dentro del artifact la navegación funciona. En GitHub Pages y en local, los enlaces funcionan enteros.
 
 > Progreso de la fase 0 (tests más rápidos, sin cambios en `src/`): diagnóstico ✔ · `test:humo` < 2 min ✔ · `test:rapido` ✔ (8 min 20 s; objetivo < 8 min ✘ por ~20 s: la app sola son ~3,6 min) · `npm test` sin cambios en lo que comprueba ✔ (completo lanzado en GitHub; en local solo los ficheros baratos) · `test:solo` ✔ · GitHub Action ✔ (pasa en GitHub) · sabotajes ✔ · caché de tablas en disco ✘ (descartada con números, ver DECISIONES.md) · documentación ✔ · push ✔ · GitHub Pages ✔.
 
