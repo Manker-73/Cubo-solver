@@ -94,6 +94,7 @@ export function crearAprenderSkewb({ geo, modelo, analizar, centros, esqA, esqB,
     });
   }
 
+  /** @param {number[]} estado @returns {import('../core/tipos.js').ResultadoAprender} */
   return function aprenderSkewb(estado) {
     const t0 = Date.now();
     const a = analizar(estado);

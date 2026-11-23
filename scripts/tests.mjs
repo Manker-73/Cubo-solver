@@ -1,6 +1,6 @@
 // Lanza la suite de tests por niveles (ver README.md, "Tests"):
 //
-//   node scripts/tests.mjs humo                 # < 2 min: humo de los puzzles, registro y humo de la app
+//   node scripts/tests.mjs humo                 # ~2,5 min: tipos (tsc), humo de los puzzles, registro y humo de la app
 //   node scripts/tests.mjs rapido               # todo, con menos casos en los tests caros
 //   node scripts/tests.mjs completo             # igual que npm test
 //   node scripts/tests.mjs solo skewb aprender  # solo lo de esas áreas (nivel rápido)
@@ -49,6 +49,15 @@ function ejecutar(ficheros, { patrones = [], env = {} } = {}) {
   return r.status ?? 1;
 }
 
+/** npm run tipos (tsc --noEmit, < 1 s): comprueba los ficheros con // @ts-check contra src/core/tipos.d.ts. */
+function tipos() {
+  console.log('tipos: tsc --noEmit');
+  const t = Date.now();
+  const r = spawnSync(process.execPath, [path.join(raiz, 'node_modules/typescript/bin/tsc'), '--noEmit', '-p', raiz], { cwd: raiz, stdio: 'inherit' });
+  console.log(`tipos: ${r.status === 0 ? 'sin errores' : 'HAY ERRORES'} (${((Date.now() - t) / 1000).toFixed(1)} s)\n`);
+  return r.status ?? 1;
+}
+
 const [nivel = 'rapido', ...resto] = process.argv.slice(2);
 const t0 = Date.now();
 let estado;
@@ -59,12 +68,13 @@ if (nivel === 'completo') {
 } else if (nivel === 'rapido') {
   estado = ejecutar(todos.map((x) => `tests/${x}`), { env: rapido });
 } else if (nivel === 'humo') {
+  const errTipos = tipos();
   estado = ejecutar([f('humo'), f('registro'), f('diseno'), f('app')], {
     env: { NIVEL: 'humo', CASOS: process.env.CASOS || '100' },
     // noche 11: diseño (rutas y contraste), navegación entre secciones, tema, enlaces antiguos y recorrido completo
     patrones: ['^humo:', '^registro:', '^interfaz:', '^diseño:', '^app: sin Worker, construye', '^app: con Web Worker',
       '^app: navegación', '^app: tema', '^app: bloqueos compartidos por URL', '^app: recorrido completo'],
-  });
+  }) || errTipos;
 } else if (nivel === 'solo') {
   const areas = resto.map((a) => ALIAS[a] || ALIAS[a.toLowerCase()] || a.toLowerCase());
   const malas = areas.filter((a) => !AREAS[a]);

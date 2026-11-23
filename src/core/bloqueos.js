@@ -1402,7 +1402,8 @@ export function puzzleConBloqueos(puzzle, definicion, opcionesAnalisis = {}) {
       }
       return null;
     },
-    buscarRedundanciaSolucion(movs) { return this.buscarRedundancia(movs); },
+    // (this = el puzzle ya hecho por definirPuzzle, que siempre tiene buscarRedundancia)
+    buscarRedundanciaSolucion(movs) { return /** @type {Puzzle<EstadoPegatinas>} */ (/** @type {unknown} */ (this)).buscarRedundancia(movs); },
     generarScramble,
     inicializar,
     estaInicializado: () => !!A,
@@ -1416,14 +1417,17 @@ export function puzzleConBloqueos(puzzle, definicion, opcionesAnalisis = {}) {
     bloqueEnPosicion,
     estadoAleatorio: undefined,
     /** Análisis de la configuración (geometrías, estados, avisos). */
+    /** @returns {InfoBloqueos} */
     analisis() { inicializar(); return A.info; },
     /** true si todos los bloques están enteros (sus piezas siguen juntas como en el resuelto). */
+    /** @param {EstadoPegatinas} estado */
     bloquesIntactos(estado) {
       const id = identificar(estado);
       if (id.errores) return false;
-      return mod.bloques.every((bq) => rigido(bq.piezas.flatMap((k) => sop.piezas[k].puntos), id.donde));
+      return mod.bloques.every((bq) => rigido(bq.piezas.flatMap((k) => sop.piezas[k].puntos), /** @type {Int16Array} */ (id.donde)));
     },
     /** true si el estado tiene la geometría resuelta (los bloques colocados como en el resuelto). */
+    /** @param {EstadoPegatinas} estado */
     geometriaResuelta(estado) {
       inicializar();
       const n = normalizar(estado);
@@ -1432,6 +1436,7 @@ export function puzzleConBloqueos(puzzle, definicion, opcionesAnalisis = {}) {
       return mod.claveG(mod.geometriaDe(S)) === mod.claveG(mod.geometriaDe(mod.resuelto));
     },
     /** ¿Es legal el movimiento en este estado? { legal, motivo } */
+    /** @param {EstadoPegatinas} estado @param {Movimiento} mov @returns {{ legal: true } | { legal: false, motivo: string }} */
     movimientoLegal(estado, mov) {
       const id = identificar(estado);
       if (id.errores) return { legal: false, motivo: id.errores[0] };
@@ -1439,6 +1444,7 @@ export function puzzleConBloqueos(puzzle, definicion, opcionesAnalisis = {}) {
       return c.legal ? { legal: true } : { legal: false, motivo: `rompería el bloque ${nombreBloque(c.bloque)}` };
     },
     /** Bloques: para cada uno, sus piezas (claves) y las pegatinas de sus piezas en el estado dado. */
+    /** @param {EstadoPegatinas} [estado] */
     piezasDeBloques(estado) {
       const id = estado ? identificar(estado) : null;
       return mod.bloques.map((bq) => ({

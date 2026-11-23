@@ -1,3 +1,4 @@
+// @ts-check
 // Skewb: modelo geométrico, validador, solucionador óptimo y scramble de estado aleatorio.
 //
 // Notación WCA (12h): se sujeta con U arriba y se ven las caras U, F, R.
@@ -20,18 +21,27 @@ import { PALETA_CUBO } from './nxn.js';
 import { CAMARA_CUBO } from '../core/modelo3d.js';
 import { crearAprenderSkewb, METODOS_SKEWB } from '../aprender/metodos-skewb.js';
 
+/**
+ * Interfaz común: DefinicionPuzzle en src/core/tipos.d.ts (definirPuzzle la comprueba con npm run tipos).
+ * @import { EstadoPegatinas, ResultadoResolver, Rng, Movimiento } from '../core/tipos.js'
+ * @import { EstadoOrbita, Buscador } from '../core/piezas.js'
+ */
+
 const VERTICES = [];
 for (const x of [-1, 1]) for (const y of [-1, 1]) for (const z of [-1, 1]) VERTICES.push([x, y, z]);
 const NORMALES = [[0, 1, 0], [1, 0, 0], [0, 0, 1], [0, -1, 0], [-1, 0, 0], [0, 0, -1]]; // U R F D L B
 const caras = carasDesdeVertices(VERTICES, NORMALES);
+/** @type {Record<string, number[]>} */
 const ESQ = {
   URF: [1, 1, 1], ULB: [-1, 1, -1], DLF: [-1, -1, 1], DRB: [1, -1, -1],
   UFL: [-1, 1, 1], UBR: [1, 1, -1], DFR: [1, -1, 1], DBL: [-1, -1, -1],
 };
 const TETRADA_A = ['URF', 'ULB', 'DLF', 'DRB'];
 const TETRADA_B = ['UFL', 'UBR', 'DFR', 'DBL'];
+/** @type {Record<string, number[]>} */
 const EJE_MOV = { R: ESQ.DRB, U: ESQ.ULB, L: ESQ.DLF, B: ESQ.DBL };
 const T = (2 * Math.PI) / 3;
+/** @type {Record<string, { eje: number[], ang: number, umbral: number }>} */
 const giros = {};
 for (const [m, e] of Object.entries(EJE_MOV)) {
   giros[m] = { eje: e, ang: -T, umbral: 0 };
@@ -48,7 +58,9 @@ const geo = crearGeoPuzzle({
 if (geo.n !== 30) throw new Error('Skewb: se esperaban 30 pegatinas y hay ' + geo.n);
 
 // ---------- Piezas ----------
+/** @param {number} x */
 const signo = (x) => (x > 1e-6 ? 1 : x < -1e-6 ? -1 : 0);
+/** @param {number[]} c */
 const claveEsquina = (c) => {
   const s = c.map(signo);
   if (s.includes(0)) return null;
@@ -56,8 +68,10 @@ const claveEsquina = (c) => {
 };
 const CARAS_N = ['U', 'R', 'F', 'D', 'L', 'B'];
 const piezasEsq = geo.piezasPor(claveEsquina);
-const piezasCen = geo.piezasPor((c, i) => (c.map(signo).filter((x) => x !== 0).length === 1 ? CARAS_N[geo.pegatinas[i].cara] : null));
-const ordenar = (lista, orden) => orden.map((k) => lista.find((p) => p.clave === k).pegatinas);
+const piezasCen = geo.piezasPor((/** @type {number[]} */ c, /** @type {number} */ i) => (c.map(signo).filter((x) => x !== 0).length === 1 ? CARAS_N[geo.pegatinas[i].cara] : null));
+/** @typedef {{ clave: string, pegatinas: number[] }} PiezaGeo */
+/** @type {(lista: PiezaGeo[], orden: string[]) => number[][]} */
+const ordenar = (lista, orden) => orden.map((k) => /** @type {PiezaGeo} */ (lista.find((p) => p.clave === k)).pegatinas);
 const centros = ordenar(piezasCen, CARAS_N);
 const esqA = ordenar(piezasEsq, TETRADA_A);
 const esqB = ordenar(piezasEsq, TETRADA_B);
@@ -72,7 +86,7 @@ const modelo = crearModeloPiezas({
     { nombre: 'esquinasA', piezas: esqA },
     { nombre: 'esquinasB', piezas: esqB },
   ],
-  movimientos: Object.fromEntries(MOVS.map((m) => [m, geo.perms[m]])),
+  movimientos: Object.fromEntries(MOVS.map((m) => [m, /** @type {Record<string, number[]>} */ (geo.perms)[m]])),
   coloresResuelto: geo.resuelto,
 });
 const coloresPieza = modelo.orbitas.map((o) => o.piezas.map((pz) => pz.map((f) => geo.resuelto[f])));
@@ -80,9 +94,16 @@ const rep = CARAS_N.map((_, f) => centros[f][0]);
 const sigmas = permutacionesDeColor(geo.rotaciones, geo.resuelto, rep);
 
 const COORDS = [modelo.coordPerm(0), modelo.coordPerm(1), modelo.coordOri(1), modelo.coordPerm(2), modelo.coordOri(2)];
+/** @param {EstadoOrbita[]} pz */
 const coordsDe = (pz) => COORDS.map((c) => c.codificar(pz));
-let buscador = null;
-let esquinasAlcanzables = null; // índices de la tabla de esquinas alcanzables (para estados aleatorios)
+/**
+ * Tablas: null hasta inicializar(), y todo lo que las usa llama antes a inicializar()
+ * (estaInicializado lo comprueba). El tipo no sigue esa invariante entre funciones: se declaran sin null.
+ * @type {Buscador}
+ */
+let buscador = /** @type {Buscador} */ (/** @type {unknown} */ (null));
+/** @type {number[]} */
+let esquinasAlcanzables = /** @type {number[]} */ (/** @type {unknown} */ (null)); // índices de la tabla de esquinas alcanzables (para estados aleatorios)
 function inicializar() {
   if (buscador) return { ms: buscador.msInit, yaEstaba: true };
   buscador = crearBuscador({
@@ -98,12 +119,19 @@ function inicializar() {
   return { ms: buscador.msInit };
 }
 
+/** @param {number} c */
 const nombreColor = (c) => (PALETA_CUBO[c] ? PALETA_CUBO[c].nombre : 'sin color');
+/** @param {number[]} cs */
 const lista = (cs) => cs.map(nombreColor).join('-');
 const NOMBRES_ESQ = [TETRADA_A, TETRADA_B];
 
+/**
+ * @param {EstadoPegatinas} estado
+ * @returns {{ valido: false, errores: string[] } | { valido: true, errores: string[], piezas: EstadoOrbita[], sigma: number[] }}
+ */
 function analizar(estado) {
   inicializar();
+  /** @type {string[]} */
   const errores = [];
   const cuenta = new Array(6).fill(0);
   let vacias = 0;
@@ -162,6 +190,7 @@ function analizar(estado) {
   return { valido: true, errores: [], piezas: id.orbitas, sigma };
 }
 
+/** @param {EstadoPegatinas} estado @returns {ResultadoResolver} */
 function resolver(estado) {
   const t0 = performance.now();
   const a = analizar(estado);
@@ -172,6 +201,7 @@ function resolver(estado) {
 }
 
 /** Estado aleatorio uniforme: centros con permutación par y una configuración de esquinas alcanzable al azar. */
+/** @param {Rng} rng */
 function coordsAleatorias(rng) {
   let pc;
   do { pc = entero(rng, 720); } while (paridad(permDeIndice(pc, 6)) !== 0);
@@ -182,6 +212,7 @@ function coordsAleatorias(rng) {
   return [pc, ...v];
 }
 
+/** @param {Movimiento} m */
 function invertirMovimiento(m) {
   return m.endsWith("'") ? m.slice(0, -1) : m + "'";
 }
@@ -189,7 +220,8 @@ function invertirMovimiento(m) {
 function generarScramble(rng = rngSeguro()) {
   inicializar();
   for (;;) {
-    const r = buscador.resolver(coordsAleatorias(rng), 14);
+    // (un estado alcanzable siempre se resuelve en ≤ 11 giros: r nunca es null)
+    const r = /** @type {{ movimientos: Movimiento[] }} */ (buscador.resolver(coordsAleatorias(rng), 14));
     if (r.movimientos.length < MIN_LONGITUD) continue;
     return r.movimientos.slice().reverse().map(invertirMovimiento);
   }
@@ -206,9 +238,9 @@ export default definirPuzzle({
   tipoScramble: 'estado aleatorio',
   costeScramble: 100, // ms aprox. del primer scramble (tablas); orden de las precargas
   paleta: PALETA_CUBO,
-  estadoResuelto: () => geo.resuelto.slice(),
+  estadoResuelto: () => /** @type {EstadoPegatinas} */ (geo.resuelto.slice()),
   aplicarMovimiento(e, m) {
-    if (!geo.perms[m]) throw new Error(`Movimiento no válido: "${m}"`);
+    if (!/** @type {Record<string, number[]>} */ (geo.perms)[m]) throw new Error(`Movimiento no válido: "${m}"`);
     return geo.aplicar(e, m);
   },
   estaResuelto(e) {

@@ -43,5 +43,10 @@ jobs:
       - name: Núcleos disponibles
         run: nproc
 
+      # Tipos (tsc --noEmit, < 1 s): los ficheros con // @ts-check contra src/core/tipos.d.ts.
+      # En todos los niveles (en humo, scripts/tests.mjs lo vuelve a ejecutar: es casi gratis).
+      - name: Tipos
+        run: npm run tipos
+
       - name: Tests (nivel ${{ inputs.nivel || 'rapido' }})
         run: node scripts/tests.mjs ${{ inputs.nivel || 'rapido' }}

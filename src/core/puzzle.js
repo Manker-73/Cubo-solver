@@ -17,10 +17,13 @@ const OBLIGATORIOS = [
 ];
 
 /**
+ * E = tipo del estado (se infiere de estadoResuelto). X = los campos propios del puzzle que no
+ * son de la interfaz (geo, modelo…): se permiten y se conservan en el resultado. Si falta un
+ * campo obligatorio o uno tiene otro tipo, `npm run tipos` lo dice en la llamada.
  * @template E
- * @template {DefinicionPuzzle<E>} D
- * @param {D & DefinicionPuzzle<E>} def
- * @returns {D & Puzzle<E>}
+ * @template {object} X
+ * @param {DefinicionPuzzle<E> & X & { [extra: string]: unknown }} def
+ * @returns {Puzzle<E> & X}
  */
 export function definirPuzzle(def) {
   for (const k of OBLIGATORIOS) {
@@ -36,7 +39,7 @@ export function definirPuzzle(def) {
    * @typedef {'descripcion' | 'costeScramble' | 'separador' | 'aplicarSecuencia' | 'parsear' | 'formatear' | 'invertir'
    *   | 'buscarRedundancia' | 'inicializar' | 'estaInicializado' | 'pegatinasEditables' | 'pintar' | 'clonar'} PorDefecto
    */
-  const p = /** @type {D & Puzzle<E>} */ (Object.assign(
+  const p = /** @type {Puzzle<E> & X} */ (Object.assign(
     /** @type {Pick<Puzzle<E>, PorDefecto>} */ ({
       descripcion: '',
       costeScramble: 0, // ms aprox. del primer scramble (tablas que necesita): ordena las precargas
