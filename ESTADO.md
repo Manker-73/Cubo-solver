@@ -1,8 +1,48 @@
 # Estado del proyecto (noche 13 — bloqueos en 4x4 y 5x5 — 24/11/2026)
 
-> Progreso de la noche 13: empezada (push de prueba ✔).
+> Progreso de la noche 13 (4x4 y 5x5 vendados): suite completa de la noche 12 comprobada ✔ · trampa de `vista3D` + test ✔ · identidad de las piezas iguales (estado de identidades) ✔ · 4x4: legalidad con todos los giros ✔, reglas de N par demostradas con BFS ✔, recuento de estados distinguibles (cifra publicada y BFS) ✔ · 5x5: centros fijos, núcleo, centros opuestos, capas interiores ✔ · solver: BFS óptimo a la vista ✔ y estrategia B con tablas de Minkwitz ✔ (100 % en todas las configuraciones medidas) · verificación giro a giro de toda solución ✔ · scramble (uniforme / paseo medido) ✔ · interfaz: selector 3x3/4x4/5x5, URL con `puzzle=`, editor de bloques 2D/3D, pintar desactivado con aviso ✔ · 3x3 vendado sin cambios (mismos análisis, scrambles y soluciones con la misma semilla) ✔ · tests de la app ✔ · `test:humo` ✔ · Chromium real (4x4 y 5x5) ✔ · documentación ✔ · 500 casos por configuración en la suite completa de GitHub (ver abajo) · ejemplos reales de 4x4/5x5 ✘ (los que existen están fuera del alcance del solver; ver «Pendiente»).
+
+## Noche 13: 4x4 y 5x5 vendados
+
+Bandaged Cubes ofrece ahora 3x3, 4x4 y 5x5 (`#/bandaged?puzzle=4x4&bloqueos=…`; sin `puzzle`, el 3x3 de siempre). Decisiones y lo que no funcionó en DECISIONES.md («Noche 13»); cómo está hecho en ARQUITECTURA.md («Bloqueos»).
+
+### Qué hay
+- `src/puzzles/nxn-identidad.js`: estado de **identidades** (qué pegatina hay en cada posición) para que los centros del mismo color se distingan; soporte de bloqueos del 4x4/5x5 (nombres de pieza, giros de búsqueda, núcleo del 5x5 unido a los seis centros fijos, clases de piezas iguales, notación `3Uw` → `D`); puzzles base `vendado-4x4` y `vendado-5x5` (sin bloques usan el solver normal; pintar desactivado con aviso).
+- `src/core/bloqueos.js` (genérico): estados distinguibles (estados / |K|), resuelto «a la vista», Schreier–Sims aleatorio con prefijo de base, BFS óptimo a la vista, fase 2 con tablas de Minkwitz (`src/core/minkwitz.js`) y verificación giro a giro de toda solución antes de devolverla (también en el 3x3).
+- `scripts/mezcla-bloqueos.mjs [N] [4x4|5x5]` y `scripts/comprobar-bloqueos.py nxn`.
+
+### Resultados (`tests/bloqueos.test.mjs`, medido en local con 30 casos por configuración; límite 700 ms por solución, 2 hilos)
+Cada scramble y cada solución se aplican giro a giro (giro legal en su momento, bloques enteros, estado final resuelto). En la estrategia B, la fase 1 acaba en la geometría resuelta. Estados = distinguibles (los centros del mismo color se cuentan una vez). Longitudes en giros de bloque (OBTM: `Uw`, `2U` cuentan 1).
+
+| Configuración | Geometrías | Estados distinguibles | Espacio | Tablas (Node) | Scramble (giros) | Resueltos | Longitud media / máx. | ms medio / máx. | Fases B (1 + 2) |
+|---|---|---|---|---|---|---|---|---|---|
+| 4x4: pareja (UFR+UF2) | 21 | 3,08·10⁴⁴ | grande | 4,4 s | 139,8 | 30/30 (100 %) | 282,2 / 305 | 678 / 817 | 2,3 + 279,9 |
+| 4x4: barra 1x1x4 | 18 | 1,06·10⁴⁴ | grande | 4,5 s | 88,1 | 30/30 (100 %) | 270,3 / 299 | 664 / 748 | 2,8 + 267,5 |
+| 4x4: los 4 centros de U | 24 | 8,63·10⁴¹ | grande | 4,4 s | 117,2 | 30/30 (100 %) | 244,3 / 275 | 745 / 1.384 | 2,5 + 241,8 |
+| 4x4: varios bloques | 378 | 8,06·10⁴¹ | grande | 4,8 s | 66,2 | 30/30 (100 %) | 257,0 / 280 | 681 / 777 | 6,3 + 250,6 |
+| 4x4: casi bloqueada (solo U y R) | 7 | 336 (1.344 con identidades, \|K\| = 4) | pequeño | 37 ms | 7,3 | 30/30 (100 %) | 7,3 / 12 (óptima a la vista) | 2 / 10 | — |
+| 5x5: pareja (UFR+UF3) | 24 | 1,18·10⁷³ | grande | 5,4 s | 158,1 | 30/30 (100 %) | 464,9 / 515 | 802 / 1.001 | 1,7 + 463,2 |
+| 5x5: barra 1x1x5 | 24 | 1,69·10⁶⁸ | grande | 5,7 s | 109,7 | 30/30 (100 %) | 608,9 / 691 | 781 / 890 | 3,0 + 605,9 |
+| 5x5: los 9 centros de U | 4 | 1,07·10⁵⁹ | grande | 4,5 s | 88,4 | 30/30 (100 %) | 376,8 / 417 | 662 / 921 | 1,4 + 375,5 |
+| 5x5: centros opuestos U+núcleo+D | 1 | 1,38·10⁷¹ | grande | 5,1 s | 133,0 | 30/30 (100 %) | 576,6 / 670 | 446 / 565 | 0 + 576,6 |
+| 5x5: varios bloques | 9.504 | 1,28·10⁶⁶ | grande | 7,0 s | 107,1 | 30/30 (100 %) | 539,3 / 631 | 796 / 929 | 6,6 + 532,7 |
+| 5x5: casi bloqueada (solo U y R) | 7 | 336 | pequeño | 62 ms | 7,3 | 30/30 (100 %) | 7,3 / 12 (óptima a la vista) | 3 / 7 | — |
+
+- **Hasta dónde llega el solver**: resuelve el 100 % de lo medido siempre que el BFS de geometrías quepa (≤ 400.000). Las soluciones de los espacios grandes son largas: **~245–280 giros en el 4x4 y ~375–610 en el 5x5** (un 4x4 normal se resuelve en ~55 y un 5x5 en ~110 con reducción, pero la reducción no respeta la legalidad). En los grandes siempre gana la B (la búsqueda directa no llega); en los pequeños, la A (BFS, óptima a la vista). **No llega**: vendados con todas las piezas en bloques, como las simulaciones de cuboides sobre un 4x4 (2x4x4, 3x4x4: más de 400.000 geometrías en 40 s, sin estrategia B ni tablas); la app lo dice y no muestra nada sin comprobar.
+- **Recuento**: sin bloques salen exactamente las cifras publicadas del 4x4 (7.401.196.841.564.901.869.874.093.974.498.574.336.000.000.000) y del 5x5 (2,83·10⁷⁴). Espacios pequeños = BFS completo: 4x4 «casi» 1.344 estados / 336 aspectos distintos (\|K\| = 4), con un bloque de los 4 centros de U igual; 5x5 «casi» 1.344 / 336, con un bloque centro fijo + centros 1.344 / 1.344; «solo y» 16 y 64.
+- **Óptimo a la vista** en todos los estados de las dos configuraciones pequeñas por tamaño (BFS de aspectos): en el 4x4 «casi» el diámetro baja de 18 (con etiquetas) a 12.
+- **3x3 sin cambios**: análisis, 15 scrambles por configuración y soluciones por BFS de las configuraciones de la noche 10 (y las firmas: CAB 15.704 formas, Meffert 32 formas y 58.320 permutaciones…) idénticos byte a byte antes y después (`/home/claude/herr/base3x3.mjs`, comparación con `cmp` tras cada cambio en la capa).
+- Tests nuevos: nombres y notación (200 secuencias), legalidad contra la regla directa con todos los giros (caras, anchos, interiores, rotaciones) en las 11 configuraciones, reglas de validación (vecinas, núcleo, totalmente bloqueado), BFS con **todos** los giros = BFS con los de búsqueda, capas interiores necesarias en el 5x5, recuento (cifras publicadas y BFS), Schreier–Sims aleatorio = determinista, óptimo a la vista, pintar desactivado y validación, y los scrambles y soluciones (500 casos por configuración en la suite completa).
+- App (`tests/app.test.mjs`): selector, aviso al pintar, crear un bloque tocando piezas en el 4x4 y en el 5x5, aplicar, análisis, scramble, cargar, resolver, reproducir hasta «Resuelto», bloques por puzzle; enlaces con `puzzle=` (4x4, 5x5, con núcleo), sin `puzzle` (3x3), `firma=` ignorada fuera del 3x3 y puzzle desconocido.
+- Mezcla (`scripts/mezcla-bloqueos.mjs 1500 4x4|5x5`): con el criterio nuevo (piezas en su sitio frente a paseos de 6.400 pasos) hacen falta 50–100 pasos; se usan max(200, 4·d²).
 
 > Progreso de la noche 12 (FTO): modelo (geometría, notación WCA 12f, 16 giros, colores de TNoodle) ✔ · restricciones demostradas con Schreier–Sims + comprobación empírica ✔ · tamaño del grupo y posiciones (coincide con Wikipedia) ✔ · cota inferior por conteo (21) ✔ · validador con mensajes por restricción ✔ · editor 2D/3D con orientación libre ✔ · solver en tres fases (IDA* + tablas de poda) ✔ · scramble de estado aleatorio (4b3) ✔ · vista 3D animada y resaltado ✔ · test de campos del registro ✔ · huellas (solo las del FTO) y sabotaje ✔ · tests de la app ✔ · `test:humo` ✔ (43/43) · `test:rapido` ✔ (195/195) · FTO con 1000 casos ✔ (16/16, 1000/1000) · `npm test` completo en GitHub ✔ (ejecución manual 45297871921, 1 h 31 min; comprobado al empezar la noche 13) · Action de `test:rapido` del último push ✔ · `npm run bench` con el FTO ✔ · Chromium real (4 modos) ✔ · documentación ✔ · push, Pages y Action ✔ · artifact republicado ✔ · modo aprender del FTO ✘ (pendiente).
+
+### Pendiente (noche 13)
+- **Soluciones más cortas** en los espacios grandes del 4x4/5x5 (hoy cientos de giros).
+- **Vendados con todas las piezas en bloques** (simulaciones de cuboides, AI Cube…): habría que tratar los bloques como piezas de un puzzle reducido. Por eso **no hay ejemplos reales** de 4x4/5x5 en la interfaz: los que encontré (twistypuzzles: «2x4x4 (bandaged 4x4x4)», «3x4x4 (bandaged 4x4x4)», Cubetwist) son de ese tipo o su patrón no está descrito pieza a pieza; `bloquesSinCortes` ya los construye.
+- **Tiempo de las tablas**: 4–7 s en Node (algo más en el navegador; en móvil, varias veces más). Se generan en el Worker y el análisis lo dice, pero es una espera.
+- 6x6 y 7x7 vendados: el código es genérico (N ≥ 4), falta medirlo y ofrecerlo en la interfaz.
 
 ## Noche 12: FTO (Face-Turning Octahedron)
 
@@ -186,7 +226,7 @@ Cada scramble y cada solución se aplican giro a giro comprobando que el giro es
 - `scripts/comprobar-bloqueos.py` (Chromium real, escritorio 1280 px claro y móvil 390 px oscuro táctil, con 3D y sin 3D): todo lo anterior también tocando el modelo 3D; pegatinas unidas en 3D (4 en la pareja, 8 en el 1x2x2, 36 en el CAB); sin errores en consola ni scroll horizontal. Capturas en `docs/capturas/bloqueos-*.jpg`.
 
 ### Pendiente / para decidir
-- Un 4x4 vendado necesitaría seguir la identidad de las piezas iguales en el estado.
+- ~~Un 4x4 vendado necesitaría seguir la identidad de las piezas iguales en el estado.~~ Hecho en la noche 13 (también el 5x5).
 
 ## Noche 9
 

@@ -19,7 +19,7 @@
 #   - scramble, cargar, resolver y reproducir hasta el final (×8);
 #   - en 3D, las pegatinas del bloque se dibujan unidas;
 #   - sin errores en consola ni scroll horizontal.
-# Capturas en docs/capturas/bloqueos-nxn-*.jpg.
+# Capturas en docs/capturas/bloqueos-nxn-*.jpg. (TAMANOS=5 para solo el 5x5.)
 import asyncio, json, os, sys
 from playwright.async_api import async_playwright
 
@@ -69,7 +69,8 @@ async def resolver_y_reproducir(pg, modo3d, fallos, clave):
 
 async def comprobar_nxn(b, errores, fallos, resumen):
     """Noche 13: 4x4 y 5x5 vendados en escritorio y móvil, oscuro y claro, con y sin 3D."""
-    for N in (4, 5):
+    tamanos = [int(x) for x in os.environ.get('TAMANOS', '4,5').split(',')]
+    for N in tamanos:
         nombre = f'{N}x{N}'
         for cfg, opts in CONFIGS:
             for tema in ('oscuro', 'claro'):
