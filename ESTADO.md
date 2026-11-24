@@ -1,5 +1,7 @@
 # Estado del proyecto (noche 13 — bloqueos en 4x4 y 5x5 — 24/11/2026)
 
+> Progreso de la sesión «orden de Bandaged Cubes» (24/11/2026): suite completa de la noche 13 (45367622475) en curso al empezar (56 min, sin fallos hasta ahora) · …
+
 > Progreso de la noche 13 (4x4 y 5x5 vendados): suite completa de la noche 12 comprobada ✔ · trampa de `vista3D` + test ✔ · identidad de las piezas iguales (estado de identidades) ✔ · 4x4: legalidad con todos los giros ✔, reglas de N par demostradas con BFS ✔, recuento de estados distinguibles (cifra publicada y BFS) ✔ · 5x5: centros fijos, núcleo, centros opuestos, capas interiores ✔ · solver: BFS óptimo a la vista ✔ y estrategia B con tablas de Minkwitz ✔ (100 % en todas las configuraciones medidas) · verificación giro a giro de toda solución ✔ · scramble (uniforme / paseo medido) ✔ · interfaz: selector 3x3/4x4/5x5, URL con `puzzle=`, editor de bloques 2D/3D, pintar desactivado con aviso ✔ · 3x3 vendado sin cambios (mismos análisis, scrambles y soluciones con la misma semilla) ✔ · tests de la app ✔ · `test:humo` ✔ · Chromium real (4x4 y 5x5) ✔ · documentación ✔ · 500 casos por configuración: suite completa lanzada en GitHub (45367622475, pendiente) · Pages ✔ · artifact republicado ✔ · ejemplos reales de 4x4/5x5 ✘ (los que existen están fuera del alcance del solver; ver «Pendiente»).
 
 ## Noche 13: 4x4 y 5x5 vendados
