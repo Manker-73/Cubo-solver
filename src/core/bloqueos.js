@@ -863,7 +863,8 @@ export function crearAnalisisBloqueos(soporte, definicion, opciones = {}) {
   /** @type {Movimiento[]} */
   const legalesResuelto = [];
   for (let m = 0; m < mod.nM; m++) if (mod.legal(mod.resuelto, m)) legalesResuelto.push(mod.movs[m]);
-  info.legalesResuelto = legalesResuelto;
+  // (en la notación del soporte, giro a giro: en el 4x4, D en vez de 3Uw)
+  info.legalesResuelto = soporte.notacion ? legalesResuelto.map((m) => /** @type {SoporteBloqueos<unknown> & { notacion(m: Movimiento[]): Movimiento[] }} */ (soporte).notacion([m])[0]) : legalesResuelto;
   if (!legalesResuelto.length) {
     info.bloqueado = true;
     info.errores.push('El cubo queda totalmente bloqueado: con estos bloques no se puede hacer ningún movimiento.');
@@ -945,7 +946,7 @@ export function crearAnalisisBloqueos(soporte, definicion, opciones = {}) {
   // 4x4, 5x5 (espacio grande): tablas de Minkwitz para la fase 2 de la estrategia B
   /** @type {TablasMinkwitz | null} */
   let mink = null;
-  if (!bfs && mod.hayIguales && geo.completo) {
+  if (!bfs && mod.hayIguales && geo.completo && (opciones.msMinkwitz ?? 3000) > 0) {
     const tm = ahora();
     mink = tablasFase2(mod, geo, rngInterno, opciones.msMinkwitz ?? 3000, g2.orden);
     info.msMinkwitz = Math.round(ahora() - tm);
@@ -1261,6 +1262,15 @@ export function resolverBloqueos(A, S, opciones = {}) {
       }
     }
     if (!s2) return;
+    if (metodo2 === 'Minkwitz') {
+      // la unión puede repetir una cara en la frontera (… U | U …): se reduce todo y la fase 1
+      // acaba donde se vuelve por primera vez a la geometría resuelta
+      const total = mod.reducirPalabra(s1.concat(s2));
+      let T2 = S, f1 = 0;
+      if (dGeo(A, T2) !== 0) for (; f1 < total.length; f1++) { T2 = mod.aplicar(T2, total[f1]); if (dGeo(A, T2) === 0) { f1++; break; } }
+      if (!res.B || total.length < res.B.movs.length) res.B = { movs: total, fase1: f1, fase2: total.length - f1, metodo: metodo2 };
+      return;
+    }
     const tot = s1.length + s2.length;
     if (!res.B || tot < res.B.movs.length) res.B = { movs: s1.concat(s2), fase1: s1.length, fase2: s2.length, metodo: metodo2 };
   };

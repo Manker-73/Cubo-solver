@@ -1,6 +1,6 @@
 // Mide cuánto hay que mezclar un cubo vendado con movimientos legales al azar
 // (espacios grandes, donde no se puede elegir un estado uniforme con el BFS).
-//   node scripts/mezcla-bloqueos.mjs [N=3000]
+//   node scripts/mezcla-bloqueos.mjs [N=3000] [3x3|4x4|5x5]   (noche 13: también el 4x4 y el 5x5)
 //
 // El paseo es de un número FIJO de pasos (cada paso, uno de los 18 giros al azar; si es
 // ilegal, nada): parar cuando la palabra reducida llega a L giros sesga la distribución
@@ -13,13 +13,22 @@
 //   - piezas: TV media, pieza a pieza, entre la distribución de su posición y la de paseos
 //     muy largos (6.400 pasos), comparada con el ruido de dos muestras de 6.400 pasos.
 // Criterio: el T más pequeño con TV(geometría) ≤ 0,05 y TV(piezas) ≤ ruido + 0,02.
+// Noche 13 (4x4, 5x5): con 24–72 posiciones por pieza, la TV por pieza tiene un ruido de muestreo
+// de ~0,07 y "pasa" con paseos que no pueden haber mezclado nada. Se añade un criterio escalar con
+// poco ruido: la media de piezas que se ven en su sitio (en la casa de su clase, si hay piezas
+// iguales) frente a la de los paseos de 6.400 pasos, con margen de 3 errores estándar
+// (pasosMinimosEnCasa). El número recomendado es el mayor de los dos.
 import { soporteBloqueos3x3 } from '../src/puzzles/cubo3-bloqueos.js';
 import { crearAnalisisBloqueos, paseoAleatorio, longitudScramble } from '../src/core/bloqueos.js';
 import { bloquesDesdeFirma } from '../src/puzzles/nxn-bloqueos.js';
+import { soporteBloqueosIdentidad, EJEMPLOS_NXN } from '../src/puzzles/nxn-identidad.js';
 import { rngConSemilla } from '../src/core/rng.js';
 
 const N = parseInt(process.argv[2] || '3000', 10);
-const CONFIGS = [
+const PUZZLE = process.argv[3] || '3x3';
+const TAM = parseInt(PUZZLE, 10);
+const soporte = TAM >= 4 ? soporteBloqueosIdentidad(TAM) : soporteBloqueos3x3;
+const CONFIGS = TAM >= 4 ? EJEMPLOS_NXN[TAM].map((e) => [e.id, e.bloques]) : [
   ['pareja', [['UFR', 'UF']]],
   ['1x2x2', [['UFR', 'UF', 'UR', 'U']]],
   ['varios', [['UFR', 'UF'], ['DBL', 'DB', 'DBR'], ['L', 'FL']]],
@@ -32,7 +41,7 @@ function muestras(A, rng, T, n) {
   const { mod } = A;
   const dist = new Map();
   const pos = mod.moviles.map(() => new Map());
-  let lon = 0;
+  let lon = 0, casa = 0, casa2 = 0;
   for (let i = 0; i < n; i++) {
     let S = mod.resuelto;
     const w = paseoAleatorio(A, rng, 0, T, { pasosFijos: true });
@@ -41,8 +50,12 @@ function muestras(A, rng, T, n) {
     const d = A.distGeo.get(mod.claveG(mod.geometriaDe(S)));
     dist.set(d, (dist.get(d) || 0) + 1);
     for (let j = 0; j < mod.nS; j++) pos[j].set(S[j], (pos[j].get(S[j]) || 0) + 1);
+    let c = 0;
+    for (let j = 0; j < mod.nS; j++) if (S[j] === mod.resuelto[j] || (mod.claseMovil && mod.claseMovil[j] >= 0 && mod.casasClase[mod.claseMovil[j]].has(S[j]))) c++;
+    casa += c; casa2 += c * c;
   }
-  return { dist, pos, n, longitud: lon / n };
+  const media = casa / n;
+  return { dist, pos, n, longitud: lon / n, enCasa: media, varCasa: casa2 / n - media * media };
 }
 const tv = (a, na, b, nb) => {
   const ks = new Set([...a.keys(), ...b.keys()]);
@@ -54,7 +67,7 @@ const tvPiezas = (x, y) => x.pos.reduce((s, p, j) => s + tv(p, x.n, y.pos[j], y.
 
 const res = {};
 for (const [id, def] of CONFIGS) {
-  const A = crearAnalisisBloqueos(soporteBloqueos3x3, def);
+  const A = crearAnalisisBloqueos(soporte, def, { msMinkwitz: 0 });
   // distribución exacta de la distancia a la geometría resuelta (estado uniforme)
   const exacta = new Map();
   for (const n of A.geo.nodos) exacta.set(n.d, (exacta.get(n.d) || 0) + 1);
@@ -63,13 +76,15 @@ for (const [id, def] of CONFIGS) {
   const ref = muestras(A, rng, REF, N), ref2 = muestras(A, rng, REF, N);
   const ruido = tvPiezas(ref, ref2);
   const filas = [];
-  let elegida = null;
+  let elegida = null, elegidaCasa = null;
   for (const T of PASOS) {
     const m = muestras(A, rng, T, N);
     const tg = tv(m.dist, m.n, exacta, nG), tp = tvPiezas(m, ref);
-    filas.push({ pasos: T, longitud: +m.longitud.toFixed(1), tvGeometria: +tg.toFixed(3), tvPiezas: +tp.toFixed(3) });
+    const se = Math.sqrt(m.varCasa / m.n + ref.varCasa / ref.n);
+    filas.push({ pasos: T, longitud: +m.longitud.toFixed(1), tvGeometria: +tg.toFixed(3), tvPiezas: +tp.toFixed(3), enCasa: +m.enCasa.toFixed(2) });
     if (elegida === null && tg <= 0.05 && tp <= ruido + 0.02) elegida = T;
+    if (elegidaCasa === null && Math.abs(m.enCasa - ref.enCasa) <= 3 * se) elegidaCasa = T;
   }
-  res[id] = { diametroGeometria: A.info.diametroGeometria, geometrias: nG, ruidoPiezas: +ruido.toFixed(3), tvGeometriaRef: +tv(ref.dist, ref.n, exacta, nG).toFixed(3), pasosMinimosMedidos: elegida, pasosUsados: longitudScramble(A), filas };
+  res[id] = { diametroGeometria: A.info.diametroGeometria, geometrias: nG, ruidoPiezas: +ruido.toFixed(3), tvGeometriaRef: +tv(ref.dist, ref.n, exacta, nG).toFixed(3), enCasaRef: +ref.enCasa.toFixed(2), pasosMinimosMedidos: elegida, pasosMinimosEnCasa: elegidaCasa, pasosUsados: longitudScramble(A), filas };
   console.log(id, JSON.stringify(res[id]));
 }

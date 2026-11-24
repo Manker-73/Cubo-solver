@@ -768,9 +768,11 @@ function comprobarSolucionVendada(doc, def, estadoInicial) {
 async function probarBloqueos(ctx) {
   const { w, doc, hasta } = ctx;
   // Noche 11: el vendado es la sección Bandaged Cubes (#/bandaged, abierta por el test): el 3x3 ya
-  // está elegido y no hay selector (antes: clic en el chip del 3x3 de la herramienta única).
+  // está elegido. Noche 13: con un selector de tres chips (3x3, 4x4, 5x5) y el 3x3 elegido.
   await hasta(() => w.cuboSolver.estado().seccion === 'bandaged' && doc.querySelector('#vista-scramble svg') && !doc.getElementById('nuevo').disabled);
-  assert.equal(doc.getElementById('selector').hidden, true, 'Bandaged Cubes no tiene selector de puzzle');
+  assert.equal(doc.getElementById('selector').hidden, false, 'Bandaged Cubes tiene selector de puzzle');
+  assert.deepEqual([...doc.querySelectorAll('#selector .chip')].map((c) => c.textContent), ['3x3', '4x4', '5x5']);
+  assert.equal(doc.querySelector('#selector .chip[data-vendado="3x3"]').getAttribute('aria-pressed'), 'true');
   assert.equal(doc.getElementById('panel-scramble').dataset.puzzle, '3x3');
   const panel = doc.getElementById('panel-bloqueos');
   assert.equal(panel.hidden, false, 'la sección de bloques se ve en Bandaged Cubes');
@@ -919,6 +921,87 @@ test('app: bloqueos compartidos por URL (#bloqueos=...) y ?firma=... (enlaces an
   }
 });
 
+// ---------- Noche 13: 4x4 y 5x5 vendados ----------
+async function probarVendadoGrande(ctx, N) {
+  const { w, doc, hasta } = ctx;
+  const nombre = `${N}x${N}`;
+  // elegir el puzzle en el selector de Bandaged Cubes
+  doc.querySelector(`#selector .chip[data-vendado="${nombre}"]`).click();
+  await hasta(() => w.cuboSolver.estado().puzzle === `vendado-${nombre}` && doc.querySelector('#vista-scramble svg') && !doc.getElementById('scramble').classList.contains('generando'), 60000);
+  assert.match(w.location.hash, new RegExp(`^#/bandaged\\?puzzle=${nombre}`), 'la URL lleva el puzzle');
+  assert.equal(doc.querySelector(`#selector .chip[data-vendado="${nombre}"]`).getAttribute('aria-pressed'), 'true');
+  assert.equal(doc.getElementById('bloq-firmas').hidden, true, 'sin firmas (solo son del 3x3)');
+  // pintar está desactivado, con un mensaje claro
+  assert.match(doc.getElementById('paleta').textContent, /no se puede pintar/);
+  doc.querySelector('#vista-editor [data-i="0"]').dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
+  await hasta(() => /no se puede pintar/.test(doc.getElementById('mensajes').textContent));
+  // crear un bloque tocando piezas: UFR y la wing de UF a su lado (pegatinas de U)
+  const n2 = N * N;
+  doc.getElementById('bloq-nuevo').click();
+  for (const i of [n2 - 1, n2 - 2]) doc.querySelector(`#vista-editor [data-i="${i}"]`).dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
+  const pareja = N === 4 ? /UFR \+ UF2/ : /UFR \+ UF3/;
+  assert.match(doc.getElementById('bloq-grupos').textContent, pareja);
+  doc.getElementById('bloq-aplicar').click();
+  await hasta(() => doc.getElementById('bloq-resumen').textContent === '1 bloque');
+  assert.match(w.location.hash, new RegExp(`^#/bandaged\\?puzzle=${nombre}&bloqueos=`));
+  await hasta(() => /geometrías/.test(doc.getElementById('bloq-analisis').textContent), 120000);
+  assert.match(doc.getElementById('bloq-analisis').textContent, /estados distinguibles/);
+  assert.match(doc.getElementById('bloq-analisis').textContent, /Minkwitz \(completas\)/);
+  // scramble legal, cargar, resolver y reproducir hasta el final
+  await hasta(() => !doc.getElementById('scramble').classList.contains('generando') && doc.getElementById('scramble').textContent.length > 0, 60000);
+  doc.getElementById('cargar').click();
+  doc.getElementById('resolver').click();
+  await hasta(() => !doc.getElementById('solucion').hidden || doc.querySelector('#mensajes .mensaje.error'), 120000);
+  assert.equal(doc.querySelector('#mensajes .mensaje.error'), null, doc.getElementById('mensajes').textContent);
+  assert.match(doc.getElementById('sol-resumen').textContent, /estrategia [AB]/);
+  const n = doc.querySelectorAll('#movs li').length;
+  assert.ok(n > 0);
+  for (let i = 0; i < n; i++) doc.getElementById('r-adelante').click();
+  assert.match(doc.getElementById('paso').textContent, /Resuelto/);
+  assert.ok(w.cuboSolver.resuelto(), `${nombre}: la solución no deja el cubo resuelto`);
+}
+
+test('app: 4x4 y 5x5 vendados (selector, bloque tocando piezas, scramble, resolver, reproducir; pintar desactivado)', { timeout: 600000 }, async (t) => {
+  const ctx = await abrir(t, { url: 'https://localhost/#/bandaged' });
+  if (!ctx) return;
+  await probarVendadoGrande(ctx, 4);
+  await probarVendadoGrande(ctx, 5);
+  // volver al 3x3: sus bloques (ninguno) y la URL sin puzzle
+  ctx.doc.querySelector('#selector .chip[data-vendado="3x3"]').click();
+  await ctx.hasta(() => ctx.w.cuboSolver.estado().puzzle === '3x3');
+  assert.match(ctx.w.location.hash, /^#\/bandaged(\?bloqueos=|$)/);
+  assert.equal(ctx.doc.getElementById('bloq-firmas').hidden, false);
+  // y al volver al 4x4, su bloque sigue aplicado
+  ctx.doc.querySelector('#selector .chip[data-vendado="4x4"]').click();
+  await ctx.hasta(() => ctx.w.cuboSolver.estado().puzzle === 'vendado-4x4' && ctx.w.cuboSolver.estado().bloqueos === 1);
+  assert.deepEqual(ctx.errores, []);
+  ctx.w.close();
+});
+
+test('app: enlaces con puzzle= (4x4 y 5x5) y enlaces antiguos sin puzzle (3x3)', { timeout: 600000 }, async (t) => {
+  const casos = [
+    ['https://localhost/#/bandaged?puzzle=4x4&bloqueos=UF2.UFR', 'vendado-4x4', 1],
+    ['https://localhost/#/bandaged?puzzle=5x5&bloqueos=D.U.n%C3%BAcleo', 'vendado-5x5', 1],
+    ['https://localhost/#/bandaged?puzzle=4x4', 'vendado-4x4', 0],
+    ['https://localhost/#/bandaged?bloqueos=UFR.UF', '3x3', 1],
+    ['https://localhost/#bloqueos=U.UF-DB.DBL', '3x3', 2],
+    ['https://localhost/#/bandaged?puzzle=4x4&firma=40000000000', 'vendado-4x4', 0], // las firmas son solo del 3x3
+    ['https://localhost/#/bandaged?puzzle=9x9', '3x3', 0], // puzzle desconocido: el 3x3
+  ];
+  for (const [url, id, n] of casos) {
+    const ctx = await abrir(t, { url });
+    if (!ctx) return;
+    const { w, doc, hasta } = ctx;
+    await hasta(() => w.cuboSolver.estado().puzzle === id && doc.getElementById('panel-bloqueos').hidden === false, 60000);
+    assert.equal(w.cuboSolver.estado().bloqueos, n, url);
+    if (id !== '3x3') assert.match(w.location.hash, new RegExp(`puzzle=${id.slice(-3)}`), url);
+    else assert.doesNotMatch(w.location.hash, /puzzle=/, url);
+    if (n) await hasta(() => /geometrías/.test(doc.getElementById('bloq-analisis').textContent), 120000);
+    assert.deepEqual(ctx.errores, []);
+    w.close();
+  }
+});
+
 // ---------- Secciones, navegación y tema (noche 11) ----------
 const esperaHash = (ctx, re) => ctx.hasta(() => re.test(ctx.w.location.hash));
 const herramientaLista = (ctx, seccion, puzzle) => ctx.hasta(() => {
@@ -988,11 +1071,12 @@ test('app: navegación entre secciones (portada, WCA Puzzles con #/wca/<id>, Ban
   doc.querySelector('.volver').click();
   await hasta(() => w.cuboSolver.estado().seccion === 'portada');
   assert.equal(doc.getElementById('portada').hidden, false);
-  // Bandaged Cubes: 3x3, sin selector, con la sección de bloques
+  // Bandaged Cubes: 3x3, con su selector (3x3, 4x4 y 5x5 desde la noche 13) y la sección de bloques
   doc.querySelector('a.tarjeta-seccion[href="#/bandaged"]').click();
   await herramientaLista(ctx, 'bandaged', '3x3');
   assert.equal(doc.getElementById('t-seccion').textContent, 'Bandaged Cubes');
-  assert.equal(doc.getElementById('selector').hidden, true);
+  assert.equal(doc.getElementById('selector').hidden, false);
+  assert.equal(doc.querySelectorAll('#selector .chip').length, 3);
   assert.equal(doc.getElementById('panel-bloqueos').hidden, false);
   // Secciones bloqueadas o desconocidas por URL: vuelven a la portada
   for (const h of ['#/shape-mods', '#/cuboids', '#/others', '#/shape-mods/mirror', '#/nada', '#algo']) {

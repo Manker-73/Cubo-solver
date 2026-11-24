@@ -182,15 +182,17 @@
           <button type="button" class="boton pequeno" id="bloq-enlace">Copiar enlace</button>
           <input type="text" id="bloq-url" readonly hidden aria-label="Enlace para compartir">
         </div>
-        <div class="bloq-fila">
-          <span>Firma (Bandaged Cube Explorer): <code id="bloq-firma-actual">0</code></span>
-          <button type="button" class="boton-texto" id="bloq-copiar-firma">Copiar</button>
+        <div id="bloq-firmas">
+          <div class="bloq-fila">
+            <span>Firma (Bandaged Cube Explorer): <code id="bloq-firma-actual">0</code></span>
+            <button type="button" class="boton-texto" id="bloq-copiar-firma">Copiar</button>
+          </div>
+          <div class="bloq-fila">
+            <input type="text" id="bloq-firma" placeholder="Firma hexadecimal, p. ej. 33EC01800846" aria-label="Firma hexadecimal" spellcheck="false">
+            <button type="button" class="boton pequeno" id="bloq-importar">Importar</button>
+          </div>
+          <p class="tenue">La firma es el formato de la comunidad (Bandaged Cube Explorer, de Andreas Nortmann): 54 uniones posibles entre cubies vecinos, en hexadecimal. Solo existe para el 3x3.</p>
         </div>
-        <div class="bloq-fila">
-          <input type="text" id="bloq-firma" placeholder="Firma hexadecimal, p. ej. 33EC01800846" aria-label="Firma hexadecimal" spellcheck="false">
-          <button type="button" class="boton pequeno" id="bloq-importar">Importar</button>
-        </div>
-        <p class="tenue">La firma es el formato de la comunidad (Bandaged Cube Explorer, de Andreas Nortmann): 54 uniones posibles entre cubies vecinos, en hexadecimal.</p>
       </details>
     </section>
     </div>

@@ -3,7 +3,7 @@
 // (tablas, scrambles de estado aleatorio, validación y búsquedas) va a un Web
 // Worker a través de motor.js, con el hilo principal como alternativa.
 
-import { PUZZLES, PUZZLES_PRONTO } from '../puzzles/index.js';
+import { PUZZLES, PUZZLES_PRONTO, BANDAGED, buscarPuzzle } from '../puzzles/index.js';
 import { crearMotor } from './motor.js';
 import { crearVista3D, hayWebGL } from './vista3d.js';
 import { crearReproductor } from './reproductor.js';
@@ -45,7 +45,9 @@ const st = {
   pasoScramble: 0,   // paso del reproductor del scramble (n = scramble aplicado)
   prefijos: [],      // estados del scramble tras 0..n movimientos (orientación real)
   metodos: {},       // modo aprender: método elegido en cada puzzle ('' = solución óptima)
-  bloqueos: [],      // bloques del 3x3 vendado (sección Bandaged Cubes): [[clave de pieza, ...]]
+  bloqueos: [],      // bloques del puzzle vendado elegido (sección Bandaged Cubes): [[clave de pieza, ...]]
+  vendado: '3x3',    // puzzle de Bandaged Cubes (su nombre en la URL: 3x3, 4x4 o 5x5; noche 13)
+  bloqueosPor: {},   // bloques aplicados de cada puzzle de Bandaged Cubes (al cambiar de uno a otro)
   seccion: 'portada', // 'portada', 'wca' o 'bandaged' (ver secciones.js)
 };
 
@@ -55,7 +57,7 @@ const st = {
 // llevan los bloques. En WCA Puzzles el 3x3 es siempre el normal.
 const vendados = new Map(); // id + clave de los bloques -> puzzle con bloqueos
 function puzzleActivo(id) {
-  const base = PUZZLES.find((x) => x.id === id);
+  const base = buscarPuzzle(id); // del registro o una base del modo vendado (4x4, 5x5)
   if (!base || !base.soporteBloqueos || st.seccion !== 'bandaged' || !st.bloqueos.length) return base;
   const k = id + '#' + claveBloqueos(st.bloqueos);
   if (!vendados.has(k)) vendados.set(k, puzzleConBloqueos(base, st.bloqueos));
@@ -65,7 +67,16 @@ function puzzleActivo(id) {
 const claveP = (p) => (p.claveBloqueos ? p.id + '#' + p.claveBloqueos : p.id);
 /** Datos de una petición al motor: con los bloques, si el puzzle los tiene. */
 const datosDe = (p, extra = {}) => (p.bloqueos && p.bloqueos.length ? { ...extra, bloqueos: p.bloqueos } : extra);
-const baseDe = (p) => (p ? PUZZLES.find((x) => x.id === p.id) : null);
+const baseDe = (p) => (p ? buscarPuzzle(p.id) : null);
+/** Puzzle de Bandaged Cubes por su nombre en la URL (3x3 si no existe). */
+const bandagedDe = (url) => BANDAGED.find((b) => b.url === url) || BANDAGED[0];
+/** Cambia el puzzle de Bandaged Cubes (guarda los bloques del que se deja). */
+function cambiarVendado(url) {
+  if (url === st.vendado) return;
+  st.bloqueosPor[st.vendado] = st.bloqueos;
+  st.vendado = bandagedDe(url).url;
+  st.bloqueos = st.bloqueosPor[st.vendado] || leerBloqueosGuardados(st.vendado);
+}
 const ms3D = () => 420 / st.velocidad;
 const ocupado = () => !!st.ocupado && !!st.p && st.ocupado === claveP(st.p);
 
@@ -203,8 +214,11 @@ const panelBloqueos = crearPanelBloqueos({
   $,
   base: () => (st.seccion === 'bandaged' ? baseDe(st.p) : null),
   aplicados: () => st.bloqueos,
+  puzzleURL: () => st.vendado,
+  consultaPuzzle: () => (st.vendado === '3x3' ? '' : `puzzle=${st.vendado}&`),
   aplicar(def) {
     st.bloqueos = def;
+    st.bloqueosPor[st.vendado] = def;
     reemplazarURL(hashVendado());
     seleccionar(st.p.id);
   },
@@ -225,8 +239,27 @@ function puedeResolver(p) {
 function pintarSelector() {
   const nav = $('selector');
   nav.innerHTML = '';
-  nav.hidden = st.seccion !== 'wca';
+  nav.hidden = st.seccion !== 'wca' && st.seccion !== 'bandaged';
   if (nav.hidden) return;
+  if (st.seccion === 'bandaged') {
+    // Bandaged Cubes (noche 13): 3x3, 4x4 y 5x5
+    for (const b of BANDAGED) {
+      const el = document.createElement('button');
+      el.type = 'button';
+      el.className = 'chip con-solver';
+      el.dataset.vendado = b.url;
+      el.setAttribute('aria-pressed', String(st.vendado === b.url));
+      el.title = `${b.url} vendado: crea tus bloques, scramble y solución con giros legales`;
+      el.innerHTML = `<span class="punto" aria-hidden="true"></span>${b.url}`;
+      el.addEventListener('click', () => {
+        cambiarVendado(b.url);
+        reemplazarURL(hashVendado());
+        seleccionar(bandagedDe(st.vendado).puzzle.id);
+      });
+      nav.appendChild(el);
+    }
+    return;
+  }
   for (const p of PUZZLES.filter((x) => x.categoria === 'wca')) {
     const b = document.createElement('button');
     b.type = 'button';
@@ -469,6 +502,14 @@ function pintarPaleta() {
   const cont = $('paleta');
   cont.innerHTML = '';
   const p = st.p;
+  if (p.avisoPintar) {
+    // 4x4 y 5x5 vendados: sin paleta (pintar está desactivado; ver nxn-identidad.js)
+    const t = document.createElement('p');
+    t.className = 'aviso aviso-pintar';
+    t.textContent = p.avisoPintar;
+    cont.appendChild(t);
+    return;
+  }
   const n = p.paleta.length + (p.herramientas ? p.herramientas.length : 0);
   for (let i = 0; i < n; i++) {
     const ent = entradaPaleta(i);
@@ -618,12 +659,16 @@ function pintarEditor() {
 
 function alPulsarPegatina(ev) {
   const t = ev.target.closest('.pegatina');
+  // 4x4 y 5x5 vendados: sus pegatinas no se pueden pintar; al tocarlas se dice por qué
+  if (!t && st.p && st.p.avisoPintar && !panelBloqueos.editando() && ev.target.closest('[data-i]')) { mensaje('info', st.p.avisoPintar); return; }
   if (!t) return;
   tocarPegatina(parseInt(t.getAttribute('data-i'), 10));
 }
 
 function tocarPegatina(i) {
   if (panelBloqueos.editando()) { panelBloqueos.tocar(i); return; }
+  // 4x4 y 5x5 vendados: no se puede pintar (no se sabe qué centro es cuál): se dice por qué
+  if (st.p.avisoPintar) { mensaje('info', st.p.avisoPintar); return; }
   if (!puedeResolver(st.p) || ocupado()) return;
   const mostradoAntes = estadoMostrado();
   if (!new Set(st.p.pegatinasEditables(mostradoAntes)).has(i)) return;
@@ -995,7 +1040,7 @@ function reemplazarURL(hash) {
   try { history.replaceState(history.state, '', base + hash); } catch { /* p. ej. about:blank */ }
 }
 /** Hash de Bandaged Cubes con los bloques aplicados (para que recargar o compartir la URL los conserve). */
-const hashVendado = () => hashDe({ seccion: 'bandaged', consulta: st.bloqueos.length ? 'bloqueos=' + encodeURIComponent(textoDeBloqueos(st.bloqueos)) : '' });
+const hashVendado = () => hashDe({ seccion: 'bandaged', consulta: [st.vendado === '3x3' ? '' : `puzzle=${st.vendado}`, st.bloqueos.length ? 'bloqueos=' + encodeURIComponent(textoDeBloqueos(st.bloqueos)) : ''].filter(Boolean).join('&') });
 
 /** Portada: una tarjeta por sección de SECCIONES (las disponibles son enlaces; las bloqueadas, no). */
 function pintarPortada() {
@@ -1072,15 +1117,19 @@ function aplicarRuta({ navegacion = false } = {}) {
     reemplazarURL(hashDe({ seccion: 'wca', puzzle: id }));
     if (entra || !st.p || st.p.id !== id) seleccionar(id);
   } else {
-    // Bandaged Cubes: la configuración de la URL (enlace compartido) o la última aplicada
+    // Bandaged Cubes: el puzzle de la URL (sin él, el 3x3: los enlaces de antes) y la configuración
+    // de la URL (enlace compartido) o la última aplicada de ese puzzle
+    cambiarVendado(r.puzzle && BANDAGED.some((b) => b.url === r.puzzle) ? r.puzzle : '3x3');
     if (r.consulta) {
-      const deURL = bloqueosDeURL({ hash: '#' + r.consulta, search: '' });
-      if (deURL) st.bloqueos = deURL;
+      // (las firmas del Bandaged Cube Explorer son solo del 3x3)
+      const deURL = bloqueosDeURL({ hash: '#' + r.consulta, search: '' }, st.vendado);
+      if (deURL) { st.bloqueos = deURL; st.bloqueosPor[st.vendado] = deURL; }
     }
     reemplazarURL(hashVendado());
     const clave = (p) => (p && p.claveBloqueos) || '';
     const quiero = st.bloqueos.length ? claveBloqueos(st.bloqueos) : '';
-    if (entra || !st.p || st.p.id !== '3x3' || clave(st.p) !== quiero) seleccionar('3x3');
+    const id = bandagedDe(st.vendado).puzzle.id;
+    if (entra || !st.p || st.p.id !== id || clave(st.p) !== quiero) seleccionar(id);
   }
   if (navegacion && entra) {
     subirArriba();
@@ -1156,7 +1205,7 @@ function iniciar() {
   $('copiar').addEventListener('click', (e) => copiar(st.p.formatear(st.scramble), e.currentTarget));
   $('copiar-sol').addEventListener('click', (e) => st.sol && copiar(st.p.formatear(st.sol.movimientos), e.currentTarget));
   // Bloques del vendado: los de un enlace (los lee la ruta) o los últimos aplicados en este navegador
-  st.bloqueos = leerBloqueosGuardados();
+  st.bloqueos = leerBloqueosGuardados('3x3');
   panelBloqueos.iniciar();
   tema.iniciar();
   pintarPortada();

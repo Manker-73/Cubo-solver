@@ -3,7 +3,7 @@
     "cab": "15704 geometrías, 10 permutaciones"
   },
   "casos": 1000,
-  "fecha": "2026-11-22T22:18:10.131Z",
+  "fecha": "2026-11-24T02:02:28.099Z",
   "sin-bloqueos": {
     "nombre": "Sin bloqueos",
     "firma": "0",
@@ -397,5 +397,437 @@
       "optimas": 14,
       "n": 500
     }
+  },
+  "recuentoNxN": {
+    "4x4 casi": "1344 estados, 336 distinguibles (|K| = 4); BFS: 1344 y 336",
+    "4x4 casi+centros": "1344 estados, 336 distinguibles (|K| = 4); BFS: 1344 y 336",
+    "4x4 solo-y": "16 estados, 16 distinguibles (|K| = 1); BFS: 16 y 16",
+    "5x5 casi": "1344 estados, 336 distinguibles (|K| = 4); BFS: 1344 y 336",
+    "5x5 casi+centros": "1344 estados, 1344 distinguibles (|K| = 1); BFS: 1344 y 1344",
+    "5x5 solo-y": "64 estados, 64 distinguibles (|K| = 1); BFS: 64 y 64"
+  },
+  "4x4-pareja": {
+    "nombre": "4x4: una pareja (UFR+UF2)",
+    "bloques": 1,
+    "geometrias": 21,
+    "estados": "29466473799684442593352168829798867986808832000000000",
+    "distinguibles": "308383201731870911244753915604107264000000000",
+    "espacio": "grande",
+    "msTablas": 4287,
+    "minkwitz": {
+      "niveles": 55,
+      "entradas": 638,
+      "longitudMedia": 8.3,
+      "completo": true,
+      "ms": 3000,
+      "pasos": 141020,
+      "rescate": true
+    },
+    "scramble": {
+      "longitudMedia": 51.7,
+      "msMedio": 14.6,
+      "pasos": 80
+    },
+    "resueltos": "3/3 (100.0%)",
+    "longitud": {
+      "media": 291.7,
+      "max": 296
+    },
+    "ms": {
+      "media": 721.1,
+      "max": 770
+    },
+    "gana": {
+      "B": 3
+    },
+    "B": {
+      "fase1": 3,
+      "fase2": 288.7
+    },
+    "sinResolver": 0
+  },
+  "4x4-barra": {
+    "nombre": "4x4: una barra 1x1x4",
+    "bloques": 1,
+    "geometrias": 18,
+    "estados": "10167865355308641336560444730779457552384000000000",
+    "distinguibles": "106412422957857457296326402899968000000000",
+    "espacio": "grande",
+    "msTablas": 4356,
+    "minkwitz": {
+      "niveles": 55,
+      "entradas": 590,
+      "longitudMedia": 9.3,
+      "completo": true,
+      "ms": 3000,
+      "pasos": 131984,
+      "rescate": true
+    },
+    "scramble": {
+      "longitudMedia": 35.3,
+      "msMedio": 6.1,
+      "pasos": 80
+    },
+    "resueltos": "3/3 (100.0%)",
+    "longitud": {
+      "media": 268,
+      "max": 287
+    },
+    "ms": {
+      "media": 560.2,
+      "max": 701
+    },
+    "gana": {
+      "B": 3
+    },
+    "B": {
+      "fase1": 4,
+      "fase2": 264
+    },
+    "sinResolver": 0
+  },
+  "4x4-centros": {
+    "nombre": "4x4: los cuatro centros de U",
+    "bloques": 1,
+    "geometrias": 24,
+    "estados": "2289415222135354086475754512981583462400000000",
+    "distinguibles": "862560591383702440229158571212800000000",
+    "espacio": "grande",
+    "msTablas": 4302,
+    "minkwitz": {
+      "niveles": 55,
+      "entradas": 528,
+      "longitudMedia": 7.9,
+      "completo": true,
+      "ms": 3000,
+      "pasos": 151080,
+      "rescate": true
+    },
+    "scramble": {
+      "longitudMedia": 48,
+      "msMedio": 3.5,
+      "pasos": 80
+    },
+    "resueltos": "3/3 (100.0%)",
+    "longitud": {
+      "media": 236.3,
+      "max": 243
+    },
+    "ms": {
+      "media": 560.9,
+      "max": 722
+    },
+    "gana": {
+      "B": 3
+    },
+    "B": {
+      "fase1": 2,
+      "fase2": 234.3
+    },
+    "sinResolver": 0
+  },
+  "4x4-varios": {
+    "nombre": "4x4: varios bloques",
+    "bloques": 3,
+    "geometrias": 378,
+    "estados": "19257320748690608591970539262839881728000000000",
+    "distinguibles": "806154719377708009820654567424000000000",
+    "espacio": "grande",
+    "msTablas": 4773,
+    "minkwitz": {
+      "niveles": 55,
+      "entradas": 526,
+      "longitudMedia": 10.1,
+      "completo": true,
+      "ms": 3000,
+      "pasos": 129972,
+      "rescate": true
+    },
+    "scramble": {
+      "longitudMedia": 63.3,
+      "msMedio": 10.2,
+      "pasos": 196
+    },
+    "resueltos": "3/3 (100.0%)",
+    "longitud": {
+      "media": 259,
+      "max": 272
+    },
+    "ms": {
+      "media": 677.4,
+      "max": 713
+    },
+    "gana": {
+      "B": 3
+    },
+    "B": {
+      "fase1": 5.3,
+      "fase2": 253.7
+    },
+    "sinResolver": 0
+  },
+  "4x4-casi": {
+    "nombre": "4x4: casi bloqueada (solo U y R; espacio pequeño)",
+    "bloques": 2,
+    "geometrias": 7,
+    "estados": "1344",
+    "distinguibles": "336",
+    "espacio": "pequeño",
+    "msTablas": 25,
+    "minkwitz": null,
+    "scramble": {
+      "longitudMedia": 8.3,
+      "msMedio": 2.5,
+      "pasos": 80
+    },
+    "resueltos": "3/3 (100.0%)",
+    "longitud": {
+      "media": 8.3,
+      "max": 12
+    },
+    "ms": {
+      "media": 4.1,
+      "max": 9
+    },
+    "gana": {
+      "A": 3
+    },
+    "B": {
+      "fase1": null,
+      "fase2": null
+    },
+    "sinResolver": 0
+  },
+  "5x5-pareja": {
+    "nombre": "5x5: una pareja (UFR+UF3)",
+    "bloques": 1,
+    "geometrias": 24,
+    "estados": "107609844703623307465117487423945149413253705835593213839365783523705225216000000000000000",
+    "distinguibles": "11786289261572577355674180546131263678880322166069672280064000000000000000",
+    "espacio": "grande",
+    "msTablas": 4816,
+    "minkwitz": {
+      "niveles": 92,
+      "entradas": 1110,
+      "longitudMedia": 6.4,
+      "completo": true,
+      "ms": 3003,
+      "pasos": 70872,
+      "rescate": false
+    },
+    "scramble": {
+      "longitudMedia": 60.7,
+      "msMedio": 6,
+      "pasos": 80
+    },
+    "resueltos": "3/3 (100.0%)",
+    "longitud": {
+      "media": 496.7,
+      "max": 507
+    },
+    "ms": {
+      "media": 816.4,
+      "max": 866
+    },
+    "gana": {
+      "B": 3
+    },
+    "B": {
+      "fase1": 1.7,
+      "fase2": 495
+    },
+    "sinResolver": 0
+  },
+  "5x5-barra": {
+    "nombre": "5x5: una barra 1x1x5",
+    "bloques": 1,
+    "geometrias": 24,
+    "estados": "1547185482856327747083009653553386666282115623355089916024927874449408000000000000000",
+    "distinguibles": "169460105555161280131041243186842415442838770503647232000000000000000",
+    "espacio": "grande",
+    "msTablas": 5022,
+    "minkwitz": {
+      "niveles": 92,
+      "entradas": 1033,
+      "longitudMedia": 7.8,
+      "completo": true,
+      "ms": 3000,
+      "pasos": 69540,
+      "rescate": true
+    },
+    "scramble": {
+      "longitudMedia": 42.3,
+      "msMedio": 9,
+      "pasos": 80
+    },
+    "resueltos": "3/3 (100.0%)",
+    "longitud": {
+      "media": 599.3,
+      "max": 657
+    },
+    "ms": {
+      "media": 721.3,
+      "max": 818
+    },
+    "gana": {
+      "B": 3
+    },
+    "B": {
+      "fase1": 1.3,
+      "fase2": 598
+    },
+    "sinResolver": 0
+  },
+  "5x5-centros": {
+    "nombre": "5x5: los nueve centros de U",
+    "bloques": 1,
+    "geometrias": 4,
+    "estados": "46990609293819127115119598116889066671767847162597248860160000000000000",
+    "distinguibles": "106723768279883340251206838665114896359793623040000000000000",
+    "espacio": "grande",
+    "msTablas": 4207,
+    "minkwitz": {
+      "niveles": 92,
+      "entradas": 847,
+      "longitudMedia": 6.9,
+      "completo": true,
+      "ms": 3000,
+      "pasos": 79108,
+      "rescate": true
+    },
+    "scramble": {
+      "longitudMedia": 39,
+      "msMedio": 4.6,
+      "pasos": 80
+    },
+    "resueltos": "3/3 (100.0%)",
+    "longitud": {
+      "media": 392,
+      "max": 412
+    },
+    "ms": {
+      "media": 637.1,
+      "max": 766
+    },
+    "gana": {
+      "B": 3
+    },
+    "B": {
+      "fase1": 2,
+      "fase2": 390
+    },
+    "sinResolver": 0
+  },
+  "5x5-opuestos": {
+    "nombre": "5x5: centros opuestos U y D unidos por el núcleo",
+    "bloques": 1,
+    "geometrias": 1,
+    "estados": "1261052867620585634356845555749357219686566865260857974680067775668420608000000000000000",
+    "distinguibles": "138120577284053640886806803274975746236878775383628972032000000000000000",
+    "espacio": "grande",
+    "msTablas": 4397,
+    "minkwitz": {
+      "niveles": 92,
+      "entradas": 1079,
+      "longitudMedia": 8.1,
+      "completo": true,
+      "ms": 3000,
+      "pasos": 116528,
+      "rescate": true
+    },
+    "scramble": {
+      "longitudMedia": 49.7,
+      "msMedio": 10.4,
+      "pasos": 80
+    },
+    "resueltos": "3/3 (100.0%)",
+    "longitud": {
+      "media": 608.3,
+      "max": 636
+    },
+    "ms": {
+      "media": 395.6,
+      "max": 417
+    },
+    "gana": {
+      "B": 3
+    },
+    "B": {
+      "fase1": 0,
+      "fase2": 608.3
+    },
+    "sinResolver": 0
+  },
+  "5x5-varios": {
+    "nombre": "5x5: varios bloques",
+    "bloques": 3,
+    "geometrias": 9504,
+    "estados": "2930275535712741945232972828699595958867643226051306659138120974336000000000000000",
+    "distinguibles": "1283788678448191516144251842324563753354839170482176000000000000000",
+    "espacio": "grande",
+    "msTablas": 6645,
+    "minkwitz": {
+      "niveles": 92,
+      "entradas": 951,
+      "longitudMedia": 8.9,
+      "completo": true,
+      "ms": 3000,
+      "pasos": 48764,
+      "rescate": true
+    },
+    "scramble": {
+      "longitudMedia": 108,
+      "msMedio": 35.9,
+      "pasos": 256
+    },
+    "resueltos": "3/3 (100.0%)",
+    "longitud": {
+      "media": 500.7,
+      "max": 533
+    },
+    "ms": {
+      "media": 773.2,
+      "max": 812
+    },
+    "gana": {
+      "B": 3
+    },
+    "B": {
+      "fase1": 9.7,
+      "fase2": 491
+    },
+    "sinResolver": 0
+  },
+  "5x5-casi": {
+    "nombre": "5x5: casi bloqueada (solo U y R; espacio pequeño)",
+    "bloques": 2,
+    "geometrias": 7,
+    "estados": "1344",
+    "distinguibles": "336",
+    "espacio": "pequeño",
+    "msTablas": 58,
+    "minkwitz": null,
+    "scramble": {
+      "longitudMedia": 8.3,
+      "msMedio": 2.3,
+      "pasos": 80
+    },
+    "resueltos": "3/3 (100.0%)",
+    "longitud": {
+      "media": 8.3,
+      "max": 12
+    },
+    "ms": {
+      "media": 10.8,
+      "max": 18
+    },
+    "gana": {
+      "A": 3
+    },
+    "B": {
+      "fase1": null,
+      "fase2": null
+    },
+    "sinResolver": 0
   }
 }

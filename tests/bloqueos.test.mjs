@@ -316,3 +316,308 @@ test('bloqueos: la estrategia B se comprueba también fuera del Worker (resolver
   }
   assert.ok(conB >= 40, `B solo resolvió ${conB} de 50`);
 });
+
+// ===========================================================================
+// Noche 13: 4x4 y 5x5 vendados (identidad de las piezas iguales)
+// ===========================================================================
+import { soporteBloqueosIdentidad, EJEMPLOS_NXN, analizarGiroVendado } from '../src/puzzles/nxn-identidad.js';
+import { crearNxNVendado } from '../src/puzzles/vendado.js';
+import { crearCadena, completarAleatorio } from '../src/core/schreier.js';
+
+/** Claves de las piezas cuyo cubie cumple f (coordenadas en pasos de 2; sin el núcleo). */
+const piezasDonde = (N, f) => soporteBloqueosIdentidad(N).piezas.filter((p) => p.tipo !== 'nucleo' && f(...p.cubie)).map((p) => p.clave);
+/** Casi bloqueada: todo lo que no está en U ni en R pegado en un bloque, y la barra UR (solo giran U y R). */
+const casiBloqueada = (N) => [piezasDonde(N, (x, y) => x <= N - 3 && y <= N - 3), N === 4 ? ['UBR', 'UR1', 'UR2', 'UFR'] : ['UBR', 'UR1', 'UR', 'UR3', 'UFR']];
+const ej = (N, id) => EJEMPLOS_NXN[N].find((e) => e.id === id).bloques;
+
+const CONFIGS_NXN = [
+  { N: 4, id: 'pareja', nombre: '4x4: una pareja (UFR+UF2)', def: ej(4, 'pareja') },
+  { N: 4, id: 'barra', nombre: '4x4: una barra 1x1x4', def: ej(4, 'barra') },
+  { N: 4, id: 'centros', nombre: '4x4: los cuatro centros de U', def: ej(4, 'centros') },
+  { N: 4, id: 'varios', nombre: '4x4: varios bloques', def: ej(4, 'varios') },
+  { N: 4, id: 'casi', nombre: '4x4: casi bloqueada (solo U y R; espacio pequeño)', def: casiBloqueada(4) },
+  { N: 5, id: 'pareja', nombre: '5x5: una pareja (UFR+UF3)', def: ej(5, 'pareja') },
+  { N: 5, id: 'barra', nombre: '5x5: una barra 1x1x5', def: ej(5, 'barra') },
+  { N: 5, id: 'centros', nombre: '5x5: los nueve centros de U', def: ej(5, 'centros') },
+  { N: 5, id: 'opuestos', nombre: '5x5: centros opuestos U y D unidos por el núcleo', def: ej(5, 'opuestos') },
+  { N: 5, id: 'varios', nombre: '5x5: varios bloques', def: ej(5, 'varios') },
+  { N: 5, id: 'casi', nombre: '5x5: casi bloqueada (solo U y R; espacio pequeño)', def: casiBloqueada(5) },
+];
+
+test('bloqueos NxN: piezas, nombres, giros de búsqueda y notación (3Uw = D + rotación)', () => {
+  const s4 = soporteBloqueosIdentidad(4), s5 = soporteBloqueosIdentidad(5);
+  // 4x4: 8 esquinas, 24 wings, 24 centros; 5x5: + 12 aristas centrales, 24 + 24 centros, 6 fijos y núcleo
+  const cuenta = (s) => s.piezas.reduce((m, p) => ({ ...m, [p.tipo]: (m[p.tipo] || 0) + 1 }), {});
+  assert.deepEqual(cuenta(s4), { esquina: 8, arista: 24, centro: 24 });
+  assert.deepEqual(cuenta(s5), { esquina: 8, arista: 24, 'arista-central': 12, 'centro-x': 24, 'centro-t': 24, centro: 6, nucleo: 1 });
+  assert.ok(['UFR', 'UF1', 'UF2', 'U11', 'U22'].every((k) => s4.piezas.some((p) => p.clave === k)));
+  assert.ok(['UFR', 'UF1', 'UF', 'UF3', 'U11', 'U12', 'U', 'núcleo'].every((k) => s5.piezas.some((p) => p.clave === k)));
+  // UF1 es la wing de UF del lado de L (pegatina de U en la fila de abajo, columna 1)
+  assert.deepEqual(s4.piezas.find((p) => p.clave === 'UF1').puntos.filter((q) => q < 16), [13]);
+  // centros iguales: 6 clases de 4 en el 4x4; 12 en el 5x5 (X y cruz por color); los fijos no
+  assert.deepEqual(s4.iguales.map((c) => c.length), [4, 4, 4, 4, 4, 4]);
+  assert.equal(s5.iguales.length, 12);
+  // giros de búsqueda: 4x4 U, R, F de 1 a 3 capas (la esquina DBL no se mueve); 5x5 las 6 caras
+  // de 1 y 2 capas y las capas interiores 2U… (ver el test de las capas interiores)
+  assert.equal(s4.busqueda.length, 27);
+  assert.ok(s4.busqueda.includes('3Uw') && !s4.busqueda.some((m) => /^[DLB]/.test(m)));
+  assert.equal(s5.busqueda.length, 54);
+  assert.deepEqual(analizarGiroVendado("2U'", 5), { cara: 'U', desde: 2, hasta: 2, veces: 3, rotacion: false });
+  assert.throws(() => analizarGiroVendado('3U', 5)); // la capa del medio (lleva los centros fijos) no
+  // notación: 3Uw se escribe D y los giros siguientes se traducen; mismo estado salvo una rotación
+  assert.deepEqual(s4.notacion(['3Uw', 'R', "3Fw'"]), ['D', 'B', "L'"]); // 3Uw = D + y: tras D falta la y, y la R del plan es la cara que está en B
+  const p = crearNxNVendado(4, []);
+  const rng = rngConSemilla(2);
+  for (let k = 0; k < casosPor(200, 30); k++) {
+    const movs = Array.from({ length: 25 }, () => s4.todos[Math.floor(rng() * s4.todos.length)]);
+    const a = s4.identificar(p.aplicarSecuencia(p.estadoResuelto(), movs)).donde;
+    const b = s4.identificar(p.aplicarSecuencia(p.estadoResuelto(), s4.notacion(movs))).donde;
+    assert.ok(s4.rotaciones.some((Q) => a.every((x, i) => Q[x] === b[i])), movs.join(' '));
+    assert.ok(!s4.notacion(movs).some((m) => /^3/.test(m)));
+  }
+});
+
+test('bloqueos NxN: legalidad = mover todas las piezas de cada bloque o ninguna, con todos los giros (caras, anchos, interiores)', () => {
+  for (const N of [4, 5]) {
+    const s = soporteBloqueosIdentidad(N);
+    const todos = s.todos.concat(N === 4 ? ['2U', '2R', "2F'", '3D2'] : []).concat(['x', 'y2', "z'"]);
+    for (const cfg of CONFIGS_NXN.filter((c) => c.N === N)) {
+      const p = crearNxNVendado(N, cfg.def);
+      const bloques = p.piezasDeBloques().map((b) => b.piezas.map((k) => s.piezas.find((q) => q.clave === k)));
+      const rng = rngConSemilla(N * 10 + cfg.id.length);
+      let e = p.estadoResuelto();
+      let legales = 0, ilegales = 0;
+      for (let k = 0; k < casosPor(400, 80); k++) {
+        const m = todos[Math.floor(rng() * todos.length)];
+        // regla directa: el mapa del giro mueve todos los puntos de cada bloque o ninguno
+        const donde = s.identificar(e).donde, M = s.mapa(m);
+        const regla = bloques.every((b) => { const mov = b.flatMap((q) => q.puntos).map((q) => M[donde[q]] !== donde[q] || s.enCapa(m)[donde[q]] === 1); return mov.every(Boolean) || mov.every((x) => !x); });
+        const l = p.movimientoLegal(e, m).legal;
+        assert.equal(l, regla, `${cfg.nombre}: ${m}`);
+        if (l) { e = p.aplicarMovimiento(e, m); assert.ok(p.bloquesIntactos(e)); legales++; } else { assert.throws(() => p.aplicarMovimiento(e, m), /ilegal/); ilegales++; }
+      }
+      assert.ok(legales > 0 && ilegales > 0, cfg.nombre);
+    }
+  }
+});
+
+test('bloqueos NxN: reglas de validación de los bloques (N par sin núcleo; N impar con núcleo y centros opuestos)', () => {
+  const s4 = soporteBloqueosIdentidad(4), s5 = soporteBloqueosIdentidad(5);
+  const err = (s, def) => comprobarBloqueos(s, def).errores.join(' ');
+  // vecinas: cubies que comparten una cara
+  assert.equal(err(s4, [['UFR', 'UF2', 'U22']]), '');
+  assert.match(err(s4, [['UFR', 'U22']]), /no son vecinas/); // esquina y centro: solo un vértice
+  assert.match(err(s4, [['U11', 'U22']]), /no son vecinas/); // centros en diagonal
+  assert.match(err(s4, [['U22', 'F12']]), /no son vecinas/); // centros de caras distintas no se tocan
+  // N par: no hay núcleo ni centro fijo: dos centros opuestos solo se unen a través de piezas de la superficie
+  assert.ok(!s4.piezas.some((p) => p.tipo === 'nucleo'));
+  assert.match(err(s4, [['U22', 'D22']]), /no son vecinas/);
+  // N impar: el núcleo, unido a los seis centros fijos (no a los demás centros)
+  assert.equal(err(s5, [['U', 'núcleo', 'D']]), '');
+  assert.match(err(s5, [['U12', 'núcleo']]), /no son vecinas/);
+  assert.match(err(s5, [['U', 'D']]), /no son vecinas/);
+  // totalmente bloqueado: cada plano de corte lo cruza algún bloque
+  for (const N of [4, 5]) {
+    const tot = crearAnalisisBloqueos(soporteBloqueosIdentidad(N), [piezasDonde(N, () => true)]);
+    assert.ok(tot.info.bloqueado);
+    assert.match(tot.info.errores.join(' '), /totalmente bloqueado/);
+    // basta con que quede un plano libre para que no lo esté
+    const casi = crearAnalisisBloqueos(soporteBloqueosIdentidad(N), [piezasDonde(N, (x, y) => y < N - 1)], { limiteEstados: 0 });
+    assert.ok(!casi.info.bloqueado);
+    assert.deepEqual(casi.info.legalesResuelto.map((m) => m.replace(/['2]$/, '')).filter((v, i, a) => a.indexOf(v) === i), ['U']);
+  }
+});
+
+test('bloqueos NxN: los giros de búsqueda alcanzan todo (BFS con todos los giros, salvo rotación) y en el 5x5 hacen falta las capas interiores', () => {
+  // Con todos los giros con nombre (caras opuestas, anchos de N−1 capas, capas interiores 2U…) y las
+  // rotaciones, el BFS de aspectos (normalizando la orientación) llega a los mismos estados que con
+  // los giros de búsqueda: la demostración está en DECISIONES.md (noche 13) y esto la comprueba.
+  for (const N of [4, 5]) {
+    const s = soporteBloqueosIdentidad(N);
+    const def = casiBloqueada(N);
+    const A = crearAnalisisBloqueos(s, def);
+    assert.ok(A.bfs);
+    const p = crearNxNVendado(N, def);
+    p.inicializar();
+    const extra = N === 4 ? ['2U', '2R', '2F', '2D', '2L', '2B'] : [];
+    const todos = s.todos.concat(extra.flatMap((m) => [m, m + '2', m + "'"])).concat(['x', 'y', 'z']);
+    const clave = (e) => { const r = p.analisisInterno().mod; const n = s.identificar(e).donde; const Q = s.rotaciones.find((R) => [...Array(s.puntos).keys()].filter((q) => r.fijo[q]).every((q) => R[n[q]] === q)); const d = Int16Array.from(n, (x) => Q[x]); return Array.from(r.SDesdeDonde(d)).join(','); };
+    const vistos = new Set([clave(p.estadoResuelto())]);
+    let frontera = [p.estadoResuelto()];
+    while (frontera.length) {
+      const sig = [];
+      for (const e of frontera) for (const m of todos) {
+        if (!p.movimientoLegal(e, m).legal) continue;
+        const e2 = p.aplicarMovimiento(e, m), k = clave(e2);
+        if (!vistos.has(k)) { vistos.add(k); sig.push(e2); }
+      }
+      frontera = sig;
+    }
+    assert.equal(vistos.size, A.bfs.tabla.tamano, `${N}x${N}`);
+  }
+  // 5x5 con U + núcleo + D: 2U es legal aunque U y Uw no lo sean, así que sin las capas interiores
+  // no se llegaría a todo
+  const s5 = soporteBloqueosIdentidad(5);
+  const op = crearAnalisisBloqueos(s5, ej(5, 'opuestos'), { limiteEstados: 0, msMinkwitz: 0 });
+  assert.ok(op.info.legalesResuelto.includes('2U') && !op.info.legalesResuelto.includes('U') && !op.info.legalesResuelto.includes('Uw'));
+});
+
+test('bloqueos NxN: recuento de estados distinguibles (cifras publicadas sin bloques y BFS completo en los pequeños)', () => {
+  // Sin bloques, el recuento con piezas iguales da las cifras conocidas del 4x4 y el 5x5
+  const libre4 = crearAnalisisBloqueos(soporteBloqueosIdentidad(4), [], { rng: rngConSemilla(1), limiteEstados: 0, msMinkwitz: 0 });
+  assert.equal(libre4.info.estadosDistinguibles, '7401196841564901869874093974498574336000000000');
+  assert.ok(libre4.info.distinguiblesExacto);
+  const libre5 = crearAnalisisBloqueos(soporteBloqueosIdentidad(5), [], { rng: rngConSemilla(1), limiteEstados: 0, msMinkwitz: 0 });
+  assert.equal(libre5.info.estadosDistinguibles, '282870942277741856536180333107150328293127731985672134721536000000000000000');
+  // Espacios pequeños: aspectos distintos (colores + qué posiciones están pegadas) en el BFS completo
+  const resumenRecuento = {};
+  for (const N of [4, 5]) {
+    const s = soporteBloqueosIdentidad(N);
+    const n2 = N * N;
+    const casos = {
+      casi: casiBloqueada(N),
+      // con un bloque de centros del mismo color que puede girar (K no trivial por los bloques)
+      'casi+centros': casiBloqueada(N).concat([N === 4 ? ['U11', 'U12', 'U21', 'U22'] : ['U11', 'U12', 'U21', 'U']]),
+      'solo-y': [piezasDonde(N, (x, y) => y <= -(N - 3))],
+    };
+    for (const [id, def] of Object.entries(casos)) {
+      const A = crearAnalisisBloqueos(s, def, { rng: rngConSemilla(1) });
+      assert.ok(A.bfs, id);
+      const { mod } = A;
+      const vistos = new Set();
+      const k = new Uint32Array(mod.palabras);
+      for (let t = 0; t < A.bfs.tabla.tamano; t++) {
+        A.bfs.tabla.nesimo(t, k);
+        const donde = mod.dondeDesdeS(mod.desempaquetar(k));
+        const col = s.estadoDesde(donde).map((x) => Math.floor(x / n2)).join('');
+        const pegado = mod.bloques.map((b) => b.piezas.flatMap((kk) => s.piezas[kk].puntos.map((q) => donde[q])).sort((a, b) => a - b).join(',')).sort().join('|');
+        vistos.add(col + '#' + pegado);
+      }
+      assert.equal(String(A.bfs.tabla.tamano), A.info.estados, `${N}x${N} ${id}: estados`);
+      assert.equal(String(vistos.size), A.info.estadosDistinguibles, `${N}x${N} ${id}: distinguibles`);
+      assert.ok(A.info.distinguiblesExacto);
+      resumenRecuento[`${N}x${N} ${id}`] = `${A.info.estados} estados, ${A.info.estadosDistinguibles} distinguibles (|K| = ${A.info.simetriaIguales}); BFS: ${A.bfs.tabla.tamano} y ${vistos.size}`;
+    }
+  }
+  guardarResultado('bloqueos', { recuentoNxN: resumenRecuento });
+});
+
+test('bloqueos NxN: Schreier–Sims aleatorio = determinista (orden del grupo de la fase 2)', () => {
+  // El aleatorio (con prefijo de base) se usa con piezas iguales; el determinista, en el 3x3.
+  // Aquí se cuentan los mismos grupos con los dos.
+  for (const [N, id] of [[4, 'pareja'], [4, 'centros'], [5, 'opuestos']]) {
+    const A = crearAnalisisBloqueos(soporteBloqueosIdentidad(N), ej(N, id), { rng: rngConSemilla(3), limiteEstados: 0, msMinkwitz: 0 });
+    const det = crearCadena(A.mod.soporte.puntos);
+    for (const g of A.g2.cadena.niveles[0].gens) det.incluir(g);
+    assert.equal(det.orden().toString(), A.info.grupoFase2, `${N}x${N} ${id}`);
+    // y otra cadena aleatoria con otra semilla da lo mismo
+    const otra = crearCadena(A.mod.soporte.puntos, { sinSchreier: true });
+    completarAleatorio(otra, A.g2.cadena.niveles[0].gens, rngConSemilla(99));
+    assert.equal(otra.orden().toString(), A.info.grupoFase2);
+  }
+});
+
+test('bloqueos NxN: solución óptima "a la vista" en los espacios pequeños (BFS de aspectos)', () => {
+  for (const N of [4, 5]) {
+    const def = casiBloqueada(N).concat([N === 4 ? ['U11', 'U12', 'U21', 'U22'] : ['U11', 'U12', 'U21', 'U']]);
+    const p = crearNxNVendado(N, def, { rng: rngConSemilla(1) });
+    p.inicializar();
+    const A = p.analisisInterno(), { mod } = A, s = mod.soporte, n2 = N * N;
+    const aspecto = (S) => { const d = mod.dondeDesdeS(S); return s.estadoDesde(d).map((x) => Math.floor(x / n2)).join('') + '#' + mod.bloques.map((b) => b.piezas.flatMap((kk) => s.piezas[kk].puntos.map((q) => d[q])).sort((a, b) => a - b).join(',')).sort().join('|'); };
+    const dist = new Map([[aspecto(mod.resuelto), 0]]);
+    let fr = [mod.resuelto];
+    for (let d = 0; fr.length; d++) { const sig = []; for (const S of fr) for (let m = 0; m < mod.nM; m++) { if (!mod.legal(S, m)) continue; const T = mod.aplicar(S, m), k = aspecto(T); if (!dist.has(k)) { dist.set(k, d + 1); sig.push(T); } } fr = sig; }
+    const k = new Uint32Array(mod.palabras);
+    for (let t = 0; t < A.bfs.tabla.tamano; t++) {
+      A.bfs.tabla.nesimo(t, k);
+      const S = mod.desempaquetar(k);
+      const r = resolverBloqueos(A, S, { msMax: 100 });
+      assert.equal(r.movs.length, dist.get(aspecto(S)), `${N}x${N}: estado ${t}`);
+    }
+  }
+});
+
+test('bloqueos NxN: pintar está desactivado y el estado es de identidades (validar rechaza lo que no lo es)', () => {
+  const p = crearNxNVendado(4, ej(4, 'pareja'));
+  assert.deepEqual(p.pegatinasEditables(p.estadoResuelto()), []);
+  assert.match(p.avisoPintar, /no se puede pintar/);
+  const colores = p.colores(p.estadoResuelto());
+  assert.equal(colores[0], 0); assert.equal(colores[95], 5);
+  p.inicializar();
+  assert.equal(p.validar(colores).valido, false); // un estado de colores no es una permutación
+  const roto = p.estadoResuelto(); [roto[15], roto[14]] = [roto[14], roto[15]]; // esquina y wing cambiadas: piezas rotas
+  assert.equal(p.validar(roto).valido, false);
+  // sin bloques delega en el 4x4 normal (sobre los colores)
+  const libre = crearNxNVendado(4, []);
+  libre.inicializar();
+  const e = libre.aplicarSecuencia(libre.estadoResuelto(), ['R', 'Uw', "F'", '3Rw2']);
+  const s = libre.resolver(e);
+  assert.ok(s.ok);
+  assert.ok(libre.estaResuelto(libre.aplicarSecuencia(e, s.movimientos)));
+});
+
+// ---------- 4x4 y 5x5: scrambles y soluciones (500 casos por configuración en la suite completa) ----------
+const N_CASOS_NXN = casosPor(Math.min(CASOS, 500), 6, 'CASOS_BLOQUEOS');
+const SOLO_NXN = process.env.BLOQUEOS_NXN ? process.env.BLOQUEOS_NXN.split(',') : null;
+for (const cfg of CONFIGS_NXN) {
+  const clave = `${cfg.N}x${cfg.N}-${cfg.id}`;
+  if (SOLO_NXN && !SOLO_NXN.includes(clave)) continue;
+  test(`bloqueos NxN: ${cfg.nombre}: ${N_CASOS_NXN} scrambles y soluciones`, { timeout: 3 * 3600 * 1000 }, async () => {
+    const p = crearNxNVendado(cfg.N, cfg.def, { rng: rngConSemilla(7) });
+    const tIni = performance.now();
+    p.inicializar();
+    const msIni = performance.now() - tIni;
+    const info = p.analisis();
+    assert.deepEqual(info.errores, []);
+    const rng = rngConSemilla(11);
+    const scrambles = [], estados = [];
+    let sumaScr = 0;
+    const tScr = performance.now();
+    for (let i = 0; i < N_CASOS_NXN; i++) {
+      const s = p.generarScramble(rng);
+      assert.equal(p.buscarRedundancia(s), null, `scramble ${i}: redundante`);
+      const e = aplicarComprobando(p, p.estadoResuelto(), s, `scramble ${i}`);
+      assert.ok(p.validar(e).valido, `scramble ${i}: estado no válido`);
+      assert.ok(!p.estaResuelto(e), `scramble ${i}: parece resuelto`);
+      scrambles.push(s); estados.push(e); sumaScr += s.length;
+    }
+    const msScr = (performance.now() - tScr) / N_CASOS_NXN;
+    const { resultados } = info.espacio === 'pequeño'
+      ? { resultados: estados.map((e) => { const t = performance.now(); const r = p.resolver(e, { msMax: MS_SOLVER }); return { r, ms: performance.now() - t }; }) }
+      : await resolverEnParalelo({
+        modulo: new URL('../src/puzzles/vendado.js', import.meta.url).href,
+        exportar: 'crearNxNVendado', args: [cfg.N, cfg.def],
+        estados, opciones: { msMax: MS_SOLVER },
+      });
+    const est = { n: 0, suma: 0, max: 0, ms: 0, msMax: 0, gana: {}, f1: 0, f2: 0, nB: 0, fallos: [] };
+    resultados.forEach(({ r, ms }, i) => {
+      if (!r.ok) { est.fallos.push(i); return; }
+      assert.equal(p.buscarRedundanciaSolucion(r.movimientos), null, `caso ${i}: solución redundante`);
+      const fin = aplicarComprobando(p, estados[i], r.movimientos, `solución ${i}`);
+      assert.ok(p.estaResuelto(fin), `caso ${i}: la solución no resuelve\nscramble: ${scrambles[i].join(' ')}\nsolución: ${r.movimientos.join(' ')}`);
+      est.n++; est.suma += r.movimientos.length; est.max = Math.max(est.max, r.movimientos.length); est.ms += ms; est.msMax = Math.max(est.msMax, ms);
+      est.gana[r.estrategia] = (est.gana[r.estrategia] || 0) + 1;
+      const d = r.detalle;
+      if (d && d.B && r.estrategia === 'B') {
+        est.nB++; est.f1 += d.B.fase1; est.f2 += d.B.fase2;
+        const tras1 = aplicarComprobando(p, estados[i], d.B.movimientos.slice(0, d.B.fase1), `fase 1 (B) ${i}`);
+        assert.ok(p.geometriaResuelta(tras1), `caso ${i}: la fase 1 no deja la geometría resuelta`);
+      }
+    });
+    const m2 = (x, n) => (n ? +(x / n).toFixed(1) : null);
+    const resumen = {
+      nombre: cfg.nombre, bloques: cfg.def.length,
+      geometrias: info.geometrias, estados: info.estados, distinguibles: info.estadosDistinguibles, espacio: info.espacio,
+      msTablas: Math.round(msIni), minkwitz: info.minkwitz || null,
+      scramble: { longitudMedia: m2(sumaScr, N_CASOS_NXN), msMedio: +msScr.toFixed(1), pasos: info.pasosScramble },
+      resueltos: `${est.n}/${N_CASOS_NXN} (${((100 * est.n) / N_CASOS_NXN).toFixed(1)}%)`,
+      longitud: { media: m2(est.suma, est.n), max: est.max }, ms: { media: m2(est.ms, est.n), max: Math.round(est.msMax) },
+      gana: est.gana, B: { fase1: m2(est.f1, est.nB), fase2: m2(est.f2, est.nB) },
+      sinResolver: est.fallos.length,
+    };
+    guardarResultado('bloqueos', { [clave]: resumen });
+    // Toda solución devuelta se ha comprobado arriba giro a giro; las que no se encuentran se
+    // cuentan (y se documentan en ESTADO.md): con las tablas completas no debería haber ninguna.
+    assert.equal(est.fallos.length, 0, `${cfg.nombre}: sin resolver ${est.fallos.length} de ${N_CASOS_NXN} (casos ${est.fallos.slice(0, 10).join(', ')})`);
+  });
+}

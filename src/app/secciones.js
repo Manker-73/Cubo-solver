@@ -13,7 +13,7 @@
 /** @type {Seccion[]} */
 export const SECCIONES = [
   { id: 'wca', nombre: 'WCA Puzzles', descripcion: '2x2–7x7 · Pyraminx · Skewb · Square-1 · Megaminx · FTO', descripcionCorta: '2x2–7x7 · Pyraminx · Skewb · Square-1 · Megaminx · FTO', estado: 'disponible', estilo: 'acento' },
-  { id: 'bandaged', nombre: 'Bandaged Cubes', descripcion: '3x3 con tus bloques · firmas de la comunidad', descripcionCorta: '3x3 con tus bloques', estado: 'disponible', estilo: 'suave' },
+  { id: 'bandaged', nombre: 'Bandaged Cubes', descripcion: '3x3, 4x4 y 5x5 con tus bloques · firmas de la comunidad', descripcionCorta: '3x3–5x5 con tus bloques', estado: 'disponible', estilo: 'suave' },
   { id: 'shape-mods', nombre: 'Shape Mods', descripcion: 'Mirror, Axis, Fisher…', estado: 'bloqueada' },
   { id: 'cuboids', nombre: 'Cuboids', descripcion: '2x2x3, 3x3x2, 3x3x4…', estado: 'bloqueada' },
   { id: 'others', nombre: 'Others', descripcion: 'Clover Cube, Kilominx…', estado: 'bloqueada' },
@@ -22,7 +22,7 @@ export const SECCIONES = [
 /** Textos de cabecera de cada sección con herramienta (en español). @type {Record<string, string>} */
 export const INTRO_SECCION = {
   wca: 'Scrambles oficiales, validador de estados y solucionador de los puzzles de la WCA, con la solución animada en 3D y el modo aprender.',
-  bandaged: 'Un 3x3 con piezas pegadas entre sí: crea tus bloques tocando el cubo, carga ejemplos o firmas de la comunidad, y obtén scrambles y soluciones con giros legales.',
+  bandaged: 'Un 3x3, 4x4 o 5x5 con piezas pegadas entre sí: crea tus bloques tocando el cubo, carga ejemplos (o firmas de la comunidad en el 3x3), y obtén scrambles y soluciones con giros legales.',
 };
 
 /** @param {string} id @returns {Seccion | null} */
@@ -36,10 +36,12 @@ export const disponible = (id) => !!seccion(id) && /** @type {Seccion} */ (secci
  *   #/como-funciona       -> { seccion: 'portada', ancla: 'como-funciona' }
  *   #/wca, #/wca/<id>     -> { seccion: 'wca', puzzle: id | null }
  *   #/bandaged[?bloqueos=…|?firma=…] -> { seccion: 'bandaged', consulta }
+ *   #/bandaged?puzzle=4x4[&bloqueos=…] -> { seccion: 'bandaged', consulta, puzzle: '4x4' } (noche 13;
+ *                         sin puzzle, el 3x3: los enlaces de antes siguen igual)
  * Enlaces antiguos (antes de las secciones): #bloqueos=…, #firma=…, ?bloqueos=…, ?firma=…
  * abren Bandaged Cubes con esa configuración (antigua: true; main.js reescribe la URL).
  * Una sección bloqueada o desconocida -> portada con redirigir: true.
- * consulta = texto "bloqueos=…" o "firma=…" (sin '?'), o '' si no hay.
+ * consulta = texto "bloqueos=…" o "firma=…" (sin '?', con "puzzle=…" si lo hay), o '' si no hay.
  * @param {string} [hash]
  * @param {string} [search]
  * @returns {Ruta}
@@ -59,7 +61,11 @@ export function leerRuta(hash = '', search = '') {
   if (partes[0] === 'como-funciona' && partes.length === 1) return { seccion: 'portada', ancla: 'como-funciona' };
   if (!disponible(partes[0])) return { seccion: 'portada', redirigir: true };
   if (partes[0] === 'wca') return { seccion: 'wca', puzzle: partes[1] || null };
-  if (partes[0] === 'bandaged') return { seccion: 'bandaged', consulta: conConfig(consulta) ? consulta : '' };
+  if (partes[0] === 'bandaged') {
+    const puzzle = new URLSearchParams(consulta).get('puzzle');
+    if (puzzle) return { seccion: 'bandaged', consulta, puzzle };
+    return { seccion: 'bandaged', consulta: conConfig(consulta) ? consulta : '' };
+  }
   return { seccion: partes[0] };
 }
 

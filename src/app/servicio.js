@@ -3,7 +3,7 @@
 // Lo usan el Web Worker (worker.js) y, si no hay Worker, el hilo principal
 // (motor.js). Solo usa la interfaz común de los puzzles.
 
-import { PUZZLES } from '../puzzles/index.js';
+import { buscarPuzzle } from '../puzzles/index.js';
 import { rngSeguro } from '../core/rng.js';
 import { puzzleConBloqueos, claveBloqueos } from '../core/bloqueos.js';
 
@@ -27,14 +27,14 @@ const conBloqueos = new Map();
  * @returns {PuzzleServicio}
  */
 export function puzzleDePeticion(msg) {
-  const p = PUZZLES.find((x) => x.id === msg.puzzle);
+  const p = buscarPuzzle(msg.puzzle); // los del registro y las bases del modo vendado (4x4, 5x5)
   if (!p) throw new Error(`Puzzle desconocido: ${msg.puzzle}`);
   const def = msg.bloqueos;
   if (!def || !def.length || !p.soporteBloqueos) return p;
   const k = p.id + '#' + claveBloqueos(def);
   let q = conBloqueos.get(k);
   if (q) { conBloqueos.delete(k); conBloqueos.set(k, q); return q; }
-  // (los puzzles con soporteBloqueos tienen estado de pegatinas: el 3x3)
+  // (los puzzles con soporteBloqueos tienen estado de pegatinas: colores en el 3x3, identidades en el 4x4 y el 5x5)
   q = puzzleConBloqueos(/** @type {Puzzle<EstadoPegatinas>} */ (p), def);
   conBloqueos.set(k, q);
   while (conBloqueos.size > CONFIGS_GUARDADAS) conBloqueos.delete(/** @type {string} */ (conBloqueos.keys().next().value));

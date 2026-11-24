@@ -1,5 +1,6 @@
 // Interfaz de los bloqueos (cubo vendado): sección "Bloqueos" de los puzzles con
-// soporte de bloqueos (el 3x3). El usuario toca piezas en el editor (2D o 3D) para
+// soporte de bloqueos (3x3 y, desde la noche 13, 4x4 y 5x5; las firmas de la comunidad
+// son solo del 3x3). El usuario toca piezas en el editor (2D o 3D) para
 // agruparlas; puede crear varios bloques con colores distintos, editarlos y
 // borrarlos, cargar ejemplos, guardar sus configuraciones en el navegador,
 // compartirlas por URL e importar o exportar la firma de la comunidad.
@@ -13,6 +14,8 @@ import { bloquesDesdeFirma, firmaDesdeBloques } from '../puzzles/nxn-bloqueos.js
 export const COLORES_BLOQUE = ['#ff3ea5', '#14c7e8', '#9ad11f', '#a66cff', '#ff8a1f', '#16b89a', '#f5c400', '#ff5a5a', '#6b7cff', '#d946ef'];
 const CLAVE_GUARDADAS = 'cubo-solver:bloqueos-guardados';
 const CLAVE_ACTUAL = 'cubo-solver:bloqueos';
+/** Clave del almacenamiento de los bloques aplicados de un puzzle (la del 3x3, la de siempre). */
+const claveActual = (url = '3x3') => (url === '3x3' ? CLAVE_ACTUAL : `${CLAVE_ACTUAL}:${url}`);
 
 /** Texto de una configuración para la URL: grupos separados por "-", piezas por ".". */
 export const textoDeBloqueos = (def) => claveBloqueos(def);
@@ -21,19 +24,23 @@ export function bloqueosDeTexto(t) {
   return decodeURIComponent(t).split('-').map((g) => g.split('.').filter(Boolean)).filter((g) => g.length);
 }
 
-/** Configuración pedida en la URL (#bloqueos=... o ?bloqueos=... o ?firma=...), o null. Con las secciones (noche 11) main.js le pasa la consulta de #/bandaged?… como hash. */
-export function bloqueosDeURL(loc = typeof location !== 'undefined' ? location : null) {
+/**
+ * Configuración pedida en la URL (#bloqueos=... o ?bloqueos=... o ?firma=...), o null. Con las secciones (noche 11) main.js le pasa la consulta de #/bandaged?… como hash.
+ * url: el puzzle (3x3, 4x4, 5x5): las firmas solo valen en el 3x3.
+ */
+export function bloqueosDeURL(loc = typeof location !== 'undefined' ? location : null, url = '3x3') {
   if (!loc) return null;
   const params = new URLSearchParams((loc.hash || '').replace(/^#/, '') + '&' + (loc.search || '').replace(/^\?/, ''));
   try {
-    if (params.get('firma')) return bloquesDesdeFirma(params.get('firma'));
+    if (params.get('firma') && url === '3x3') return bloquesDesdeFirma(params.get('firma'));
   } catch { return null; }
   if (params.has('bloqueos')) return bloqueosDeTexto(params.get('bloqueos'));
   return null;
 }
 
-export function leerBloqueosGuardados() {
-  try { return JSON.parse(localStorage.getItem(CLAVE_ACTUAL) || '[]') || []; } catch { return []; }
+/** Últimos bloques aplicados de un puzzle en este navegador. @param {string} [url] 3x3, 4x4 o 5x5 */
+export function leerBloqueosGuardados(url = '3x3') {
+  try { return JSON.parse(localStorage.getItem(claveActual(url)) || '[]') || []; } catch { return []; }
 }
 
 const aclarar = (hex, k) => {
@@ -59,6 +66,7 @@ export function crearPanelBloqueos(ctx) {
   const borradores = new Map(); // clave -> puzzle con bloqueos (para dibujar el borrador)
 
   const sop = () => ctx.base() && ctx.base().soporteBloqueos;
+  const urlPuzzle = () => (ctx.puzzleURL ? ctx.puzzleURL() : '3x3');
   const piezaDePegatina = () => {
     const s = sop();
     const m = new Map();
@@ -97,7 +105,9 @@ export function crearPanelBloqueos(ctx) {
     const grupoDe = new Map();
     grupos.forEach((g, i) => g.forEach((k) => grupoDe.set(k, i)));
     const nPal = base.paleta.length;
-    const colores = estado.map((c, i) => {
+    // (4x4 y 5x5: el estado es de identidades; sus colores los da el puzzle)
+    const coloresEstado = base.colores ? base.colores(estado) : estado;
+    const colores = coloresEstado.map((c, i) => {
       const g = grupoDe.get(deP.get(i));
       return g === undefined ? nPal + c : 2 * nPal + (g % COLORES_BLOQUE.length);
     });
@@ -146,13 +156,15 @@ export function crearPanelBloqueos(ctx) {
     sel.innerHTML = '';
     const op = (v, t) => { const o = document.createElement('option'); o.value = v; o.textContent = t; return o; };
     sel.appendChild(op('', 'Elegir una configuración…'));
-    sel.appendChild(op('vacia', 'Sin bloqueos (3x3 normal)'));
+    sel.appendChild(op('vacia', `Sin bloqueos (${base.nombre} normal)`));
     const g1 = document.createElement('optgroup'); g1.label = 'Ejemplos';
     (base.ejemplosBloqueos || []).forEach((e) => g1.appendChild(op('ej:' + e.id, e.nombre)));
     sel.appendChild(g1);
-    if (guardadas.length) {
+    // las guardadas de este puzzle (las de antes de la noche 13 no llevan puzzle: son del 3x3)
+    const delPuzzle = guardadas.map((e, i) => ({ e, i })).filter(({ e }) => (e.puzzle || '3x3') === urlPuzzle());
+    if (delPuzzle.length) {
       const g2 = document.createElement('optgroup'); g2.label = 'Guardadas';
-      guardadas.forEach((e, i) => g2.appendChild(op('g:' + i, e.nombre)));
+      delPuzzle.forEach(({ e, i }) => g2.appendChild(op('g:' + i, e.nombre)));
       sel.appendChild(g2);
     }
     sel.value = '';
@@ -207,7 +219,9 @@ export function crearPanelBloqueos(ctx) {
     $('bloq-aplicar').textContent = editando ? 'Terminar y aplicar' : 'Aplicar';
     $('bloq-quitar').disabled = !grupos.length;
     $('bloq-guardar').disabled = !grupos.some((g) => g.length >= 2);
-    try { $('bloq-firma-actual').textContent = firmaDesdeBloques(aplicados) || '0'; } catch { $('bloq-firma-actual').textContent = '—'; }
+    // firmas del Bandaged Cube Explorer: solo del 3x3
+    $('bloq-firmas').hidden = urlPuzzle() !== '3x3';
+    if (urlPuzzle() === '3x3') try { $('bloq-firma-actual').textContent = firmaDesdeBloques(aplicados) || '0'; } catch { $('bloq-firma-actual').textContent = '—'; }
     pintarAnalisis();
   }
 
@@ -224,9 +238,13 @@ export function crearPanelBloqueos(ctx) {
     if (a.errores && a.errores.length) return;
     const caras = [...new Set((a.legalesResuelto || []).map((m) => m.replace(/['2]/g, '')))];
     fila(`Giros posibles con el cubo resuelto: ${caras.join(', ') || 'ninguno'}.`);
-    fila(`Alcanzables: ${formatearNumero(a.geometrias)} geometrías${a.geometriasExacto ? '' : ' (o más)'} y ${formatearNumero(a.estados)} estados${a.estadosExacto ? '' : ' (aprox.)'}.`);
-    if (a.sinBloques) fila('Es el 3x3 normal.');
+    if (a.estadosDistinguibles) {
+      // 4x4, 5x5: los estados que se ven distintos (los centros iguales no se distinguen)
+      fila(`Alcanzables: ${formatearNumero(a.geometrias)} geometrías${a.geometriasExacto ? '' : ' (o más)'} y ${formatearNumero(a.estadosDistinguibles)} estados distinguibles${a.distinguiblesExacto ? '' : ' (aprox.)'} (${formatearNumero(a.estados)} si los centros del mismo color se contaran como distintos).`);
+    } else fila(`Alcanzables: ${formatearNumero(a.geometrias)} geometrías${a.geometriasExacto ? '' : ' (o más)'} y ${formatearNumero(a.estados)} estados${a.estadosExacto ? '' : ' (aprox.)'}.`);
+    if (a.sinBloques) fila(`Es el ${ctx.base().nombre} normal.`);
     else if (a.espacio === 'pequeño') fila(`Espacio pequeño: scramble de estado aleatorio uniforme y solución óptima (BFS completo, diámetro ${a.diametro}).`);
+    else if (a.minkwitz) fila(`Espacio grande: scramble de giros legales al azar (${formatearNumero(a.pasosScramble || 0)} pasos de un paseo al azar); solución en dos fases: geometría (búsqueda) y permutación con tablas de Minkwitz (${a.minkwitz.completo ? 'completas' : 'INCOMPLETAS: puede que algún estado no se resuelva'}). Las soluciones son largas (cientos de giros) pero siempre se comprueban giro a giro.`);
     else fila(`Espacio grande: scramble de giros legales al azar (${formatearNumero(a.pasosScramble || 0)} pasos de un paseo al azar, suficientes para mezclar geometría y piezas); solución por búsqueda directa y por dos fases (geometría y permutación), la más corta.`);
     if (a.msTablas != null) fila(`Tablas generadas en ${formatearNumero(a.msTablas)} ms${a.mbBFS ? ` (${a.mbBFS} MB)` : ''}.`, 'tenue');
     for (const e of a.avisos || []) fila(e, 'mensaje info');
@@ -251,7 +269,7 @@ export function crearPanelBloqueos(ctx) {
     if (c.errores.length) { pintar(); return; }
     terminarEdicion();
     if (claveBloqueos(def) !== claveBloqueos(ctx.aplicados())) analisis = null;
-    try { localStorage.setItem(CLAVE_ACTUAL, JSON.stringify(def)); } catch { /* sin almacenamiento */ }
+    try { localStorage.setItem(claveActual(urlPuzzle()), JSON.stringify(def)); } catch { /* sin almacenamiento */ }
     ctx.aplicar(def);
     pintar();
   }
@@ -279,21 +297,22 @@ export function crearPanelBloqueos(ctx) {
     $('bloq-guardar').addEventListener('click', () => {
       const def = grupos.filter((g) => g.length >= 2);
       const nombre = $('bloq-nombre').value.trim() || `Mi configuración ${guardadas.length + 1}`;
-      const i = guardadas.findIndex((g) => g.nombre === nombre);
-      if (i >= 0) guardadas[i].bloques = def; else guardadas.push({ nombre, bloques: def });
+      const u = urlPuzzle();
+      const i = guardadas.findIndex((g) => g.nombre === nombre && (g.puzzle || '3x3') === u);
+      if (i >= 0) guardadas[i].bloques = def; else guardadas.push(u === '3x3' ? { nombre, bloques: def } : { nombre, bloques: def, puzzle: u });
       try { localStorage.setItem(CLAVE_GUARDADAS, JSON.stringify(guardadas)); ctx.mensaje('ok', `Configuración "${nombre}" guardada en este navegador.`); } catch { ctx.mensaje('error', 'No se pudo guardar: el navegador no deja usar el almacenamiento.'); }
       pintarConfigs();
     });
     $('bloq-borrar').addEventListener('click', () => {
       const nombre = $('bloq-nombre').value.trim();
-      const i = guardadas.findIndex((g) => g.nombre === nombre);
+      const i = guardadas.findIndex((g) => g.nombre === nombre && (g.puzzle || '3x3') === urlPuzzle());
       if (i < 0) { ctx.mensaje('info', 'Escribe el nombre de una configuración guardada para borrarla.'); return; }
       guardadas.splice(i, 1);
       try { localStorage.setItem(CLAVE_GUARDADAS, JSON.stringify(guardadas)); } catch { /* sin almacenamiento */ }
       pintarConfigs();
     });
     $('bloq-enlace').addEventListener('click', async (ev) => {
-      const url = location.href.split('#')[0].split('?')[0] + '#/bandaged?bloqueos=' + encodeURIComponent(textoDeBloqueos(ctx.aplicados()));
+      const url = location.href.split('#')[0].split('?')[0] + '#/bandaged?' + (ctx.consultaPuzzle ? ctx.consultaPuzzle() : '') + 'bloqueos=' + encodeURIComponent(textoDeBloqueos(ctx.aplicados()));
       const b = ev.currentTarget;
       try { await navigator.clipboard.writeText(url); b.textContent = 'Enlace copiado'; } catch { $('bloq-url').hidden = false; $('bloq-url').value = url; $('bloq-url').select(); b.textContent = 'Cópialo de aquí'; }
       setTimeout(() => { b.textContent = 'Copiar enlace'; }, 1600);
