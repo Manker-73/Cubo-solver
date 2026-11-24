@@ -350,8 +350,22 @@ main:focus { outline: none; }
 
 /* ---------- Bloqueos (cubo vendado) ---------- */
 .panel-bloqueos { grid-column: 1 / -1; }
-/* Bandaged Cubes: tus bloques primero, luego el scramble y el solucionador del 3x3 vendado */
-.seccion-herramienta[data-seccion="bandaged"] .panel-bloqueos { order: -1; }
+/* Orden de los paneles (main.js, ordenarPaneles, mueve los nodos: el tabulador sigue el orden visual).
+   WCA Puzzles: .paneles-par no existe para la maqueta (display: contents): Scramble | Resolver como siempre.
+   Bandaged Cubes: Tus bloques → Resolver → Scramble; una columna hasta 999 px y, desde 1000 px, Tus bloques
+   y Resolver lado a lado (el cubo a la derecha) con el Scramble debajo, a todo el ancho. */
+.paneles-par { display: contents; }
+.seccion-herramienta[data-seccion="bandaged"] .paneles { grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 1000px) {
+  .seccion-herramienta[data-seccion="bandaged"] .paneles-par {
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; align-items: start;
+  }
+  .seccion-herramienta[data-seccion="bandaged"] .paneles-par .panel-bloqueos { grid-column: auto; }
+  /* Si «Tus bloques» es más alto, el Resolver (con el cubo) se queda a la vista al bajar por la lista; solo
+     cuando cabe entero en la ventana (clase .cabe, main.js): si no, taparía su propio final. Al ser
+     .paneles-par su contenedor, nunca baja hasta el Scramble. */
+  .seccion-herramienta[data-seccion="bandaged"] #panel-resolver.cabe { position: sticky; top: 16px; }
+}
 .bloq-fila { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .bloq-fila label { font-weight: 600; font-size: 0.9rem; }
 .bloq-fila select, .bloq-fila input[type="text"] {

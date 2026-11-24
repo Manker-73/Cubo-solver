@@ -51,7 +51,11 @@
       <p class="seccion-intro" id="intro-seccion"></p>
       <nav class="selector" id="selector" aria-label="Puzzle"></nav>
     </div>
-    <div class="paneles">
+    <!-- Orden de los paneles por sección (main.js, ordenarPaneles): WCA Puzzles, Scramble → Resolver (en
+         .paneles-par, que ahí es display: contents) y Tus bloques (oculto); Bandaged Cubes, Tus bloques →
+         Resolver (en .paneles-par: lado a lado en escritorio) y Scramble debajo. -->
+    <div class="paneles" id="paneles">
+    <div class="paneles-par" id="paneles-par">
     <section class="panel" aria-labelledby="t-scramble" id="panel-scramble">
       <div class="panel-cab">
         <h2 id="t-scramble">Scramble</h2>
@@ -143,6 +147,7 @@
         </div>
       </div>
     </section>
+    </div>
 
     <section class="panel panel-bloqueos" aria-labelledby="t-bloqueos" id="panel-bloqueos" hidden>
       <div class="panel-cab">

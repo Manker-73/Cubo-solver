@@ -1083,6 +1083,36 @@ function puzzleWCAInicial() {
 }
 
 /**
+ * Orden de los paneles según la sección. Se mueven los nodos (no CSS order) para que el orden del DOM,
+ * el del tabulador y el de los lectores de pantalla sean el visual:
+ *   WCA Puzzles: [Scramble, Resolver] (en .paneles-par, display: contents) y Tus bloques (oculto), como siempre;
+ *   Bandaged Cubes: [Tus bloques, Resolver] (en .paneles-par: lado a lado en escritorio) y Scramble.
+ * Solo maquetación: los paneles conservan sus nodos, escuchadores y lienzos (mover un canvas no pierde WebGL).
+ * @param {string} seccion
+ */
+function ordenarPaneles(seccion) {
+  const par = $('paneles-par');
+  const [a, b, c] = seccion === 'bandaged'
+    ? ['panel-bloqueos', 'panel-resolver', 'panel-scramble']
+    : ['panel-scramble', 'panel-resolver', 'panel-bloqueos'];
+  const sig = par.nextElementSibling;
+  if ([...par.children].map((e) => e.id).join() === `${a},${b}` && sig && sig.id === c) return;
+  const foco = document.activeElement;
+  par.append($(a), $(b));
+  $('paneles').append($(c));
+  if (foco instanceof HTMLElement && foco !== document.activeElement && foco.isConnected) foco.focus({ preventScroll: true });
+}
+
+/** Escritorio, Bandaged Cubes: el Resolver solo se queda fijo al bajar (sticky, CSS) si cabe entero en la ventana. */
+function vigilarResolverFijo() {
+  const panel = $('panel-resolver');
+  const mirar = () => panel.classList.toggle('cabe', panel.offsetHeight + 32 <= window.innerHeight);
+  if (typeof ResizeObserver === 'function') new ResizeObserver(mirar).observe(panel);
+  window.addEventListener('resize', mirar);
+  mirar();
+}
+
+/**
  * Lee la URL y muestra la sección. Enlaces antiguos (#bloqueos=…, ?firma=…) abren Bandaged
  * Cubes con esa configuración; una sección bloqueada o desconocida vuelve a la portada.
  * navegacion: el usuario ha cambiado el hash (enlace, atrás/adelante): el foco va al título.
@@ -1095,6 +1125,7 @@ function aplicarRuta({ navegacion = false } = {}) {
   $('herramienta').hidden = !herramienta;
   $('app').dataset.seccion = r.seccion;
   $('herramienta').dataset.seccion = herramienta ? r.seccion : '';
+  if (herramienta) ordenarPaneles(r.seccion);
   if (!herramienta) {
     // fuera de las herramientas: nada se anima en segundo plano
     repSol.cancelar();
@@ -1216,6 +1247,7 @@ function iniciar() {
   // El puzzle de una sección con herramienta se elige al momento al entrar (antes se esperaba
   // al ping de los Workers y un clic en "Resolver" en ese tiempo se perdía).
   window.addEventListener('hashchange', () => aplicarRuta({ navegacion: true }));
+  vigilarResolverFijo();
   aplicarRuta();
 }
 

@@ -1004,6 +1004,8 @@ test('app: enlaces con puzzle= (4x4 y 5x5) y enlaces antiguos sin puzzle (3x3)',
 
 // ---------- Secciones, navegación y tema (noche 11) ----------
 const esperaHash = (ctx, re) => ctx.hasta(() => re.test(ctx.w.location.hash));
+// Orden de los paneles en el DOM (= orden visual y del tabulador), sin los ocultos.
+const ordenPaneles = (doc) => [...doc.querySelectorAll('#paneles section.panel')].filter((e) => !e.hidden).map((e) => e.id);
 const herramientaLista = (ctx, seccion, puzzle) => ctx.hasta(() => {
   const e = ctx.w.cuboSolver.estado();
   return e.seccion === seccion && (!puzzle || e.puzzle === puzzle) && ctx.doc.querySelector('#vista-scramble svg')
@@ -1042,6 +1044,9 @@ test('app: navegación entre secciones (portada, WCA Puzzles con #/wca/<id>, Ban
   assert.equal(doc.getElementById('portada').hidden, true);
   assert.equal(doc.getElementById('t-seccion').textContent, 'WCA Puzzles');
   assert.equal(doc.getElementById('panel-bloqueos').hidden, true);
+  // WCA Puzzles: el orden de siempre (Scramble → Resolver; Tus bloques, oculto, al final)
+  assert.deepEqual(ordenPaneles(doc), ['panel-scramble', 'panel-resolver']);
+  assert.deepEqual([...doc.querySelectorAll('#paneles section.panel')].map((e) => e.id), ['panel-scramble', 'panel-resolver', 'panel-bloqueos']);
   assert.equal(doc.querySelector('#selector .chip[aria-pressed="true"]').textContent, '3x3');
   // FTO (noche 12): ya no está bloqueado; es un chip normal, como los demás
   assert.equal(doc.querySelector('#selector .chip-pronto'), null);
@@ -1078,6 +1083,18 @@ test('app: navegación entre secciones (portada, WCA Puzzles con #/wca/<id>, Ban
   assert.equal(doc.getElementById('selector').hidden, false);
   assert.equal(doc.querySelectorAll('#selector .chip').length, 3);
   assert.equal(doc.getElementById('panel-bloqueos').hidden, false);
+  // Bandaged Cubes: Tus bloques → Resolver (lado a lado en escritorio, en .paneles-par) → Scramble
+  assert.deepEqual(ordenPaneles(doc), ['panel-bloqueos', 'panel-resolver', 'panel-scramble']);
+  assert.deepEqual([...doc.getElementById('paneles-par').children].map((e) => e.id), ['panel-bloqueos', 'panel-resolver']);
+  // y al volver a WCA Puzzles, otra vez el orden de siempre (los paneles conservan sus nodos)
+  const lienzo = doc.getElementById('vista-editor');
+  w.location.hash = '#/wca/3x3';
+  await herramientaLista(ctx, 'wca', '3x3');
+  assert.deepEqual(ordenPaneles(doc), ['panel-scramble', 'panel-resolver']);
+  assert.equal(doc.getElementById('vista-editor'), lienzo);
+  w.location.hash = '#/bandaged';
+  await herramientaLista(ctx, 'bandaged', '3x3');
+  assert.deepEqual(ordenPaneles(doc), ['panel-bloqueos', 'panel-resolver', 'panel-scramble']);
   // Secciones bloqueadas o desconocidas por URL: vuelven a la portada
   for (const h of ['#/shape-mods', '#/cuboids', '#/others', '#/shape-mods/mirror', '#/nada', '#algo']) {
     w.location.hash = '#/wca/3x3';
