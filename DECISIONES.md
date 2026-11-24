@@ -605,3 +605,56 @@ Casi todo el tiempo es de **solvers con límite de tiempo**: cada caso consume (
 **Riesgos**: (1) los imports con extensión: cada `import './x.js'` pasa a `./x.ts` y un olvido solo se ve al ejecutar (lo detectaría `tsc` con `allowImportingTsExtensions`); (2) `tests/trabajador.mjs` y `tests/util.mjs` importan los módulos por ruta: hay que cambiar las rutas; (3) el bundle ya no saldrá idéntico byte a byte si se cambia sintaxis (p. ej. `satisfies`); la comprobación pasa a ser «mismo código salvo nombres» (comparar la build con `minifyIdentifiers: false`, como se hizo aquí para encontrar las dos diferencias); (4) los `@typedef` con `ReturnType<typeof f>` hay que convertirlos en interfaces explícitas si se quieren mensajes de error legibles; (5) la «type stripping» de Node sigue siendo experimental en algunas versiones: fijar la versión de Node en la Action (hoy `node-version: 22`).
 
 **Estimación**: pasos 1–3, una sesión (~3 h); paso 4, media sesión; paso 5, una o dos sesiones (los solvers grandes tienen mucho código numérico: tipos mínimos); paso 6, una sesión. Total ≈ 4–5 sesiones.
+
+# Noche 12: FTO (Face-Turning Octahedron)
+
+## Notación: la del Reglamento WCA 2027 (12f)
+La WCA aprobó el FTO el 24/06/2026 como modalidad oficial desde el 2 de enero de 2027 (media de 5). El texto del reglamento aún no está en la versión publicada (1/4/2026); está en la rama `drafts2027` de github.com/thewca/wca-regulations (PR #31, «P002-FTO», último commit 16/11/2026):
+- **12f1**: «The puzzle is oriented with four faces visible, and the corner between them facing the scrambler.»
+- **12f2/12f3**: U (arriba), F (delante), R, L, B (detrás), D (abajo), BR (detrás a la derecha), BL (detrás a la izquierda); 120° en sentido horario, con `'` antihorario.
+- **4d6**: se mezcla con blanco arriba y verde delante. **4b3**: el FTO **no** está entre las excepciones, así que el scramble tiene que ser de **estado aleatorio** (uniforme entre los estados que necesitan al menos 2 giros). **10f3**: desalineación máxima de 60°.
+
+Con el vértice hacia quien mezcla, las cuatro caras de delante son U (arriba), R, F (abajo) y L; detrás, B es la vecina de U, BR la de R, BL la de L y D la de F. Opuestas: U–D, F–B, R–BL, L–BR (los tests lo comprueban sobre la geometría).
+
+**csTimer usa las mismas letras** (`U D F B L BR R BL` con `'`; en su scramble de movimientos aleatorios agrupa justo esas parejas opuestas), así que no hay diferencia que explicar. csTimer tiene además notaciones propias para practicar (giros dobles, `Rw`, `T`, rotaciones entre corchetes) que no forman parte de la notación WCA: no las usamos.
+
+## Colores: los de TNoodle
+El reglamento solo exige un color distinto por cara (3a3). El esquema por defecto es el del programa oficial de scrambles, TNoodle (`FaceTurningOctahedronPuzzle.getDefaultColorScheme`): U blanco, F verde, R rojo, L morado, B azul, D amarillo, BR gris, BL naranja. Cumple 4d6 (verde comparte esquina con blanco). Con tonos de la paleta de la app (morado y gris, los del Megaminx). **Pendiente de comprobar con un FTO físico** (la mayoría de FTO de la comunidad, p. ej. el DianSheng, usan este esquema, pero no lo he podido verificar).
+
+## Modelo
+- `crearGeoPuzzle` con el octaedro (vértices en (0,0,±1) y (±1,±1,0)/√2) y un plano de corte por cara a 1/3 del inradio: 72 pegatinas, 27 por giro. Red 2D como la imagen de TNoodle: dos cuadrados (las caras de delante de frente y las de detrás vistas desde atrás).
+- Piezas por las capas en las que está cada pegatina: 4 caras = esquina (6), 2 = arista (12), 3 = triángulo (24).
+- **Tétradas**: las caras se reparten en A = {U, F, BR, BL} y B = {R, L, B, D}, que no se tocan entre sí. Cada arista une una cara A y una B, y alrededor de una esquina se alternan. Ordenando las pegatinas de cada pieza desde una cara A, ningún giro voltea una arista y las esquinas solo giran 0 o 2 pasos (de 4): eso hace las coordenadas mucho más simples.
+- El FTO **no tiene ninguna pieza fija**: el estado son las 72 pegatinas tal como se sujeta, y está resuelto si cada cara es de un color (en cualquier orientación).
+
+## Restricciones: demostradas (`fto-grupo.js`)
+Schreier–Sims sobre las pegatinas: esquinas 6!/2·2⁵ = 11.520, aristas 12!/2, cada órbita de triángulos (los de las caras A y los de las B, nunca se mezclan) 12!/2, y el puzzle entero **exactamente el producto**: 158.260.810.061.489.362.698.240.000.000. No hay ninguna otra restricción.
+- De las 24 rotaciones del puzzle entero, **12 están en el grupo** (las de la tétrada, que no cambian A por B); las otras 12 cambian a la vez la paridad de esquinas, aristas y triángulos.
+- Posiciones distintas = |G| / (648² · 12) = **31.408.133.379.194.880.000.000** (648 = 3!⁴/2: en cada órbita de triángulos, los cambios pares entre triángulos iguales; 12: las orientaciones que se ven igual). Coincide con la de Wikipedia (6!·2⁶·12!·(12!)²/(2·4·3!⁸·12)). Las dos fórmulas cuentan lo mismo de dos maneras: Wikipedia habla de «paridades iguales de esquinas y aristas» porque deja libre la orientación; con la orientación fijada por las tétradas, las dos son pares.
+- Comprobación empírica en los tests: 2000 giros al azar sobre el modelo de piezas cumplen todas las invariantes.
+- **Cota inferior por conteo: 21** giros (8 caras × 2 sentidos; solo conmutan las opuestas, que se cuentan en un solo orden).
+
+## Validador
+Sin centros fijos, la orientación se deduce de las piezas: la mayoría de las aristas dice qué colores hacen de tétrada A (si hay empate, los triángulos), y entre las 12 rotaciones de esa mitad se elige la que deja más pegatinas en su sitio. Mensajes: pieza inexistente o especular, repetida o que falta, arista volteada, esquina girada un cuarto, triángulos en caras imposibles (de una tétrada a la otra), dos esquinas o dos aristas intercambiadas, número impar de esquinas giradas media vuelta, colores mal contados.
+
+## Solver: fases
+**Lo que hay publicado**: el scrambler oficial de TNoodle usa `fto3phase` (Levi Gibson), tres fases tipo Kociemba: G0 = todos los giros → G1 = ⟨U, R, L, B, D⟩ (aristas y triángulos de D en D) → G2 = ⟨R, L, B, D⟩ (aristas en su cara B, triángulos B, y los de A «pegados» a las esquinas) → resuelto (esquinas 6!/2·2⁵ × aristas 3⁴). csTimer (`ftocta.js`, de cs0x7f) tiene otro solver propio y métodos de entrenamiento de la última capa (L3T, TCP). Elegí las fases de fto3phase porque están pensadas para el estado aleatorio (lo que exige 4b3) y porque comprobé con Schreier–Sims que **G2 tiene 933.120 elementos tanto sobre todas las pegatinas como sobre esquinas + aristas**: dentro de G2 los triángulos no añaden nada, y la fase 3 cabe en una tabla exacta. Las coordenadas y las tablas son nuestras (`crearBuscador`):
+1. **G0 → G1** (16 giros): posiciones y paridad de las 3 aristas de D (440) × posiciones de los 3 triángulos amarillos (220). Tabla exacta de 96.800.
+2. **G1 → G2** (10 giros): aristas por cara B con la paridad de los tríos de R y L (6720) × triángulos de R, L y B (1680) = **11,3 M** (la tabla más grande, 11,3 MB; como la «TxE» de fto3phase), y una tabla por cara A: posiciones de sus 3 esquinas, en cuál de sus dos huecos A está la pegatina de esa cara (160) × posiciones de sus 3 triángulos (220). El objetivo es un subgrupo: **`crearBuscador` admite ahora `cierre`** (los giros que generan el subgrupo): las tablas empiezan con distancia 0 en todo lo que se alcanza desde el resuelto con ellos. Sin `cierre`, nada cambia para los demás puzzles.
+3. **G2 → resuelto** (8 giros): esquinas (720 · 2⁶) × aristas (3⁴) = 3,7 M, exacta: óptima en G2 (como mucho 11 giros).
+- Se toman las 20 primeras soluciones de la fase 1 (la más corta y una más) y se busca la fase 2 por longitud total creciente; al llegar a G2 (comprobado con la tabla de la fase 3) se hace la fase 3 y se comprueban las piezas.
+- **Orientaciones**: el FTO se puede resolver desde cualquiera de sus 12 orientaciones del grupo, y la fase 2 cuesta muy distinto en cada una (de 30 ms a varios segundos para el mismo estado). El solver reparte el tiempo en rondas (40 ms por orientación, luego ×3) y se queda con la más corta dentro de `tiempoMax` (1 s por defecto). En los tests, 300 ms.
+- **Scramble**: estado de piezas uniforme (esquinas y aristas en permutación par, número par de esquinas giradas, triángulos en cualquier orden), descartando los que están a menos de 2 giros. Para no sesgar el reparto, la solución tiene que llevar exactamente al resuelto de referencia (blanco arriba, verde delante), no a uno girado. Por eso no se reetiquetan colores: se gira el puzzle entero con una de las 12 rotaciones del grupo (conjugación), se resuelve en ese marco y se traducen los nombres de los giros. Todas llevan al mismo resuelto, así que se puede probar en los 12 marcos y quedarse con la primera (test: el scramble da exactamente el estado elegido).
+
+## Lo que no funcionó
+- **Coordenada de las esquinas de cada cara A con solo su media vuelta** (como fto3phase, que guarda `nCr(6,3)·2³`): en nuestro modelo la orientación depende de qué esquina es, así que no basta. Hay que guardar en qué hueco A está la pegatina de esa cara.
+- **Aristas de la fase 2 sin la paridad de los tríos** (1680 en vez de 6720): muchos estados daban 0 en todas las tablas sin estar en G2 (hasta 116 rechazos en un estado y más de 8 s). Con las paridades, ningún rechazo en las pruebas.
+- **Tablas extra de aristas o triángulos B × triángulos de cada cara A** (369.600 cada una): no podan más y cada nodo hace más consultas; más lento.
+- **Más candidatas de la fase 1** (40–60): igual de largo y más lento que 20. Menos (8–10) alarga ~0,5 giros.
+- La tabla de aristas sin paridades × triángulos B (2,8 M) generaba en 1,2 s, pero cada solución tardaba ~1,5 s de media con colas de más de 8 s. La de 11,3 M tarda ~1,8 s en generarse (×4 en móvil: ~8,4 s, dentro del límite de ~10 s acordado) y baja la media a ~0,25 s por orientación.
+
+## Interfaz
+Ningún cambio en `main.js`: el FTO entra por el registro (sale de `PUZZLES_PRONTO`, que queda vacío) y la interfaz común. La portada ya no dice «FTO pronto» y el pie lo cuenta entre los scrambles de estado aleatorio. Modo aprender: pendiente (ver ESTADO.md).
+
+## Registro: campos mal escritos
+`tsc` no ve un campo opcional mal escrito en la definición de un puzzle (cae en los campos propios). `tests/registro.test.mjs` lee `DefinicionPuzzle` y `Puzzle` de `src/core/tipos.d.ts` y comprueba que cada campo de cada puzzle del registro es de la interfaz o está en la lista de campos propios permitidos de ese puzzle (y que la lista no tiene campos que ya no existen). Comprobado: `avisoInicialisacion` en el FTO pasa `npm run tipos` y este test lo detecta.

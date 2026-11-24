@@ -4,14 +4,14 @@ Generador de scrambles WCA, validador de estado y solucionador visual de puzzles
 Aplicación web en un único HTML, sin servidor.
 
 **Mezcla. Comprueba. Resuelve. Aprende.** La portada lleva a las secciones (los nombres, en inglés, como en la comunidad):
-- **WCA Puzzles** (`#/wca`, y `#/wca/<puzzle>` para abrir uno: `#/wca/megaminx`): scramble, editor, solucionador, vista 3D y modo aprender de 2x2–7x7, Pyraminx, Skewb, Square-1 y Megaminx. El FTO aparece ya como «pronto».
+- **WCA Puzzles** (`#/wca`, y `#/wca/<puzzle>` para abrir uno: `#/wca/megaminx`): scramble, editor, solucionador, vista 3D y modo aprender de 2x2–7x7, Pyraminx, Skewb, Square-1, Megaminx y FTO (Face-Turning Octahedron, oficial de la WCA desde el 2 de enero de 2027).
 - **Bandaged Cubes** (`#/bandaged`): el 3x3 vendado con tus bloques y las firmas de la comunidad.
 - *Shape Mods*, *Cuboids* y *Others*: próximamente (se ven bloqueadas en la portada).
 
 Tema oscuro por defecto; el botón de la cabecera cambia a claro (y lo recuerda en el navegador). Funciona sin conexión: las fuentes van dentro del HTML y no se pide nada a la red.
 
-- **Scrambles**: 2x2 a 7x7, Square-1, Skewb, Pyraminx y Megaminx (estado aleatorio en 2x2, 3x3, Pyraminx, Skewb y Square-1).
-- **Validador y solucionador en todos los puzzles**: 2x2 (óptimo), 3x3 (dos fases de Kociemba), 4x4 (reducción en tres fases de búsqueda, sin paridades OLL ni PLL, ~55 movimientos) y 5x5 a 7x7 (reducción: búsqueda por etapas en los centros, aristas emparejadas con un voraz de macros que no mueven los centros y conmutadores para lo que quede; ~109, ~256 y ~356 movimientos), Pyraminx (óptimo), Skewb (óptimo), Square-1 (dos fases: forma de cubo y permutación, solo con giros posibles) y Megaminx (por etapas con búsqueda IDA* y la última capa con macros buscadas automáticamente; ~90 giros de cara de media).
+- **Scrambles**: 2x2 a 7x7, Square-1, Skewb, Pyraminx, Megaminx y FTO (estado aleatorio en 2x2, 3x3, Pyraminx, Skewb, Square-1 y FTO).
+- **Validador y solucionador en todos los puzzles**: 2x2 (óptimo), 3x3 (dos fases de Kociemba), 4x4 (reducción en tres fases de búsqueda, sin paridades OLL ni PLL, ~55 movimientos) y 5x5 a 7x7 (reducción: búsqueda por etapas en los centros, aristas emparejadas con un voraz de macros que no mueven los centros y conmutadores para lo que quede; ~109, ~256 y ~356 movimientos), Pyraminx (óptimo), Skewb (óptimo), Square-1 (dos fases: forma de cubo y permutación, solo con giros posibles) Megaminx (por etapas con búsqueda IDA* y la última capa con macros buscadas automáticamente; ~90 giros de cara de media) y FTO (tres fases con tablas de poda, como el scrambler oficial de TNoodle; ~27 giros de media, cota inferior 21).
 - **Modo aprender** (2x2, 3x3, 4x4, 5x5, Pyraminx, Skewb y Square-1): además de la solución por ordenador, una solución por un **método humano** explicada paso a paso: 3x3 por capas para principiantes o CFOP; 2x2 por capas o Ortega; 4x4 y 5x5 por reducción (con el 3x3 por capas o CFOP y las paridades); Pyraminx, Skewb y Square-1 por sus métodos de principiantes.
 - **3x3 vendado** (bloqueos definidos por el usuario): pega piezas entre sí (parejas, barras, bloques 1x2x2, 2x2x2…) y el 3x3 se comporta como un cubo vendado real: solo giros que no rompen ningún bloque, scramble y solución adaptados a cada configuración, dos estrategias de solución (búsqueda directa, y geometría y luego permutación) y comparación con la solución sin bloqueos.
 - Las tablas se generan en el navegador dentro de un Web Worker (la página no se bloquea); si no hay Worker, en el hilo principal.
@@ -20,9 +20,9 @@ Tema oscuro por defecto; el botón de la cabecera cambia a claro (y lo recuerda 
 
 ## Cómo usarla
 
-1. Entra en **WCA Puzzles** y elige el puzzle (2x2 … 7x7, Pyraminx, Skewb, Square-1, Megaminx); la URL cambia a `#/wca/<puzzle>`, así que se puede guardar o compartir.
+1. Entra en **WCA Puzzles** y elige el puzzle (2x2 … 7x7, Pyraminx, Skewb, Square-1, Megaminx, FTO); la URL cambia a `#/wca/<puzzle>`, así que se puede guardar o compartir.
 2. **Scramble**: pulsa *Nuevo scramble*; *Copiar* lo copia al portapapeles. Los scrambles se preparan por adelantado en segundo plano, así que al cambiar de puzzle suele salir al momento; la primera vez en cada puzzle, las tablas del solucionador se generan en segundo plano (unos segundos; hasta ~8 s en el 7x7) sin retrasar el scramble.
-3. **Resolver** (un clic basta; si las tablas aún se están generando, se ve "Generando tablas… X s" y la solución aparece al terminar): pinta el estado de tu puzzle eligiendo un color de la paleta y tocando las pegatinas (o pulsa *Cargar scramble actual*) y luego *Resolver*. Puedes sujetar el puzzle en cualquier orientación: la solución sale para como lo tengas. *Rellenar cara* (cubos grandes y Megaminx) pinta una cara entera de un toque y *Deshacer* (o Ctrl+Z) deshace el último cambio. Si el estado es imposible, la app dice qué pieza falla. Resolver un 4x4–7x7 tarda 1–7 s de media (hasta ~13 s en el peor caso medido); un Megaminx, unos 2,5–3 s (prueba muchas orientaciones y se queda con la solución más corta).
+3. **Resolver** (un clic basta; si las tablas aún se están generando, se ve "Generando tablas… X s" y la solución aparece al terminar): pinta el estado de tu puzzle eligiendo un color de la paleta y tocando las pegatinas (o pulsa *Cargar scramble actual*) y luego *Resolver*. Puedes sujetar el puzzle en cualquier orientación: la solución sale para como lo tengas. *Rellenar cara* (cubos grandes y Megaminx) pinta una cara entera de un toque y *Deshacer* (o Ctrl+Z) deshace el último cambio. Si el estado es imposible, la app dice qué pieza falla. Resolver un 4x4–7x7 tarda 1–7 s de media (hasta ~13 s en el peor caso medido); un Megaminx, unos 2,5–3 s (prueba muchas orientaciones y se queda con la solución más corta); un FTO, ~1 s (las tablas, la primera vez, ~2 s en un ordenador y ~8–9 s en un móvil lento).
 4. Recorre la solución con los botones de reproducción (paso a paso, play y velocidad); *Copiar* copia los movimientos. En los puzzles con etapas (cubos grandes, Megaminx) la barra de fases muestra en qué etapa está cada tramo.
 
 ### Modo aprender (2x2, 3x3, 4x4, 5x5, Pyraminx, Skewb y Square-1)
@@ -44,7 +44,7 @@ Al resolver en modo aprender:
 - Arriba se muestra la **longitud total** del método frente a la de la **solución óptima** (por ejemplo, "Método CFOP: 56 giros (+ 4 giros del cubo entero) · solución óptima: 20 giros"). Las rotaciones del cubo entero (`x`, `y`, `z`) se cuentan aparte.
 - Los nombres estándar (F2L, OLL, PLL, T-perm, Sune…) se dejan en inglés; las explicaciones, en español. Los algoritmos son los habituales de la comunidad; los casos de la última capa (y lo que hace cada PLL) se describen a partir del estado real, no de una tabla.
 
-Longitudes medias (500 casos por método): 3x3 por capas ~145 giros y CFOP ~56; 2x2 por capas ~70 y Ortega ~23; 4x4 por reducción ~270 (por capas) y ~183 (CFOP); 5x5 ~424 y ~337; Pyraminx ~26; Skewb ~22; Square-1 ~60 movimientos. Aún no hay modo aprender en 6x6, 7x7 ni Megaminx.
+Longitudes medias (500 casos por método): 3x3 por capas ~145 giros y CFOP ~56; 2x2 por capas ~70 y Ortega ~23; 4x4 por reducción ~270 (por capas) y ~183 (CFOP); 5x5 ~424 y ~337; Pyraminx ~26; Skewb ~22; Square-1 ~60 movimientos. Aún no hay modo aprender en 6x6, 7x7, Megaminx ni FTO.
 
 ### 3x3 vendado (sección *Bandaged Cubes*)
 En **Bandaged Cubes** (`#/bandaged`), encima del scramble y del solucionador del 3x3, está **Tus bloques** (en WCA Puzzles el 3x3 es siempre el normal):
@@ -60,6 +60,9 @@ En **Bandaged Cubes** (`#/bandaged`), encima del scramble y del solucionador del
 - Bajo la vista previa hay un reproductor del scramble: ⇤ lo deja resuelto, ▶ lo aplica movimiento a movimiento (velocidad ×1…×8, pausa, paso atrás). En el Megaminx, al acabar, el puzzle gira entero hasta la orientación de referencia, como indica la nota.
 - El editor de colores sigue siendo la red 2D, pero con **3D** también se puede pintar tocando el modelo.
 - Si el navegador no tiene WebGL, todo sigue funcionando en 2D.
+
+### Notación del FTO
+La del Reglamento WCA 2027 (12f): se sujeta con cuatro caras a la vista y su vértice común hacia ti (U arriba, F abajo, L y R a los lados); detrás, B (vecina de U), D (de F), BR (de R) y BL (de L). Cada letra gira esa cara 120° en sentido horario mirándola; con `'`, antihorario. Colores por defecto de TNoodle: U blanco, F verde, R rojo, L morado, B azul, D amarillo, BR gris, BL naranja. El FTO no tiene ninguna pieza fija: puedes pintarlo en cualquier orientación.
 
 ### Notación del Megaminx
 Los scrambles están en notación Pochmann (`R++`, `D--`, `U'`), como en la WCA: se empieza con el blanco arriba y el verde oscuro delante; `R++` = sujetar la cara de la izquierda y girar el resto 2/5 en sentido horario visto desde la derecha; `D++` = sujetar la de arriba y girar el resto visto desde abajo. Como estos movimientos giran casi todo el puzzle, al acabar los centros están en otro sitio: la vista previa se muestra con el blanco arriba y el verde delante, y debajo se indica cómo girar el puzzle para que coincida. Las soluciones usan notación de caras: **U** arriba; a su alrededor, en sentido horario, **F** (delante), **R**, **BR**, **BL**, **L**; **D** abajo y a su alrededor **DR** (debajo de F y R), **DBR**, **B** (detrás, opuesta a F), **DBL**, **DL**. `R` = 72° en sentido horario mirando la cara R, `R'` = 72° antihorario, `R2` = 144° horario, `R2'` = 144° antihorario; cada giro cuenta 1. La app tiene una leyenda con la red y la letra de cada cara, y durante la reproducción muestra las letras en los centros.
@@ -126,4 +129,5 @@ python3 scripts/comprobar-3d.py              # vista 3D
 python3 scripts/comprobar-aprender.py        # modo aprender
 python3 scripts/comprobar-cambios.py         # cambios rápidos de puzzle
 python3 scripts/comprobar-primer-resolver.py # un clic en Resolver nada más cargar
+python3 scripts/comprobar-fto.py             # FTO: tiempos (CPU ×4) y recorrido completo en 4 modos
 ```

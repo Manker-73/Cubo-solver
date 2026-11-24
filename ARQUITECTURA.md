@@ -47,6 +47,10 @@ src/
     megaminx-ultima.js  Megaminx: última capa con macros buscadas por colisiones
     square1.js      Square-1: estado de colores, validador, editor, dibujo y scramble
     square1-motor.js  Square-1: formas, paridad, tablas, solver en dos fases, estado aleatorio
+    fto.js          FTO: validador (orientación libre), editor, scramble de estado aleatorio, interfaz común
+    fto-geo.js      FTO: geometría (octaedro, cortes), red 2D, 16 giros, piezas (6 esquinas, 12 aristas, 24 triángulos), tétradas, 24 rotaciones
+    fto-grupo.js    FTO: restricciones (Schreier–Sims), número de posiciones y cota inferior por conteo
+    fto-solver.js   FTO: solver en tres fases (coordenadas propias + crearBuscador), estados aleatorios, simplificación
   aprender/       modo aprender: soluciones por métodos humanos, explicadas por etapas
     guion.js          resultado común: etapas con objetivo, bloques con texto, algoritmo y piezas
     motor-cubo.js     cubos 2x2/3x3: piezas por colores, IDA* con tablas de 1–3 piezas, búsqueda de algoritmos (macros)
@@ -82,6 +86,7 @@ tests/            node --test (npm test; niveles: ver "Tests" más abajo)
 scripts/
   build.mjs       genera dist/index.html y dist/artifact.html (con las fuentes en base64; SIN_FUENTES=1 sin ellas)
   fuentes.sh      regenera los subconjuntos de src/app/fuentes/ (fonttools)
+  comprobar-fto.py     FTO en Chromium real: tiempos (escritorio y CPU ×4) y recorrido desde la portada en 4 modos (capturas fto-*.jpg)
   comprobar-diseno.py  rediseño en Chromium real: portada, WCA (3x3 en 3D) y Bandaged, escritorio/móvil, oscuro/claro, sin red
   construir.mjs   empaquetado con esbuild (el Worker va incrustado como texto y se crea desde un blob)
   bench.mjs       benchmark de todos los solvers (npm run bench)
@@ -146,7 +151,7 @@ Estas dos tablas están, como tipos, en `src/core/tipos.d.ts` (`DefinicionPuzzle
 ## Cómo añadir un puzzle
 
 1. Crear `src/puzzles/mipuzzle.js` que exporte `definirPuzzle({...})`, con `// @ts-check` en la primera línea (ver "Tipos").
-2. Añadir una línea en `src/puzzles/index.js`.
+2. Añadir una línea en `src/puzzles/index.js` (y, si tiene campos propios, a `EXTRAS` en `tests/registro.test.mjs`).
 3. Crear `tests/mipuzzle.test.mjs` usando `probarScrambles`, `probarSolver` y `debeRechazar` de `tests/util.mjs`.
 4. `npm run tipos` (menos de 1 s) y `npm run test:solo -- <área>`.
 
@@ -157,7 +162,7 @@ puzzle no necesita saber nada del Worker, pero su estado debe poder copiarse con
 
 ### Herramientas para puzzles nuevos
 - **Puzzle de cortes planos** (Megaminx, FTO, Dino…): `crearGeoPuzzle({caras, cortes, giros, rotaciones, red})` da pegatinas, permutaciones de cada giro, rotaciones del puzzle entero y la red 2D.
-- **Validador y solver**: `crearModeloPiezas({orbitas, movimientos, coloresResuelto})` identifica piezas por colores (detecta piezas inexistentes y especulares) y da coordenadas; `crearBuscador({coords, movs, ejes, podas, objetivo})` genera tablas de poda por BFS y resuelve con IDA*. Las tablas también sirven para decidir si una coordenada es alcanzable (validador).
+- **Validador y solver**: `crearModeloPiezas({orbitas, movimientos, coloresResuelto})` identifica piezas por colores (detecta piezas inexistentes y especulares) y da coordenadas; `crearBuscador({coords, movs, ejes, podas, objetivo})` genera tablas de poda por BFS y resuelve con IDA*. Las tablas también sirven para decidir si una coordenada es alcanzable (validador). Las coordenadas pueden ser propias (`{nombre, tam, codificar(estadoPiezas), mover(idx, mov)}`; el FTO usa subconjuntos, tríos y paridades). Con `cierre: [índices de movs]` el objetivo es el subgrupo que generan esos giros (fases tipo Kociemba): cada tabla empieza con distancia 0 en lo que se alcanza desde `objetivo` con ellos y el objetivo se da por alcanzado cuando todas las tablas dan 0 (quien lo usa debe comprobar que basta).
 - **Orientación libre al pintar**: `permutacionesDeColor(rotaciones, …)` + `reetiquetar`.
 
 ### Square-1 (cómo está hecho)
@@ -179,6 +184,14 @@ puzzle no necesita saber nada del Worker, pero su estado debe poder copiarse con
 - `megaminx-solver.js`: 10 etapas que van retirando caras (Base 1–4, Anillo 1–3, F2L 1–3; ver DECISIONES.md), última capa con `megaminx-ultima.js` (dos macros de una biblioteca de ~10.800, encontradas al inicializar por colisiones de secuencias de U, F, R), todo en varias de las 60 orientaciones mientras quede tiempo; simplificación con conmutación de caras no vecinas.
 - Restricciones y cota inferior: `megaminx-grupo.js` (los tests las comprueban).
 
+### FTO (cómo está hecho)
+- `fto-geo.js`: octaedro con un corte por cara a 1/3 del inradio (`crearGeoPuzzle`), notación del Reglamento WCA 2027 (12f), colores de TNoodle, red de dos cuadrados (delante y detrás). Las piezas salen de las capas de cada pegatina. Las caras forman dos **tétradas** que no se tocan, A = {U, F, BR, BL} y B = {R, L, B, D}; ordenando las pegatinas de cada pieza desde una cara A, las aristas nunca se voltean y las esquinas solo giran media vuelta. Los triángulos son dos órbitas de 12 (los de A y los de B) y se tratan por su color (los tres de una cara son iguales).
+- `fto-grupo.js`: Schreier–Sims (órdenes por órbita, total = producto, 12 rotaciones en el grupo, |⟨R, L, B, D⟩| = 933.120), posiciones (3,14·10²²) y cota inferior por conteo (21).
+- `fto.js`: el FTO no tiene ninguna pieza fija. El validador elige el reetiquetado de colores (una de las 24 rotaciones) por las aristas (qué colores hacen de tétrada A) y da el estado de piezas en las 12 orientaciones del grupo. `resolver` reparte el tiempo entre ellas (rondas de 40 ms, ×3) y se queda con la solución más corta en `tiempoMax` (1 s).
+- `fto-solver.js`: tres fases (G0 → ⟨U, R, L, B, D⟩ → ⟨R, L, B, D⟩ → resuelto, como `fto3phase` de TNoodle) con coordenadas propias y `crearBuscador` (la fase 2 con `cierre`); tablas: 96.800 + 11,3 M + 4 × 35.200 + 3,7 M bytes (~2 s en escritorio). Una búsqueda propia sobre las tablas del buscador enumera varias soluciones de la fase 1, salta giros de caras opuestas en orden decreciente (conmutan) y comprueba que la fase 2 llega a G2.
+- Scramble de estado aleatorio exacto: se resuelve el estado elegido en 12 marcos girados (conjugación: girar el puzzle entero y traducir los nombres de los giros), así la solución lleva siempre al resuelto de referencia y el reparto es uniforme.
+- Vista 3D: `modelo3DGeo` (cámara casi de frente al vértice delantero, como se sujeta para mezclar).
+
 ## Tipos
 
 El código sigue siendo JavaScript (módulos ES que Node y esbuild ejecutan tal cual). TypeScript 7 solo
@@ -198,7 +211,7 @@ Action de tests. No genera nada ni cambia el bundle (esbuild recibe un tsconfig 
 - **Qué se comprueba**: solo los ficheros que empiezan con `// @ts-check` (`tsconfig.json`: `allowJs`,
   `checkJs: false`, `strict`). Hoy: `core/puzzle.js`, `core/piezas.js`, `core/modelo3d.js`, `core/bloqueos.js`,
   `aprender/guion.js`, `puzzles/index.js`, `app/servicio.js`, `app/secciones.js` y los puzzles `skewb.js`,
-  `pyraminx.js` y `cubo2.js`. Los demás se leen para conocer sus tipos, pero no dan errores.
+  `pyraminx.js`, `cubo2.js` y los cuatro módulos del FTO. Los demás se leen para conocer sus tipos, pero no dan errores.
 - **Cómo se usan desde JavaScript**: `/** @import { Puzzle, EstadoPegatinas } from '../core/tipos.js' */` y
   comentarios `@param`, `@returns`, `@type`, `@typedef`. Un cast es `/** @type {X} */ (expresión)`: los
   paréntesis no cambian nada al ejecutar. **Nunca** se cambia código para contentar al comprobador (ni
@@ -209,7 +222,9 @@ Action de tests. No genera nada ni cambia el bundle (esbuild recibe un tsconfig 
   'DefinicionPuzzle<…>'`. Las funciones que devuelven un resultado de la interfaz se anotan
   (`@returns {ResultadoResolver}`), así un campo mal escrito da `'fasses' does not exist in type 'ResolverOk'.
   Did you mean to write 'fases'?`. Un nombre mal escrito de un campo **opcional** de la definición
-  (`metodosAprendr`) no se detecta: cae en `X`.
+  (`metodosAprendr`) no se detecta: cae en `X`. Lo detecta `tests/registro.test.mjs` (noche 12): cada campo de cada
+  puzzle del registro tiene que estar en `DefinicionPuzzle`/`Puzzle` (los lee de este fichero) o en la lista de
+  campos propios permitidos de ese puzzle (`EXTRAS`). Un puzzle nuevo con campos propios los añade ahí.
 
 **Cómo añadir un puzzle tipado** (lo que se hizo con el Skewb, el Pyraminx y el 2x2):
 1. `// @ts-check` en la primera línea y, debajo de los imports,
@@ -403,7 +418,7 @@ wings) en el estado, en vez de deducirla de los colores: es lo único que no es 
 
 `tests/util.mjs` exporta `NIVEL` (`humo`, `rapido` o `completo`; por defecto, `completo` si `CASOS >= 1000`) y `casosPor(completo, rapido, variable)`: cada test caro pide así su número de casos, de modo que la suite completa usa exactamente los de siempre y las demás menos. Todo test con datos al azar usa `rngConSemilla` (semilla fija).
 
-**Qué recorta el nivel rápido** (solo número de casos; ninguna comprobación desaparece): solver de 4x4–7x7 (6/4/2/2 casos), Megaminx (5), vista previa Pochmann (30), Square-1 scrambles y solver (30), 3x3 (50), modo aprender en 4x4/5x5 (8) y Square-1 (40), cada configuración vendada (10), capas centrales del vendado (6), método de respaldo de los NxN (1 por tamaño) y "sin aristas libres" (solo 5x5). Además, en rápido los vendados de espacio pequeño se resuelven en el hilo principal, que ya tiene la tabla del BFS completo (en lugar de generarla otra vez en cada worker_thread). En `humo.test.mjs`, en rápido y completo, solo se ejecutan las huellas: el resto es un subconjunto de lo que comprueban los demás ficheros.
+**Qué recorta el nivel rápido** (solo número de casos; ninguna comprobación desaparece): FTO (scrambles y solver 100 en vez de 1000, reparto 60 en vez de 300), solver de 4x4–7x7 (6/4/2/2 casos), Megaminx (5), vista previa Pochmann (30), Square-1 scrambles y solver (30), 3x3 (50), modo aprender en 4x4/5x5 (8) y Square-1 (40), cada configuración vendada (10), capas centrales del vendado (6), método de respaldo de los NxN (1 por tamaño) y "sin aristas libres" (solo 5x5). Además, en rápido los vendados de espacio pequeño se resuelven en el hilo principal, que ya tiene la tabla del BFS completo (en lugar de generarla otra vez en cada worker_thread). En `humo.test.mjs`, en rápido y completo, solo se ejecutan las huellas: el resto es un subconjunto de lo que comprueban los demás ficheros.
 
 ### Huellas de los giros (`tests/huellas.json`)
 El solver, el scramble y la vista 3D de un puzzle salen del mismo modelo: si un giro se define al revés, todo sigue siendo coherente y los tests de "resuelve el 100 %" pasan. Lo detecta comparar el estado tras cada giro básico (y tras una secuencia fija) con el guardado. Se regeneran con `HUELLAS=actualizar npm run test:humo` cuando un cambio es intencionado.

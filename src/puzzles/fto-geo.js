@@ -158,6 +158,6 @@ if (SIGMAS.length !== 24) throw new Error('FTO: se esperaban 24 orientaciones');
 /** true si la rotación conserva las tétradas (está en el grupo de los giros). */
 export const sigmaPar = SIGMAS.map((s) => s.every((c, f) => enA[c] === enA[f]));
 
-/** Cámara de la vista 3D: el vértice delantero hacia quien mira, un poco desde arriba y la derecha. */
-export const CAMARA_FTO = { desde: [0.42, 0.62, 1], arriba: [0, 1, 0] };
+/** Cámara de la vista 3D: casi de frente al vértice delantero (como se sujeta para mezclar, 12f1), un poco desde arriba y la derecha. */
+export const CAMARA_FTO = { desde: [0.12, 0.2, 1], arriba: [0, 1, 0] };
 export const vista3DGeo = modelo3DGeo(geo, CAMARA_FTO);
