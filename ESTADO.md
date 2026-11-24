@@ -1,4 +1,6 @@
-# Estado del proyecto (noche 12 — FTO — 24/11/2026)
+# Estado del proyecto (noche 13 — bloqueos en 4x4 y 5x5 — 24/11/2026)
+
+> Progreso de la noche 13: empezada (push de prueba ✔).
 
 > Progreso de la noche 12 (FTO): modelo (geometría, notación WCA 12f, 16 giros, colores de TNoodle) ✔ · restricciones demostradas con Schreier–Sims + comprobación empírica ✔ · tamaño del grupo y posiciones (coincide con Wikipedia) ✔ · cota inferior por conteo (21) ✔ · validador con mensajes por restricción ✔ · editor 2D/3D con orientación libre ✔ · solver en tres fases (IDA* + tablas de poda) ✔ · scramble de estado aleatorio (4b3) ✔ · vista 3D animada y resaltado ✔ · test de campos del registro ✔ · huellas (solo las del FTO) y sabotaje ✔ · tests de la app ✔ · `test:humo` ✔ (43/43) · `test:rapido` ✔ (195/195) · FTO con 1000 casos ✔ (16/16, 1000/1000) · `npm test` completo lanzado en GitHub (ejecución manual 45297871921; pendiente de ver el resultado) · Action de `test:rapido` del último push ✔ · `npm run bench` con el FTO ✔ · Chromium real (4 modos) ✔ · documentación ✔ · push, Pages y Action ✔ · artifact republicado ✔ · modo aprender del FTO ✘ (pendiente).
 
