@@ -1,6 +1,41 @@
-# Estado del proyecto (noche 12 — FTO — en curso — 23/11/2026)
+# Estado del proyecto (noche 12 — FTO — 24/11/2026)
 
-> Progreso de la noche 12 (FTO): en curso.
+> Progreso de la noche 12 (FTO): modelo (geometría, notación WCA 12f, 16 giros, colores de TNoodle) ✔ · restricciones demostradas con Schreier–Sims + comprobación empírica ✔ · tamaño del grupo y posiciones (coincide con Wikipedia) ✔ · cota inferior por conteo (21) ✔ · validador con mensajes por restricción ✔ · editor 2D/3D con orientación libre ✔ · solver en tres fases (IDA* + tablas de poda) ✔ · scramble de estado aleatorio (4b3) ✔ · vista 3D animada y resaltado ✔ · test de campos del registro ✔ · huellas (solo las del FTO) y sabotaje ✔ · tests de la app ✔ · `test:humo` ✔ (43/43) · `test:rapido` ✔ (195/195) · FTO con 1000 casos ✔ (16/16, 1000/1000) · `npm test` completo lanzado en GitHub · `npm run bench` con el FTO ✔ · Chromium real (4 modos) ✔ · documentación ✔ · push, Pages y Action ✔ · artifact republicado ✔ · modo aprender del FTO ✘ (pendiente).
+
+## Noche 12: FTO (Face-Turning Octahedron)
+
+Modalidad oficial de la WCA desde el 2 de enero de 2027 (media de 5). Ya es un puzzle más: chip normal en WCA Puzzles y ruta `#/wca/fto`. Decisiones y lo que no funcionó en DECISIONES.md; cómo está hecho en ARQUITECTURA.md («FTO (cómo está hecho)»).
+
+### Resultados
+| | Valor |
+|---|---|
+| Tamaño del grupo (pegatinas) | **158.260.810.061.489.362.698.240.000.000** = 6!/2·2⁵ · 12!/2 · (12!/2)² (Schreier–Sims; sin relaciones entre órbitas) |
+| Posiciones distintas | **31.408.133.379.194.880.000.000** (|G| / (648² · 12)); la misma cifra que Wikipedia |
+| Cota inferior por conteo | **21** giros (calculada aquí; métrica: cada giro de 120° = 1, que en el FTO es la OBTM) |
+| Longitud media (1 s, por defecto en la app) | **27,0** giros (bench, 100 casos; máx. 30) |
+| Longitud media (300 ms, tests) | **27,71** (1000 casos; máx. 32) |
+| **Cociente media / cota inferior** | **1,29** (app) · 1,32 (tests) |
+| Scrambles | 28,57 giros de media (1000; mín. 24, máx. 32), estado aleatorio |
+| Tablas | 15,3 MB (la mayor, 11,3 MB); **2,0 s** en Chromium de escritorio, **8,5 s** con la CPU a ×4 |
+| Una solución (Chromium) | ~1,0 s en escritorio y ~1,4 s con CPU ×4 (busca en las 12 orientaciones hasta 1 s) |
+| Un scramble (Chromium) | ~0,1 s en escritorio y ~0,9 s con CPU ×4 (330 ms de media en Node con 1000 casos) |
+| HTML (`dist/index.html`) | 703,7 KB → **737,5 KB** (+34,6 KB); gzip 288,6 → 300,7 KB (+12,1 KB) |
+
+### Tests
+- `tests/fto.test.mjs` (16 tests; área `fto` de `test:solo`): geometría, notación 12f (vecinas, opuestas, sentido horario), colores, piezas, restricciones con Schreier–Sims (órdenes, producto, 12 rotaciones, |⟨R, L, B, D⟩| = 933.120), 2000 giros al azar, cota 21, orientación libre, simplificación, tablas, `probarScrambles` (1000) con reparto de piezas, scramble exacto (lleva justo al estado elegido), `probarSolver` (**1000/1000**, reorientado al azar entre las 24 orientaciones, giro a giro) y `debeRechazar` para cada restricción: dos esquinas, dos aristas, media vuelta de una esquina, cuarto de vuelta, arista volteada, triángulo en la otra órbita, esquina especular, pieza inexistente, colores mal contados y pegatina sin pintar. Con 1000 casos tarda 18,6 min (casi todo scrambles y soluciones); en rápido, 100 casos (~2 min).
+- `tests/registro.test.mjs`: cada campo de cada puzzle está en `DefinicionPuzzle`/`Puzzle` o en su lista de campos propios. Sabotaje: `avisoInicialisacion` en el FTO pasa `npm run tipos` y este test falla. Deshecho.
+- Huellas: `HUELLAS=actualizar` solo añadió el bloque `fto` (diff revisado). Sabotaje: R del FTO con el ángulo al revés → `test:humo` falla solo en las huellas («FTO: el giro R no deja el estado de siempre»); todo lo demás pasa (por eso hacen falta las huellas). Deshecho.
+- App: el chip del FTO es un botón normal, `#/wca/fto` lo abre (antes estaba bloqueado) y el recorrido completo de `test:humo` elige el FTO, genera scramble, carga, resuelve y reproduce hasta «Resuelto». El FTO está entre los de estado aleatorio en la prueba de etiquetas. Vista 3D: el FTO tiene 42 piezas (24 de 1 pegatina, 12 de 2, 6 de 4) y sus giros animados acaban en el estado del modelo.
+- `test:humo` 43/43 (2 min 43 s) · `test:rapido` 195/195 (11 min 54 s, 2 núcleos) · `npm run bench` incluye el FTO.
+- Chromium real (`scripts/comprobar-fto.py`; escritorio y móvil 390 px, oscuro y claro): portada (la tarjeta dice «… · FTO») → WCA Puzzles → FTO → scramble animado → cargar → resolver → solución en 3D hasta el final → pintar tocando el modelo 3D. 0 errores de consola, 0 px de scroll horizontal. Capturas en `docs/capturas/fto-*.jpg`.
+
+### Pendiente / por verificar con un FTO físico
+- **Colores** (los de TNoodle: U blanco, F verde, R rojo, L morado, B azul, D amarillo, BR gris, BL naranja) y **red 2D** (dos cuadrados: delante y, a la derecha, detrás visto desde atrás).
+- **Sentido de los giros**: que R gire como dice 12f2 (horario mirando la cara R) y que las caras de detrás estén donde dice la app (B detrás de U, BR detrás de R, BL detrás de L, D detrás de F). Un scramble de la app aplicado a un FTO resuelto con blanco arriba y verde delante tiene que dejarlo como la vista previa.
+- **Modo aprender**: no hay. El método de speedsolving más citado es **Bencisco** (Ben Streeter, 2018, según Wikipedia), pero no he comprobado que sea el más extendido ni sus etapas: queda para otra noche.
+- Las tablas en un móvil lento tardan ~8,5 s (límite acordado: ~10 s). Si hiciera falta bajar, la tabla de 11,3 MB podría partirse en dos (aristas con paridades por un lado), a costa de búsquedas más lentas.
+- El reglamento citado es el borrador de 2027 (rama `drafts2027`): revisar cuando se publique la versión oficial del 1 de enero de 2027.
+
 
 > Progreso del paso 0 de TypeScript (tipos con JSDoc, sin renombrar ficheros): infraestructura (TypeScript 7, `tsconfig.json`, `npm run tipos`) ✔ · contratos en `src/core/tipos.d.ts` ✔ · `@ts-check` en `puzzle.js`, `piezas.js`, `modelo3d.js`, `bloqueos.js`, `guion.js`, `index.js`, `servicio.js` y `secciones.js` ✔ · y en los puzzles Skewb, Pyraminx y 2x2 ✔ · demás puzzles ✘ (paso 1) · `tipos` en `test:humo` y en la Action ✔ · bundle idéntico byte a byte ✔ · sabotajes ✔ · `test:humo` ✔ (39/39) · `test:rapido` ✔ (174/174) · `npm test` ✔ (completo en GitHub, ejecución 45266099655, 1 h 14 min) · documentación y plan del paso 1 ✔ · push y GitHub Pages ✔.
 
@@ -430,6 +465,7 @@ Todas en **OBTM** (métrica de la WCA: un giro de cara o de bloque exterior = 1;
 | 5x5 | desconocido | 52 | 130 (demostrada) / ~60–80 (estimada) | 52: **calculada aquí** (no encontré fuente publicada con ese valor). 130: xyzzy, speedsolving.com, 2018. Estimación: **sin confirmar** (Hirata: 58 en otra métrica; el solver de xyzzy reduce en ~70–75). |
 | 6x6 | desconocido | 75 | ~90–120 (estimación teórica) | 75: **calculada aquí** (un conteo más tosco en speedsolving da 73). Estimación: **sin confirmar** (no encontré ninguna fuente). |
 | 7x7 | desconocido | 99 | ~120–160 (estimación teórica) | 99: **calculada aquí** (el conteo tosco da 95). Estimación: **sin confirmar**. |
+| FTO (noche 12) | desconocido | 21 | — | 21: **calculada aquí** (conteo con 8 caras × 2 giros; solo conmutan las opuestas; 3,14·10²² posiciones). Solver: 27,0 de media (cociente 1,29). |
 
 Cálculo de las cotas inferiores (test en `tests/cubo-grande.test.mjs`): posiciones con los centros de un color indistinguibles frente a secuencias canónicas de n movimientos (los del mismo eje conmutan: por eje, C(N−1, j)·3^j elementos con j movimientos). Sale exactamente 35 / 52 / 75 / 99 (y 9 / 18 para 2x2 / 3x3, las cotas clásicas por conteo).
 
