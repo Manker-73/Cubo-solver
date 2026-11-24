@@ -6,7 +6,8 @@ import { resolverEnParalelo } from './paralelo.mjs';
 import { rngConSemilla } from '../src/core/rng.js';
 import cubo3 from '../src/puzzles/cubo3.js';
 import { crear3x3Vendado } from '../src/puzzles/vendado.js';
-import { crearAnalisisBloqueos, comprobarBloqueos, claveBloqueos, resolverBloqueos } from '../src/core/bloqueos.js';
+import { crearAnalisisBloqueos, comprobarBloqueos, claveBloqueos, resolverBloqueos, puzzleConBloqueos } from '../src/core/bloqueos.js';
+import { definirPuzzle } from '../src/core/puzzle.js';
 import { soporteBloqueosNxN, bloquesDesdeFirma, firmaDesdeBloques } from '../src/puzzles/nxn-bloqueos.js';
 import { soporteBloqueos3x3, EJEMPLOS_BLOQUEOS } from '../src/puzzles/cubo3-bloqueos.js';
 
@@ -176,6 +177,25 @@ test('bloqueos: la capa es genérica (2x2 vendado con el mismo código)', () => 
   const conU = crearAnalisisBloqueos(s2, [['UFR', 'UFL', 'UBR', 'UBL']]);
   // la capa U entera pegada: solo U y D... y los que no la cortan
   assert.deepEqual(conU.info.legalesResuelto.filter((m) => !/^[UD]/.test(m)), []);
+});
+
+test('bloqueos: el envoltorio solo tiene vista 3D si el puzzle de debajo la tiene', () => {
+  // con 3D: la del 3x3, con las pegatinas de un mismo bloque unidas
+  const con = crear3x3Vendado([['UFR', 'UF']]);
+  assert.equal(typeof con.vista3D, 'function');
+  assert.ok(con.vista3D(con.estadoResuelto()).geometria.pegatinas.some((q) => q.expandir));
+  // sin 3D: el mismo 3x3 sin vista3D (como un puzzle que no la tiene)
+  const sin3D = definirPuzzle({ ...cubo3, vista3D: undefined, giro3D: undefined });
+  const p = puzzleConBloqueos(sin3D, [['UFR', 'UF']]);
+  assert.equal(p.vista3D, undefined);
+  assert.equal(p.giro3D, undefined);
+  // lo demás sigue funcionando: dibujo 2D con los bloques unidos, scramble y solución
+  assert.match(p.renderizar(p.estadoResuelto()), /<svg/);
+  p.inicializar();
+  const e = p.aplicarSecuencia(p.estadoResuelto(), p.generarScramble(rngConSemilla(4)));
+  const s = p.resolver(e, { msMax: 300, compararSinBloqueos: false });
+  assert.ok(s.ok);
+  assert.ok(p.estaResuelto(aplicarComprobando(p, e, s.movimientos, 'sin 3D')));
 });
 
 test('bloqueos: ejemplos predefinidos válidos', () => {

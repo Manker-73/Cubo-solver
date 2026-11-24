@@ -1347,7 +1347,7 @@ export function puzzleConBloqueos(puzzle, definicion, opcionesAnalisis = {}) {
   /** @type {Map<string, import('./tipos.js').Geometria3D>} */
   const cacheGeo3D = new Map();
   /**
-   * (Solo la usa la interfaz si el puzzle tiene vista 3D: el 3x3.)
+   * (Solo existe si el puzzle de debajo tiene vista 3D: ver el objeto que se devuelve.)
    * @param {EstadoPegatinas} estado
    * @param {{ bloqueEnPosicion?: Int16Array }} [opciones]
    * @returns {Vista3D}
@@ -1412,7 +1412,8 @@ export function puzzleConBloqueos(puzzle, definicion, opcionesAnalisis = {}) {
     resolver,
     aprender: undefined,
     metodosAprender: undefined,
-    vista3D,
+    // solo si el puzzle de debajo tiene vista 3D (si no, la interfaz creería que la hay)
+    vista3D: puzzle.vista3D ? vista3D : undefined,
     renderizar,
     bloqueEnPosicion,
     estadoAleatorio: undefined,

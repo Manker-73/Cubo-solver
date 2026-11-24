@@ -505,7 +505,8 @@ export interface PuzzleVendado<E> extends Puzzle<E> {
   geometriaResuelta(estado: E): boolean;
   bloqueEnPosicion(estado: E): Int16Array;
   piezasDeBloques(estado?: E): Array<{ piezas: string[]; pegatinas: number[] }>;
-  vista3D(estado: E, opciones?: { bloqueEnPosicion?: Int16Array }): Vista3D;
+  /** Solo si el puzzle de debajo tiene vista 3D (noche 13: antes estaba siempre). */
+  vista3D?(estado: E, opciones?: { bloqueEnPosicion?: Int16Array }): Vista3D;
   erroresBloqueos: string[];
   avisosBloqueos: string[];
   modeloBloqueos: ModeloBloqueos;
