@@ -582,7 +582,8 @@ for (const cfg of CONFIGS_NXN) {
       scrambles.push(s); estados.push(e); sumaScr += s.length;
     }
     const msScr = (performance.now() - tScr) / N_CASOS_NXN;
-    const { resultados } = info.espacio === 'pequeño'
+    // en este hilo (que ya tiene las tablas) si el espacio es pequeño o hay pocos casos; si no, en paralelo
+    const { resultados } = info.espacio === 'pequeño' || !COMPLETO
       ? { resultados: estados.map((e) => { const t = performance.now(); const r = p.resolver(e, { msMax: MS_SOLVER }); return { r, ms: performance.now() - t }; }) }
       : await resolverEnParalelo({
         modulo: new URL('../src/puzzles/vendado.js', import.meta.url).href,

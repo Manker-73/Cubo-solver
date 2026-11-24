@@ -480,6 +480,8 @@ export interface InfoBloqueos {
   diametroGeometria?: number;
   msGeometrias?: number;
   pasosScramble?: number;
+  /** (noche 13) Mínimo de pasos del paseo de los scrambles (4x4, 5x5: 200; si no, 80). */
+  pisoScramble?: number;
   /** Números grandes como texto (BigInt no pasa por JSON). */
   grupoFase2?: string;
   estados?: string;

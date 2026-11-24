@@ -5,7 +5,7 @@ Aplicación web en un único HTML, sin servidor.
 
 **Mezcla. Comprueba. Resuelve. Aprende.** La portada lleva a las secciones (los nombres, en inglés, como en la comunidad):
 - **WCA Puzzles** (`#/wca`, y `#/wca/<puzzle>` para abrir uno: `#/wca/megaminx`): scramble, editor, solucionador, vista 3D y modo aprender de 2x2–7x7, Pyraminx, Skewb, Square-1, Megaminx y FTO (Face-Turning Octahedron, oficial de la WCA desde el 2 de enero de 2027).
-- **Bandaged Cubes** (`#/bandaged`): el 3x3 vendado con tus bloques y las firmas de la comunidad.
+- **Bandaged Cubes** (`#/bandaged`): el 3x3, el 4x4 y el 5x5 vendados con tus bloques, y las firmas de la comunidad (3x3).
 - *Shape Mods*, *Cuboids* y *Others*: próximamente (se ven bloqueadas en la portada).
 
 Tema oscuro por defecto; el botón de la cabecera cambia a claro (y lo recuerda en el navegador). Funciona sin conexión: las fuentes van dentro del HTML y no se pide nada a la red.
@@ -14,6 +14,7 @@ Tema oscuro por defecto; el botón de la cabecera cambia a claro (y lo recuerda 
 - **Validador y solucionador en todos los puzzles**: 2x2 (óptimo), 3x3 (dos fases de Kociemba), 4x4 (reducción en tres fases de búsqueda, sin paridades OLL ni PLL, ~55 movimientos) y 5x5 a 7x7 (reducción: búsqueda por etapas en los centros, aristas emparejadas con un voraz de macros que no mueven los centros y conmutadores para lo que quede; ~109, ~256 y ~356 movimientos), Pyraminx (óptimo), Skewb (óptimo), Square-1 (dos fases: forma de cubo y permutación, solo con giros posibles) Megaminx (por etapas con búsqueda IDA* y la última capa con macros buscadas automáticamente; ~90 giros de cara de media) y FTO (tres fases con tablas de poda, como el scrambler oficial de TNoodle; ~27 giros de media, cota inferior 21).
 - **Modo aprender** (2x2, 3x3, 4x4, 5x5, Pyraminx, Skewb y Square-1): además de la solución por ordenador, una solución por un **método humano** explicada paso a paso: 3x3 por capas para principiantes o CFOP; 2x2 por capas o Ortega; 4x4 y 5x5 por reducción (con el 3x3 por capas o CFOP y las paridades); Pyraminx, Skewb y Square-1 por sus métodos de principiantes.
 - **3x3 vendado** (bloqueos definidos por el usuario): pega piezas entre sí (parejas, barras, bloques 1x2x2, 2x2x2…) y el 3x3 se comporta como un cubo vendado real: solo giros que no rompen ningún bloque, scramble y solución adaptados a cada configuración, dos estrategias de solución (búsqueda directa, y geometría y luego permutación) y comparación con la solución sin bloqueos.
+- **4x4 y 5x5 vendados** (noche 13): lo mismo con capas anchas e interiores, piezas iguales (centros del mismo color) contadas una sola vez y, en el 5x5, bloques que unen centros opuestos a través del núcleo. Si el espacio es pequeño, solución óptima; si es grande, la solución es larga (cientos de giros: geometría y luego piezas con tablas de Minkwitz), siempre comprobada giro a giro.
 - Las tablas se generan en el navegador dentro de un Web Worker (la página no se bloquea); si no hay Worker, en el hilo principal.
 
 **App en línea: https://manker-73.github.io/Cubo-solver/**
@@ -46,12 +47,13 @@ Al resolver en modo aprender:
 
 Longitudes medias (500 casos por método): 3x3 por capas ~145 giros y CFOP ~56; 2x2 por capas ~70 y Ortega ~23; 4x4 por reducción ~270 (por capas) y ~183 (CFOP); 5x5 ~424 y ~337; Pyraminx ~26; Skewb ~22; Square-1 ~60 movimientos. Aún no hay modo aprender en 6x6, 7x7, Megaminx ni FTO.
 
-### 3x3 vendado (sección *Bandaged Cubes*)
-En **Bandaged Cubes** (`#/bandaged`), encima del scramble y del solucionador del 3x3, está **Tus bloques** (en WCA Puzzles el 3x3 es siempre el normal):
+### 3x3, 4x4 y 5x5 vendados (sección *Bandaged Cubes*)
+En **Bandaged Cubes** (`#/bandaged`) eliges el cubo (3x3, 4x4 o 5x5) y, encima del scramble y del solucionador, está **Tus bloques** (en WCA Puzzles los cubos son siempre los normales):
 1. *Nuevo bloque* y toca las piezas del cubo (en 2D o en 3D) que quieres pegar; vuelve a tocar una pieza para quitarla. Puedes crear varios bloques (cada uno con su color), editarlos y borrarlos. Los bloques se definen sobre el cubo resuelto y sus piezas tienen que ser vecinas (unidas por caras); un bloque imposible (con piezas que no son vecinas) se avisa al momento; dos centros opuestos sí se pueden unir, como en el Bandaged Cube de Meffert.
 2. *Aplicar*: la app analiza la configuración en segundo plano y dice qué giros se pueden hacer con el cubo resuelto, cuántas **geometrías** (formas sin mirar los colores) y cuántos **estados** son alcanzables, y avisa si el cubo queda muy limitado o totalmente bloqueado.
 3. Desde ese momento el scramble y la solución solo usan giros legales. Si el espacio es pequeño (hasta 2 millones de estados), el scramble es un estado aleatorio uniforme y la solución, óptima; si es grande, el scramble son giros legales al azar y la solución la mejor de dos estrategias: **A** (búsqueda directa) y **B** (primero la geometría, como la forma del Square-1, y luego las piezas). El resumen dice qué estrategia ganó, cuántos movimientos tiene cada fase y cuántos haría falta sin bloqueos; en la reproducción, la barra de fases marca *Geometría* y *Permutación*.
-- *Cargar* tiene ejemplos (pareja, centro + arista, 1x2x2, 1x2x3, 2x2x2, cubos clásicos como el Bicube, el Bandaged Cube de Meffert o el CAB Cube) y tus configuraciones guardadas. En *Guardar, compartir e importar*: guardar en el navegador, **copiar un enlace** que abre Bandaged Cubes con esos bloques (`#/bandaged?bloqueos=…`; los enlaces antiguos `#bloqueos=…` y `?firma=…` siguen funcionando), y la **firma** de la comunidad (Bandaged Cube Explorer, hexadecimal) para importar o exportar.
+- **4x4 y 5x5** (noche 13): la URL lleva el cubo (`#/bandaged?puzzle=4x4&bloqueos=…`; sin `puzzle`, el 3x3). Las piezas se llaman `UFR`, `UF1`/`UF2` (wings, de izquierda a derecha), `UF` (arista central del 5x5), `U11`… (centros por fila y columna) y `U` (centro fijo del 5x5); el núcleo del 5x5 está unido a los seis centros fijos, así que se pueden pegar centros opuestos a través de él. Como hay centros del mismo color, el cubo lleva en el estado qué centro es cuál, y **no se puede pintar un estado a mano** (con colores no se sabría cuál es cuál): se mezcla con el scramble. El análisis cuenta los **estados distinguibles** (los centros iguales se cuentan una vez). En espacio grande la solución es larga (cientos de giros) y tarda unos segundos en preparar las tablas.
+- *Cargar* tiene ejemplos (pareja, centro + arista, 1x2x2, 1x2x3, 2x2x2, cubos clásicos como el Bicube, el Bandaged Cube de Meffert o el CAB Cube; en el 4x4 y el 5x5, pareja, barra, bloque de centros, varios bloques y centros opuestos) y tus configuraciones guardadas. En *Guardar, compartir e importar*: guardar en el navegador, **copiar un enlace** que abre Bandaged Cubes con esos bloques (`#/bandaged?bloqueos=…`; los enlaces antiguos `#bloqueos=…` y `?firma=…` siguen funcionando), y la **firma** de la comunidad (Bandaged Cube Explorer, hexadecimal) para importar o exportar.
 - En 3D, las piezas pegadas se dibujan unidas, sin la separación negra.
 - La notación es la de la WCA; también se aceptan M, E, S y las rotaciones x, y, z (las soluciones usan solo giros de cara).
 
@@ -124,7 +126,7 @@ Python + Playwright + Chrome (`CHROME=/ruta/al/navegador` si no está en `/usr/b
 
 ```
 python3 scripts/comprobar-diseno.py          # portada, WCA y Bandaged; escritorio/móvil; oscuro/claro; sin red
-python3 scripts/comprobar-bloqueos.py        # cubo vendado (2D y 3D)
+python3 scripts/comprobar-bloqueos.py        # cubo vendado (2D y 3D); "nxn": solo 4x4 y 5x5 (escritorio/móvil, oscuro/claro)
 python3 scripts/comprobar-3d.py              # vista 3D
 python3 scripts/comprobar-aprender.py        # modo aprender
 python3 scripts/comprobar-cambios.py         # cambios rápidos de puzzle

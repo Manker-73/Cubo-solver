@@ -327,6 +327,39 @@ export function soporteBloqueosIdentidad(N) {
 // ---------------------------------------------------------------------------
 
 /**
+ * Bloques que "eliminan" cortes del cubo: las piezas a ambos lados de cada corte se pegan por
+ * parejas (y se juntan en bloques si comparten pieza). Así se construyen los vendados que simulan
+ * cuboides (un 2x4x4 es un 4x4 sin los cortes entre las capas 1–2 y 3–4 de un eje).
+ * cortes: [eje, k]: eje 'x' (desde R), 'y' (desde U) o 'z' (desde F); k: entre las capas k y k+1.
+ * @param {number} N @param {Array<[string, number]>} cortes
+ * @returns {string[][]}
+ */
+export function bloquesSinCortes(N, cortes) {
+  const s = soporteBloqueosIdentidad(N);
+  const piezas = /** @type {PiezaNxN[]} */ (s.piezas).filter((p) => p.tipo !== 'nucleo');
+  const porCubie = new Map(piezas.map((p) => [p.cubie.join(','), p.clave]));
+  /** @type {Map<string, string>} */
+  const padre = new Map(piezas.map((p) => [p.clave, p.clave]));
+  /** @param {string} x @returns {string} */
+  const raiz = (x) => { while (padre.get(x) !== x) x = /** @type {string} */ (padre.get(x)); return x; };
+  for (const [eje, k] of cortes) {
+    const e = { x: 0, y: 1, z: 2 }[eje];
+    if (e === undefined) throw new Error(`eje no válido: ${eje}`);
+    const c1 = N + 1 - 2 * k, c2 = N - 1 - 2 * k; // las dos capas a ambos lados del corte
+    for (const p of piezas) {
+      if (p.cubie[e] !== c1) continue;
+      const q = p.cubie.slice(); q[e] = c2;
+      const otra = porCubie.get(q.join(','));
+      if (otra) { const a = raiz(p.clave), b = raiz(otra); if (a !== b) padre.set(a, b); }
+    }
+  }
+  /** @type {Map<string, string[]>} */
+  const grupos = new Map();
+  for (const p of piezas) { const r = raiz(p.clave); if (!grupos.has(r)) grupos.set(r, []); /** @type {string[]} */ (grupos.get(r)).push(p.clave); }
+  return [...grupos.values()].filter((g) => g.length > 1);
+}
+
+/**
  * Configuraciones de ejemplo del 4x4 y el 5x5 (las mismas que la verificación de la noche 13;
  * ver tests/bloqueos.test.mjs y ESTADO.md).
  * @type {Record<number, EjemploBloqueos[]>}

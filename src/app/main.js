@@ -311,6 +311,9 @@ async function seleccionar(id) {
   $('editor').classList.toggle('desactivado', !activo);
   $('proximamente').hidden = activo;
   $('desc-solver').textContent = activo ? (p.descripcion || '') : '';
+  // la pista de la vista 3D del editor: en el 4x4 y el 5x5 vendados no se pinta
+  const pista = document.querySelector('#vista3d-editor .pista-3d');
+  if (pista) pista.textContent = p.avisoPintar ? 'Arrastra para girarlo' : 'Arrastra para girarlo · toca para pintar';
   $('tipo-scramble').textContent = p.tipoScramble || '';
   for (const b of ['resetear', 'cargar', 'resolver']) $(b).disabled = !activo;
   $('nuevo').disabled = false;

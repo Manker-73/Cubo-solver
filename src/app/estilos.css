@@ -366,7 +366,7 @@ main:focus { outline: none; }
 .bloq-grupo .muestra { width: 16px; height: 16px; border-radius: 4px; flex: none; }
 .bloq-grupo .piezas { flex: 1 1 160px; font-family: var(--f-mono); font-size: 0.86rem; overflow-wrap: anywhere; }
 .bloq-analisis { background: var(--fondo); border: 1px solid var(--linea); border-radius: var(--radio); padding: 10px 14px; display: flex; flex-direction: column; gap: 4px; }
-.bloq-analisis p { margin: 0; font-size: 0.9rem; }
+.bloq-analisis p { margin: 0; font-size: 0.9rem; overflow-wrap: anywhere; } /* números de 50–90 cifras (4x4, 5x5) */
 .bloq-analisis .tenue, .bloq-mas .tenue { color: var(--tenue); font-size: 0.82rem; }
 .bloq-analisis .cargando { color: var(--tenue); }
 .bloq-mas { display: flex; flex-direction: column; gap: 8px; }

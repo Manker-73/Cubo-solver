@@ -330,10 +330,15 @@ si hace falta, puntos sin pegatina como el núcleo del 3x3):
 | `identificar(estado)`, `estadoDesde(donde)` | posiciones de los puntos a partir de los colores (piezas distinguibles) y al revés |
 | `ejeDe(familia)`, `pegatinas2D` | (opcionales) redundancias U D U; polígonos de la red para dibujar unidos los bloques |
 | `busquedaRapida(mod, S, opciones)` | (opcional) búsqueda directa propia del puzzle; en el 3x3, Kociemba con legalidad |
+| `iguales` | (opcional, noche 13) clases de piezas iguales (índices): se ven igual y se cuentan una vez |
+| `todos` | (opcional) todos los giros con nombre, para traducir una solución a la orientación del usuario |
+| `notacion(movs)` | (opcional) reescribe una secuencia (4x4: `3Uw` → `D` + rotación, y traduce lo que sigue) |
 
-`soporteBloqueosNxN(N)` (en `nxn-bloqueos.js`) lo da para cualquier N; con N = 2 y 3 las piezas se
-distinguen por sus colores. Para un 4x4 haría falta seguir la identidad de las piezas iguales (centros,
-wings) en el estado, en vez de deducirla de los colores: es lo único que no es genérico hoy.
+Dos soportes:
+- `soporteBloqueosNxN(N)` (`nxn-bloqueos.js`): N = 2 y 3, estado de **colores** (las piezas se distinguen por sus colores). Es el del 3x3 vendado; no ha cambiado.
+- `soporteBloqueosIdentidad(N)` (`nxn-identidad.js`, noche 13): N ≥ 4, estado de **identidades** (`estado[pos]` = número de la pegatina que hay ahí; su color es ⌊i/N²⌋). Piezas con nombre (`UFR`, `UF1`/`UF2` o `UF1`/`UF`/`UF3`, `U11`…, `U`, `núcleo`), giros de búsqueda (4x4: U, R, F de 1 a 3 capas, con la esquina DBL fija; 5x5: las 6 caras de 1 y 2 capas y las capas interiores `2U`…, con los centros fijos), núcleo vecino de los seis centros fijos y `iguales` = los centros por tipo y color. Lo usa `crearCuboConIdentidad(colores, N)`, el puzzle base del 4x4/5x5 vendado (ids `vendado-4x4`, `vendado-5x5`): sin bloques delega en el cubo normal pasando a colores; pintar está desactivado (`pegatinasEditables` vacío y `avisoPintar`).
+
+Ya no queda nada específico del cubo en la capa (`src/core/bloqueos.js`): lo que cambia entre el 3x3 y el 4x4/5x5 lo dice el soporte (`iguales`, `todos`, `notacion`). Con `iguales`, la capa además cuenta los estados distinguibles, busca el resuelto «a la vista», usa Schreier–Sims aleatorio y construye las tablas de Minkwitz; sin él (3x3), hace exactamente lo de antes.
 
 ### Modelo (`crearModeloBloqueos`)
 - Estado interno `S`: posición del punto seguido de cada pieza que se mueve con los giros de búsqueda
@@ -352,6 +357,13 @@ wings) en el estado, en vez de deducirla de los colores: es lo único que no es 
    bloqueado*), BFS de geometrías (hasta 400.000), grupo de la fase 2, número de estados, BFS completo si
    caben (≤ 2 millones: tabla hash con estados empaquetados en bits) y, si no, tablas de poda por
    proyecciones (grupos de 4 piezas, legalidad relajada a lo que se ve de cada bloque).
+   Con piezas iguales (noche 13): grupo de la fase 2 por Schreier–Sims aleatorio con la base empezando por
+   todo lo que no son centros iguales sueltos (`schreier.js`: opciones `prefijo` y `sinSchreier`,
+   `completarAleatorio`), estados distinguibles (`contarSimetriaIguales`: estados / |K|), estados con el
+   aspecto del resuelto (objetivos del BFS) y, en espacio grande, las tablas de Minkwitz de la fase 2
+   (`tablasFase2` → `src/core/minkwitz.js`: generadores = los lazos más cortos que generan el grupo, como
+   palabras de giros legales; base en el orden aristas centrales, centros en cruz, esquinas, aristas,
+   centros).
 2. Scramble: espacio pequeño → estado uniforme de la tabla del BFS (y su solución óptima, invertida);
    grande → paseo al azar "perezoso" con giros legales (palabra reducida; longitud medida con
    `scripts/mezcla-bloqueos.mjs`).
@@ -362,12 +374,18 @@ wings) en el estado, en vez de deducirla de los colores: es lo único que no es 
      tablas del 3x3 normal, que siguen siendo cotas inferiores) e IDA* con las tablas de proyecciones.
    - **B, geometría y luego permutación**: varias soluciones de la fase 1 sobre la tabla exacta de
      geometrías (las más cortas y hasta 2 más largas, en forma canónica) y, para cada una, la fase 2
-     desde la geometría resuelta (BFS, búsqueda rápida o IDA* con poda max(geometría, proyecciones)).
+     desde la geometría resuelta (BFS, búsqueda rápida, tablas de Minkwitz en el 4x4/5x5 o IDA* con poda
+     max(geometría, proyecciones)).
+   - El envoltorio comprueba **toda** solución giro a giro sobre el estado del usuario antes de devolverla
+     (`solucionComprobada`); si no pasa, devuelve un error.
 4. En el 3x3 la solución se traduce al marco del usuario (si el cubo está girado por M/E/S o x/y/z).
 
 ### Interfaz y Worker
 - `servicio.js`: las peticiones pueden llevar `bloqueos`; el Worker crea (y guarda, las 3 últimas) la
-  versión vendada de ese puzzle, con sus tablas. `inicializar` devuelve además el análisis. Los
+  versión vendada de ese puzzle, con sus tablas. Los puzzles se buscan con `buscarPuzzle` (los del registro
+  y las bases del modo vendado, `BANDAGED` en `src/puzzles/index.js`).
+- Bandaged Cubes (noche 13): selector 3x3 / 4x4 / 5x5 (`BANDAGED`), `#/bandaged?puzzle=4x4&bloqueos=…`
+  (sin `puzzle`, el 3x3), bloques aplicados y guardados por puzzle, firmas solo en el 3x3. `inicializar` devuelve además el análisis. Los
   scrambles de un puzzle vendado van al Worker principal (el que tiene las tablas).
 - `main.js`: con bloques aplicados, `st.p` es el puzzle envuelto y las cachés (scrambles precargados,
   tablas) usan `id#bloques` como clave. `bloqueos-ui.js` lleva la sección "Bloqueos" y, mientras se
@@ -381,7 +399,7 @@ wings) en el estado, en vez de deducirla de los colores: es lo único que no es 
 #/                    portada: titular, una tarjeta por sección (SECCIONES), «Cómo funciona»
 #/como-funciona       portada con el foco en «Cómo funciona»
 #/wca[/<id>]          WCA Puzzles: la herramienta con el selector (puzzles con categoria 'wca' + PUZZLES_PRONTO bloqueados)
-#/bandaged[?bloqueos=…|?firma=…]   Bandaged Cubes: el 3x3 con «Tus bloques», sin selector
+#/bandaged[?puzzle=4x4|5x5][&bloqueos=…|&firma=…]   Bandaged Cubes: 3x3 (por defecto), 4x4 o 5x5 con «Tus bloques»
 #/<bloqueada o desconocida>  -> #/ (replaceState)
 #bloqueos=… #firma=… ?bloqueos=… ?firma=…  (enlaces antiguos) -> #/bandaged?…
 ```
@@ -431,4 +449,8 @@ El solver, el scramble y la vista 3D de un puzzle salen del mismo modelo: si un 
 
 ## Plan para las próximas noches
 - Modo aprender en Megaminx (por capas) y 6x6/7x7 (reducción como el 5x5, más los centros oblicuos).
+- Cubos vendados (noche 13): soluciones más cortas en el 4x4/5x5 (hoy cientos de giros); vendados con todas
+  las piezas en bloques (simulaciones de cuboides: la geometría es casi el estado entero y el BFS de geometrías
+  no cabe), tratando los bloques como piezas de un puzzle reducido; el 6x6 y el 7x7 (el código es genérico,
+  falta medirlo y la interfaz).
 - Todos los puzzles tienen ya validador y solver. Lo que más pesa ahora en el 6x6 y el 7x7 son los centros oblicuos (3-ciclos, ~120 y ~125 movimientos); ver ESTADO.md. Otras mejoras posibles: scramble de estado aleatorio en el 4x4 y, para el Megaminx, etapas más grandes o una búsqueda en haz entre etapas.

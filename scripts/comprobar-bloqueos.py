@@ -9,7 +9,18 @@
 #   - en 3D, las pegatinas vecinas de un mismo bloque se dibujan unidas (lados sin encoger);
 #   - sin errores en consola ni scroll horizontal.
 # Capturas en docs/capturas/bloqueos-*.jpg.
-import asyncio, json, os
+#
+# Noche 13: también el 4x4 y el 5x5 vendados (python3 scripts/comprobar-bloqueos.py nxn para solo
+# esta parte; 3x3 para solo la de antes): escritorio y móvil, oscuro y claro, con y sin 3D:
+#   - elegir el puzzle en el selector de Bandaged Cubes (la URL lleva puzzle=);
+#   - pintar está desactivado (aviso al tocar);
+#   - crear un bloque tocando piezas (en 3D, un toque en el modelo; en 2D, las pegatinas de UFR y de
+#     la wing de UF), aplicar y esperar al análisis (Worker), cargar un ejemplo;
+#   - scramble, cargar, resolver y reproducir hasta el final (×8);
+#   - en 3D, las pegatinas del bloque se dibujan unidas;
+#   - sin errores en consola ni scroll horizontal.
+# Capturas en docs/capturas/bloqueos-nxn-*.jpg.
+import asyncio, json, os, sys
 from playwright.async_api import async_playwright
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -31,6 +42,7 @@ INFO = """() => {
     unidas: g ? g.pegatinas.filter((q) => q.expandir).length : null,
     analisis: document.getElementById('bloq-analisis').textContent,
     scroll: document.documentElement.scrollWidth > window.innerWidth + 1,
+    ancho: window.innerWidth,
   };
 }"""
 
@@ -55,13 +67,87 @@ async def resolver_y_reproducir(pg, modo3d, fallos, clave):
     if not ok: fallos.append(f'{clave}: no queda resuelto')
     return d
 
+async def comprobar_nxn(b, errores, fallos, resumen):
+    """Noche 13: 4x4 y 5x5 vendados en escritorio y móvil, oscuro y claro, con y sin 3D."""
+    for N in (4, 5):
+        nombre = f'{N}x{N}'
+        for cfg, opts in CONFIGS:
+            for tema in ('oscuro', 'claro'):
+                for modo3d in (True, False):
+                    modo = '3d' if modo3d else '2d'
+                    clave = f'{nombre}/{cfg}/{tema}/{modo}'
+                    ctx = await b.new_context(**opts)
+                    await ctx.add_init_script(f"try {{ localStorage.setItem('cubo-solver:tema', '{tema}'); }} catch (e) {{}}")
+                    pg = await ctx.new_page()
+                    pg.on('pageerror', lambda e, c=clave: errores.append(f'{c}: {e}'))
+                    pg.on('console', lambda m, c=clave: errores.append(f'{c}: {m.text}') if m.type == 'error' else None)
+                    await pg.goto(URL)
+                    await esperar_scramble(pg)
+                    await pg.click(f'#selector .chip[data-vendado="{nombre}"]')
+                    await pg.wait_for_function(f"window.cuboSolver.estado().puzzle === 'vendado-{nombre}' && location.hash.includes('puzzle={nombre}')", timeout=60000)
+                    await esperar_scramble(pg)
+                    await pg.evaluate(f"() => {{ for (const id of ['modo-previa', 'modo-editor']) {{ const b = document.querySelector('#' + id + ' button[data-modo=\"{modo}\"]'); if (b) b.click(); }} }}")
+                    # pintar: desactivado, con aviso
+                    if not modo3d:
+                        await pg.locator('#vista-editor [data-i="0"]').click()
+                        await pg.wait_for_function("/no se puede pintar/.test(document.getElementById('mensajes').textContent)", timeout=10000)
+                    # crear un bloque tocando piezas
+                    await pg.click('#bloq-nuevo')
+                    if modo3d:
+                        lienzo = pg.locator('#vista3d-editor canvas')
+                        caja = await lienzo.bounding_box()
+                        pos = {'x': caja['width'] / 2, 'y': caja['height'] / 2}
+                        if opts.get('has_touch'): await lienzo.tap(position=pos)
+                        else: await lienzo.click(position=pos)
+                        await pg.wait_for_timeout(200)
+                        n = await pg.evaluate("document.querySelectorAll('#bloq-grupos li').length && document.querySelector('#bloq-grupos li .piezas').textContent")
+                        if not n or 'vacío' in n: fallos.append(f'{clave}: el toque en 3D no añade ninguna pieza ({n})')
+                        await pg.evaluate("() => document.querySelector('#modo-editor button[data-modo=\"2d\"]').click()")
+                        await pg.click('#bloq-quitar')
+                        await pg.click('#bloq-nuevo')
+                    n2 = N * N
+                    for i in (n2 - 1, n2 - 2):  # UFR y la wing de UF a su lado
+                        await pg.locator(f'#vista-editor [data-i="{i}"]').click()
+                    txt = await pg.inner_text('#bloq-grupos')
+                    esperado = 'UFR + UF2' if N == 4 else 'UFR + UF3'
+                    if esperado not in txt: fallos.append(f'{clave}: el bloque no tiene {esperado} ({txt})')
+                    await pg.locator('#panel-bloqueos').screenshot(path=f'{OUT}/bloqueos-nxn-{nombre}-{cfg}-{tema}-{modo}-editar.jpg', quality=70, type='jpeg')
+                    await pg.click('#bloq-aplicar')
+                    await pg.wait_for_function("/estados distinguibles/.test(document.getElementById('bloq-analisis').textContent)", timeout=180000)
+                    if modo3d:
+                        await pg.evaluate("() => { for (const id of ['modo-previa', 'modo-editor']) { const b = document.querySelector('#' + id + ' button[data-modo=\"3d\"]'); if (b) b.click(); } }")
+                    await esperar_scramble(pg)
+                    d = await resolver_y_reproducir(pg, modo3d, fallos, clave + '/pareja')
+                    resumen[clave + '/pareja'] = d and {k: d[k] for k in ('resumen', 'unidas')}
+                    if modo3d and d and not d['unidas']: fallos.append(f'{clave}: en 3D no hay pegatinas unidas')
+                    await pg.click('#r-inicio')
+                    await pg.wait_for_timeout(400)
+                    await pg.locator('#panel-resolver').screenshot(path=f'{OUT}/bloqueos-nxn-{nombre}-{cfg}-{tema}-{modo}-solucion.jpg', quality=70, type='jpeg')
+                    # un ejemplo (la barra; en el 5x5 en 2D, los centros opuestos por el núcleo)
+                    ejemplo = 'opuestos' if (N == 5 and not modo3d) else 'barra'
+                    await pg.select_option('#bloq-config', f'ej:{ejemplo}')
+                    await pg.wait_for_function("/estados distinguibles/.test(document.getElementById('bloq-analisis').textContent) && document.getElementById('bloq-resumen').textContent === '1 bloque'", timeout=180000)
+                    await esperar_scramble(pg)
+                    d = await resolver_y_reproducir(pg, modo3d, fallos, clave + '/' + ejemplo)
+                    resumen[clave + '/' + ejemplo] = d and {k: d[k] for k in ('resumen', 'unidas')}
+                    info = await pg.evaluate(INFO)
+                    # (en móvil, si algo es más ancho que la pantalla, el viewport crece: se mira también su ancho)
+                    if info['scroll'] or info['ancho'] > opts['viewport']['width'] + 1: fallos.append(f"{clave}: scroll horizontal (ancho {info['ancho']})")
+                    if cfg == 'movil' or modo3d:
+                        await pg.screenshot(path=f'{OUT}/bloqueos-nxn-{nombre}-{cfg}-{tema}-{modo}-pagina.jpg', quality=55, type='jpeg', full_page=True)
+                    await pg.select_option('#bloq-config', 'vacia')
+                    await ctx.close()
+
 async def main():
     os.makedirs(OUT, exist_ok=True)
     errores, fallos, resumen = [], [], {}
+    parte = sys.argv[1] if len(sys.argv) > 1 else 'todo'
     async with async_playwright() as p:
         b = await p.chromium.launch(executable_path=os.environ.get('CHROME', '/usr/bin/google-chrome'),
                                     args=['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'])
-        for cfg, opts in CONFIGS:
+        if parte in ('todo', 'nxn'):
+            await comprobar_nxn(b, errores, fallos, resumen)
+        for cfg, opts in (CONFIGS if parte in ('todo', '3x3') else []):
             for modo3d in (True, False):
                 clave = f"{cfg}/{'3d' if modo3d else '2d'}"
                 ctx = await b.new_context(**opts)
@@ -70,8 +156,8 @@ async def main():
                 pg.on('console', lambda m, c=clave: errores.append(f'{c}: {m.text}') if m.type == 'error' else None)
                 await pg.goto(URL)
                 await esperar_scramble(pg)
-                # (antes: clic en el chip del 3x3; en Bandaged Cubes el 3x3 ya está elegido y no hay selector)
-                assert await pg.evaluate("document.getElementById('selector').hidden"), 'Bandaged Cubes no tiene selector de puzzle'
+                # (en Bandaged Cubes el 3x3 ya está elegido; desde la noche 13 hay un selector 3x3/4x4/5x5)
+                assert await pg.evaluate("document.querySelector('#selector .chip[data-vendado=\"3x3\"]').getAttribute('aria-pressed') === 'true'"), 'el 3x3 elegido en el selector de Bandaged Cubes'
                 modo = '3d' if modo3d else '2d'
                 await pg.evaluate(f"() => {{ for (const id of ['modo-previa', 'modo-editor']) {{ const b = document.querySelector('#' + id + ' button[data-modo=\"{modo}\"]'); if (b) b.click(); }} }}")
                 # 1) crear un bloque tocando piezas
@@ -148,7 +234,7 @@ async def main():
                 d = await resolver_y_reproducir(pg, modo3d, fallos, clave + '/bicube')
                 resumen[clave + '/bicube'] = d and {k: d[k] for k in ('resumen', 'fases', 'unidas')}
                 info = await pg.evaluate(INFO)
-                if info['scroll']: fallos.append(f'{clave}: scroll horizontal')
+                if info['scroll'] or info['ancho'] > opts['viewport']['width'] + 1: fallos.append(f"{clave}: scroll horizontal (ancho {info['ancho']})")
                 await pg.screenshot(path=f'{OUT}/bloqueos-{cfg}-{modo}-pagina.jpg', quality=60, type='jpeg', full_page=True)
                 # volver al 3x3 normal para no dejar bloques guardados
                 await pg.select_option('#bloq-config', 'vacia')

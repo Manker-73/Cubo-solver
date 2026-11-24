@@ -878,6 +878,8 @@ export function crearAnalisisBloqueos(soporte, definicion, opciones = {}) {
   info.geometriasExacto = geo.completo;
   info.diametroGeometria = geo.diametro;
   info.msGeometrias = Math.round(ahora() - tg);
+  // 4x4, 5x5: más pasos (medido con scripts/mezcla-bloqueos.mjs; ver longitudScramble)
+  if (mod.hayIguales) info.pisoScramble = 200;
   info.pasosScramble = longitudScramble({ info });
   const distGeo = new Map();
   for (const [k, i] of geo.indice) distGeo.set(k, geo.nodos[i].d);
@@ -1361,11 +1363,13 @@ export function scrambleBloqueos(A, rng, opciones = {}) {
  * con d el diámetro del grafo de geometrías (un paseo al azar tarda del orden de d²
  * en recorrerlo). Medido con scripts/mezcla-bloqueos.mjs (ver DECISIONES.md): hacen
  * falta 50, 50, 100 y 1.600 pasos con d = 1, 3, 7 y 24; esto da 80, 80, 196 y 2.304.
+ * 4x4 y 5x5 (noche 13): medido con el criterio de las piezas en su sitio, 50–100 pasos;
+ * se usa max(200, 4·d²) (info.pisoScramble).
  * @param {{ info: InfoBloqueos }} A
  */
 export function longitudScramble(A) {
   const d = A.info.diametroGeometria || 0;
-  return Math.max(80, 4 * d * d);
+  return Math.max(A.info.pisoScramble || 80, 4 * d * d);
 }
 
 /**
@@ -1885,7 +1889,9 @@ export function puzzleConBloqueos(puzzle, definicion, opcionesAnalisis = {}) {
     bloqueos: definicion,
     claveBloqueos: claveBloqueos(definicion),
     capacidades: { scramble: true, validar: true, resolver: true, editar: !!puzzle.capacidades.editar },
-    descripcion: 'Cubo vendado: búsqueda directa (BFS o IDA*/Kociemba con legalidad) o dos fases (geometría y permutación).',
+    descripcion: sop.iguales
+      ? 'Cubo vendado: BFS con la solución óptima si el espacio es pequeño; si no, dos fases: geometría (búsqueda) y permutación con tablas de Minkwitz (soluciones largas, siempre comprobadas giro a giro).'
+      : 'Cubo vendado: búsqueda directa (BFS o IDA*/Kociemba con legalidad) o dos fases (geometría y permutación).',
     tipoScramble: 'vendado',
     estaResuelto,
     aplicarMovimiento,
