@@ -45,7 +45,7 @@ import { crearTablasMinkwitz } from './minkwitz.js';
  * @typedef {ReturnType<typeof tablasProyeccion>} Proyecciones
  * @typedef {ReturnType<typeof tablasFase2>} TablasMinkwitz
  * @typedef {{ mod: ModeloBloqueos, info: InfoBloqueos, ok: true, geo: Geometrias, distGeo: Map<string, number>, g2: GrupoFase2,
- *   bfs: BFSEstados | null, proy: Proyecciones | null, mink?: TablasMinkwitz | null }} Analisis  análisis de una configuración válida
+ *   bfs: BFSEstados | null, proy: Proyecciones | null, mink?: TablasMinkwitz | null, objetivos?: Int16Array[] | null }} Analisis  análisis de una configuración válida
  * @typedef {{ movs: number[], optima?: boolean, metodo: string, ms?: number, fase1?: number, fase2?: number }} SolucionEstrategia
  * @typedef {{ rng?: Rng, limiteGeometrias?: number, limiteEstados?: number, msMinkwitz?: number }} OpcionesAnalisis
  */
@@ -295,6 +295,13 @@ export function crearModeloBloqueos(soporte, definicion) {
     }
   });
   const hayIguales = casasClase.length > 0;
+  // Bloques con piezas iguales: además de los colores, tienen que ocupar las mismas posiciones que
+  // en el resuelto (un bloque centro fijo + centros iguales girado en su sitio tiene los mismos
+  // colores, pero otro pegado). Conjunto de posiciones de cada bloque en el resuelto.
+  const bloquesIguales = hayIguales ? bloques.map((b, bi) => bi).filter((bi) => bloques[bi].piezas.some((k) => idxMovil[k] >= 0 && claseMovil[idxMovil[k]] >= 0)) : [];
+  /** @param {Int16Array} S @param {number} bi */
+  const posicionesBloque = (S, bi) => { const r = []; for (let j = inicioBloque[bi]; j < inicioBloque[bi + 1]; j++) r.push(posRanura(S, j)); return r.sort((a, b) => a - b).join(','); };
+  const pegadoResuelto = new Set(bloquesIguales.map((bi) => posicionesBloque(resuelto, bi)));
   /** @param {Int16Array} S */
   function resueltoColores(S) {
     for (let i = 0; i < nS; i++) {
@@ -302,6 +309,7 @@ export function crearModeloBloqueos(soporte, definicion) {
       const c = claseMovil[i];
       if (c < 0 || !casasClase[c].has(S[i])) return false;
     }
+    for (const bi of bloquesIguales) if (!pegadoResuelto.has(posicionesBloque(S, bi))) return false;
     return true;
   }
   /** Resuelto a la vista: exacto o, con piezas iguales, por colores. @param {Int16Array} S */
@@ -907,6 +915,25 @@ export function crearAnalisisBloqueos(soporte, definicion, opciones = {}) {
       info.mbBFS = +(bfs.tabla.bytes / 1048576).toFixed(1);
     }
   }
+  // Piezas iguales con BFS: los estados con el aspecto del resuelto son |K| (se comprueba) y la
+  // solución óptima es la más corta hasta cualquiera de ellos (caminoBFS)
+  /** @type {Int16Array[] | null} */
+  let objetivos = null;
+  if (bfs && mod.hayIguales) {
+    objetivos = [];
+    const indicePos = new Map(); mod.resuelto.forEach((p, i) => indicePos.set(p, i));
+    const k = new Uint32Array(mod.palabras);
+    for (let t = 0; t < bfs.tabla.tamano; t++) {
+      bfs.tabla.nesimo(t, k);
+      const Sk = mod.desempaquetar(k);
+      if (!mod.resueltoColores(Sk)) continue;
+      // pi[i] = pieza cuya casa ocupa i en Sk
+      objetivos.push(Int16Array.from(Sk, (p) => /** @type {number} */ (indicePos.get(p))));
+    }
+    if (info.simetriaIguales && BigInt(objetivos.length) !== BigInt(info.simetriaIguales)) {
+      info.avisos.push(`Aviso interno: el BFS tiene ${objetivos.length} estados con el aspecto del resuelto y |K| = ${info.simetriaIguales}.`);
+    }
+  }
   info.espacio = bfs ? 'pequeño' : 'grande';
   // Tablas de poda por proyecciones (IDA* de las estrategias A y B en espacios grandes)
   let proy = null;
@@ -931,7 +958,28 @@ export function crearAnalisisBloqueos(soporte, definicion, opciones = {}) {
     info.avisos.push(`El cubo queda muy limitado: ${formatearNumero(geo.nodos.length)} geometrías y ${formatearNumero(nEst)} estados alcanzables.`);
   }
   info.msTotal = Math.round(ahora() - t0);
-  return { mod, info, ok: true, geo, distGeo, g2, bfs, proy, mink };
+  return { mod, info, ok: true, geo, distGeo, g2, bfs, proy, mink, objetivos };
+}
+
+/**
+ * Con piezas iguales: el reetiquetado de S (entre los objetivos) más cerca del resuelto exacto.
+ * S'[pi[i]] = S[i]: mismo aspecto, misma legalidad (pi solo cambia entre sí piezas iguales sin
+ * cambiar qué posiciones están pegadas), así que un camino de S' al resuelto lleva S a un estado
+ * con el aspecto del resuelto. Devuelve { S, d } (sin objetivos, el propio S).
+ * @param {Analisis} A @param {Int16Array} S
+ */
+function reetiquetadoMasCercano(A, S) {
+  const { mod, bfs } = A;
+  const k = new Uint32Array(mod.palabras);
+  if (!bfs) return { S, d: -1 };
+  let mejor = S, d = bfs.tabla.distancia(mod.empaquetar(S, k));
+  for (const pi of A.objetivos || []) {
+    const S2 = new Int16Array(S.length);
+    for (let i = 0; i < S.length; i++) S2[pi[i]] = S[i];
+    const d2 = bfs.tabla.distancia(mod.empaquetar(S2, k));
+    if (d2 >= 0 && (d < 0 || d2 < d)) { d = d2; mejor = S2; }
+  }
+  return { S: mejor, d };
 }
 
 /**
@@ -1045,6 +1093,7 @@ function caminoBFS(A, S, previos = [-1, -1]) {
   let [u1, u2] = previos;
   const { mod, bfs } = /** @type {Analisis & { bfs: BFSEstados }} */ (A);
   const k = new Uint32Array(mod.palabras);
+  if (A.objetivos) S = reetiquetadoMasCercano(A, S).S; // piezas iguales: al resuelto más cercano a la vista
   let d = bfs.tabla.distancia(mod.empaquetar(S, k));
   if (d < 0) return null;
   // IDA* con la distancia exacta del BFS como cota: sin giros previos es el descenso
@@ -1125,7 +1174,7 @@ function idaGenerico(A, S, { msMax = 1000, maxProf = 30, conGeo = true, ultima =
   function dfs(T, g, lim, ultima) {
     const hh = h(T);
     if (g + hh > lim) return false;
-    if (hh === 0 && mod.esResuelto(T)) return true;
+    if ((hh === 0 && mod.esResuelto(T)) || (mod.hayIguales && mod.resueltoColores(T))) return true;
     if ((++nodos & 1023) === 0 && ahora() - t0 > msMax) { agotado = true; return false; }
     for (let m = 0; m < mod.nM; m++) {
       if (mod.prohibido(m, ultima)) continue;
@@ -1162,7 +1211,7 @@ export function resolverBloqueos(A, S, opciones = {}) {
   const pasado = () => ahora() - t0;
   /** @type {{ A: SolucionEstrategia | null, B: SolucionEstrategia | null }} */
   const res = { A: null, B: null };
-  if (mod.esResuelto(S)) return { movs: [], estrategia: 'A', fases: [], res };
+  if (mod.pareceResuelto(S)) return { movs: [], estrategia: 'A', fases: [], res };
   const rapida = mod.soporte.busquedaRapida;
 
   // ---- Estrategia A: búsqueda directa ----
@@ -1280,9 +1329,10 @@ export function scrambleBloqueos(A, rng, opciones = {}) {
     const k = new Uint32Array(mod.palabras);
     for (let intento = 0; intento < 100; intento++) {
       const t = 1 + Math.floor(rng() * (n - 1)); // nunca el resuelto (índice 0)
-      const d = A.bfs.tabla.nesimo(t, k);
-      if (d < Math.min(2, /** @type {number} */ (A.info.diametro))) continue;
+      let d = A.bfs.tabla.nesimo(t, k);
       const S = mod.desempaquetar(k);
+      if (A.objetivos) d = reetiquetadoMasCercano(A, S).d; // a la vista
+      if (d < Math.min(2, /** @type {number} */ (A.info.diametro))) continue;
       const sol = caminoBFS(A, S);
       return invertirSecuencia(mod, /** @type {number[]} */ (sol));
     }
@@ -1292,7 +1342,7 @@ export function scrambleBloqueos(A, rng, opciones = {}) {
     const w = paseoAleatorio(A, rng, 0, T, { pasosFijos: true });
     let S = mod.resuelto;
     for (const m of w) S = mod.aplicar(S, m);
-    if (!mod.esResuelto(S) || intento >= 20) return w;
+    if (!mod.pareceResuelto(S) || intento >= 20) return w;
   }
 }
 
@@ -1559,6 +1609,39 @@ export function puzzleConBloqueos(puzzle, definicion, opcionesAnalisis = {}) {
   /** @param {number} bi */
   const nombreBloque = (bi) => mod.bloques[bi].piezas.map((k) => sop.piezas[k].clave).join('+');
 
+  /**
+   * Comprueba una solución giro a giro sobre el estado del usuario: cada giro legal en su
+   * momento (ningún bloque se rompe) y el estado final resuelto. Nunca se devuelve una solución
+   * que no pase esto (noche 13).
+   * @param {EstadoPegatinas} estado @param {Movimiento[]} movs
+   */
+  function solucionComprobada(estado, movs) {
+    let e = estado;
+    for (const m of movs) {
+      const id = identificar(e);
+      if (id.errores) return false;
+      if (!comprobarMovimiento(id.donde, m).legal) return false;
+      const M = sop.mapa(m);
+      const nuevo = e.slice();
+      for (let p = 0; p < e.length; p++) nuevo[M[p]] = e[p];
+      e = nuevo;
+    }
+    return estaResuelto(e);
+  }
+  /**
+   * Resuelto: el del puzzle (cada cara de un color) y, si hay bloques con piezas iguales, además
+   * cada bloque en las posiciones del resuelto (un bloque centro fijo + centros iguales girado en
+   * su sitio tiene los mismos colores pero otro pegado). Sin piezas iguales, el del puzzle.
+   * @param {EstadoPegatinas} e
+   */
+  function estaResuelto(e) {
+    if (!puzzle.estaResuelto(e)) return false;
+    if (!mod.hayIguales || !mod.bloques.length) return true;
+    const n = normalizar(e);
+    if (n.errores) return false;
+    return mod.resueltoColores(mod.SDesdeDonde(n.donde));
+  }
+
   /** @param {EstadoPegatinas} estado @param {Movimiento} mov */
   function aplicarMovimiento(estado, mov) {
     const M = sop.mapa(mov); // lanza un error si el movimiento no existe
@@ -1694,6 +1777,7 @@ export function puzzleConBloqueos(puzzle, definicion, opcionesAnalisis = {}) {
     const r = resolverBloqueos(/** @type {Analisis} */ (A), /** @type {Int16Array} */ (a.S), opciones);
     if (!r) return { ok: false, errores: ['No se encontró solución en el tiempo disponible.'] };
     const movimientos = conNotacion(r.movs.map((m) => traducir(/** @type {number} */ (a.r), m)));
+    if (!solucionComprobada(estado, movimientos)) return { ok: false, errores: ['La solución encontrada no ha pasado la comprobación giro a giro, así que no se muestra (es un error del programa: por favor, avísalo).'] };
     /** @type {ResolverOk} */
     const res = {
       ok: true, movimientos, ms: ahora() - t0,
@@ -1707,6 +1791,8 @@ export function puzzleConBloqueos(puzzle, definicion, opcionesAnalisis = {}) {
         } : null,
       },
     };
+    // la de la otra estrategia (la interfaz deja verla) también se comprueba; si no pasa, no se ofrece
+    if (res.detalle && res.detalle.B && r.estrategia !== 'B' && !solucionComprobada(estado, res.detalle.B.movimientos)) res.detalle.B = null;
     if (opciones.compararSinBloqueos !== false && puzzle.solucionSinBloqueos) {
       const s = puzzle.solucionSinBloqueos(estado);
       if (s) res.sinBloqueos = { longitud: s.movimientos.length, optima: s.optima };
@@ -1791,6 +1877,7 @@ export function puzzleConBloqueos(puzzle, definicion, opcionesAnalisis = {}) {
     capacidades: { scramble: true, validar: true, resolver: true, editar: !!puzzle.capacidades.editar },
     descripcion: 'Cubo vendado: búsqueda directa (BFS o IDA*/Kociemba con legalidad) o dos fases (geometría y permutación).',
     tipoScramble: 'vendado',
+    estaResuelto,
     aplicarMovimiento,
     invertirMovimiento: invertirNombre,
     infoMovimiento(mov) { const { fam } = partesMov(mov); return { eje: ejeDe(fam), clave: fam }; },
