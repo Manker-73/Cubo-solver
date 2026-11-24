@@ -503,6 +503,9 @@ export interface InfoBloqueos {
   /** |K|: reetiquetados de piezas iguales que dejan el resuelto alcanzable con el mismo aspecto. */
   simetriaIguales?: string;
   detalleDistinguibles?: string;
+  /** (noche 13) Tablas de Minkwitz de la fase 2 (4x4, 5x5 en espacio grande). */
+  msMinkwitz?: number;
+  minkwitz?: { niveles: number; entradas: number; longitudMedia: number; completo: boolean; ms: number; pasos: number };
 }
 
 export interface DetalleEstrategias {

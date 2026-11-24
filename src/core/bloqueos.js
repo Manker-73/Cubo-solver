@@ -28,6 +28,7 @@
 
 import { crearCadena, permProducto, permInversa, completarAleatorio } from './schreier.js';
 import { crearTablaEstados } from './tabla-estados.js';
+import { crearTablasMinkwitz } from './minkwitz.js';
 
 /**
  * Tipos de los contratos (soporte, definición, análisis, puzzle vendado) en ./tipos.d.ts;
@@ -42,10 +43,11 @@ import { crearTablaEstados } from './tabla-estados.js';
  * @typedef {ReturnType<typeof grupoFase2>} GrupoFase2
  * @typedef {NonNullable<ReturnType<typeof bfsEstados>>} BFSEstados
  * @typedef {ReturnType<typeof tablasProyeccion>} Proyecciones
+ * @typedef {ReturnType<typeof tablasFase2>} TablasMinkwitz
  * @typedef {{ mod: ModeloBloqueos, info: InfoBloqueos, ok: true, geo: Geometrias, distGeo: Map<string, number>, g2: GrupoFase2,
- *   bfs: BFSEstados | null, proy: Proyecciones | null }} Analisis  análisis de una configuración válida
+ *   bfs: BFSEstados | null, proy: Proyecciones | null, mink?: TablasMinkwitz | null }} Analisis  análisis de una configuración válida
  * @typedef {{ movs: number[], optima?: boolean, metodo: string, ms?: number, fase1?: number, fase2?: number }} SolucionEstrategia
- * @typedef {{ rng?: Rng, limiteGeometrias?: number, limiteEstados?: number }} OpcionesAnalisis
+ * @typedef {{ rng?: Rng, limiteGeometrias?: number, limiteEstados?: number, msMinkwitz?: number }} OpcionesAnalisis
  */
 
 export const LIMITES = {
@@ -391,8 +393,36 @@ export function crearModeloBloqueos(soporte, definicion) {
     return S;
   }
 
+  // ----- palabras -----
+  const vecesMov = movs.map((n) => (n.endsWith("'") ? 3 : n.endsWith('2') ? 2 : 1));
+  /** @type {Map<string, number[]>} */
+  const porFamilia = new Map();
+  movs.forEach((n, i) => { if (!porFamilia.has(caraDe[i])) porFamilia.set(caraDe[i], [-1, -1, -1, -1]); /** @type {number[]} */ (porFamilia.get(caraDe[i]))[vecesMov[i]] = i; });
+  const inversoMov = movs.map((n, i) => /** @type {number[]} */ (porFamilia.get(caraDe[i]))[(4 - vecesMov[i]) % 4]);
+  /**
+   * Simplifica una palabra sin cambiar lo que hace ni su legalidad: un giro se une al de su misma
+   * cara del tramo final de giros del mismo eje (conmutan; U U' desaparece, U U = U2). Los giros
+   * del mismo eje no cambian qué planos de ese eje cortan los bloques, así que la legalidad de
+   * cada giro no depende de su orden dentro del tramo.
+   * @param {number[]} w
+   */
+  function reducirPalabra(w) {
+    /** @type {number[]} */
+    const r = [];
+    for (const m of w) {
+      let j = r.length - 1;
+      while (j >= 0 && ejeFam[famIdx[r[j]]] === ejeFam[famIdx[m]] && famIdx[r[j]] !== famIdx[m]) j--;
+      if (j >= 0 && famIdx[r[j]] === famIdx[m]) {
+        const v = (vecesMov[r[j]] + vecesMov[m]) % 4;
+        if (v === 0) r.splice(j, 1); else r[j] = /** @type {number[]} */ (porFamilia.get(caraDe[m]))[v];
+      } else r.push(m);
+    }
+    return r;
+  }
+
   return {
     soporte, errores, avisos, bloques, clases, piezas, movs, nM, caraDe, prohibido, redundante, MAPA, CAPA, fijo,
+    inversoMov, reducirPalabra,
     moviles, nS, resuelto, palabras, codigos: codigo, codigoArr, puntoAPieza, seguido, enBloque, idxMovil,
     hayIguales, claseMovil, casasClase, resueltoColores, pareceResuelto,
     aplicar, aplicarEn, legal, esResuelto, geometriaDe, claveG, legalG, aplicarG, canonica,
@@ -497,18 +527,31 @@ function grupoFase2Aleatorio(mod, geo, rng, camino) {
   for (let p = 0; p < P; p++) (libre[p] ? libres : prefijo).push(p);
   const cadena = crearCadena(P, { prefijo, sinSchreier: true });
   const nA = geo.aristas.length / 3;
-  // lazos: todos o, si son muchos, 20.000 al azar (los elementos al azar completan el resto)
-  let orden = [...Array(nA).keys()];
-  if (nA > 20000) {
-    for (let i = nA - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); const t = orden[i]; orden[i] = orden[j]; orden[j] = t; }
-    orden = orden.slice(0, 20000);
-  }
-  const lazos = orden.map((a) => {
+  /** @param {number} a */
+  const lazo = (a) => {
     const u = geo.aristas[3 * a], m = geo.aristas[3 * a + 1], v = geo.aristas[3 * a + 2];
     return permProducto(permProducto(camino[u], mod.MAPA[m]), permInversa(camino[v]));
-  });
-  const azar = completarAleatorio(cadena, lazos, rng, { seguidas: 50 });
-  return { cadena, camino, orden: cadena.orden(), exacto: geo.completo, aleatorio: true, azar, prefijo: prefijo.length, libres };
+  };
+  // Lazos del más corto al más largo hasta que 3.000 seguidos no amplían el grupo (con pocas
+  // geometrías, todos); luego elementos al azar del grupo hasta que 50 seguidos no lo amplían, y
+  // por último 5.000 lazos más al azar tienen que estar todos dentro (si no, se sigue con ellos).
+  const lon = (/** @type {number} */ a) => geo.nodos[geo.aristas[3 * a]].d + geo.nodos[geo.aristas[3 * a + 2]].d;
+  const orden = [...Array(nA).keys()].sort((a, b) => lon(a) - lon(b));
+  let usados = 0, seguidos = 0;
+  for (; usados < nA && seguidos < 3000; usados++) { if (cadena.incluir(lazo(orden[usados]))) seguidos = 0; else seguidos++; }
+  let azar = completarAleatorio(cadena, [], rng, { seguidas: 50 });
+  let comprobados = 0;
+  for (let vuelta = 0; usados < nA && vuelta < 10; vuelta++) {
+    let amplia = false;
+    for (let i = 0; i < 5000; i++) {
+      const a = orden[usados + Math.floor(rng() * (nA - usados))];
+      comprobados++;
+      if (cadena.incluir(lazo(a))) amplia = true;
+    }
+    if (!amplia) break;
+    azar += completarAleatorio(cadena, [], rng, { seguidas: 50 });
+  }
+  return { cadena, camino, orden: cadena.orden(), exacto: geo.completo, aleatorio: true, azar, lazosUsados: usados, lazosComprobados: comprobados, prefijo: prefijo.length, libres };
 }
 
 // ---------------------------------------------------------------------------
@@ -868,9 +911,18 @@ export function crearAnalisisBloqueos(soporte, definicion, opciones = {}) {
   // Tablas de poda por proyecciones (IDA* de las estrategias A y B en espacios grandes)
   let proy = null;
   if (!bfs) {
-    proy = tablasProyeccion(mod);
+    proy = tablasProyeccion(mod, mod.hayIguales ? 1000 : 4000);
     info.msProyecciones = Math.round(proy.ms);
     info.tablasProyeccion = proy.tablas.length;
+  }
+  // 4x4, 5x5 (espacio grande): tablas de Minkwitz para la fase 2 de la estrategia B
+  /** @type {TablasMinkwitz | null} */
+  let mink = null;
+  if (!bfs && mod.hayIguales && geo.completo) {
+    const tm = ahora();
+    mink = tablasFase2(mod, geo, rngInterno, opciones.msMinkwitz ?? 3000, g2.orden);
+    info.msMinkwitz = Math.round(ahora() - tm);
+    info.minkwitz = mink.info;
   }
 
   // Avisos
@@ -879,7 +931,100 @@ export function crearAnalisisBloqueos(soporte, definicion, opciones = {}) {
     info.avisos.push(`El cubo queda muy limitado: ${formatearNumero(geo.nodos.length)} geometrías y ${formatearNumero(nEst)} estados alcanzables.`);
   }
   info.msTotal = Math.round(ahora() - t0);
-  return { mod, info, ok: true, geo, distGeo, g2, bfs, proy };
+  return { mod, info, ok: true, geo, distGeo, g2, bfs, proy, mink };
+}
+
+/**
+ * Tablas de Minkwitz del grupo de la fase 2 (lazos de la geometría resuelta como palabras).
+ * Base: el punto seguido de cada pieza móvil, en el orden de las piezas (esquinas, aristas,
+ * centros).
+ * @param {ModeloBloqueos} mod @param {Geometrias} geo @param {Rng} rng @param {number} msMax
+ */
+function tablasFase2(mod, geo, rng, msMax, ordenG2 = 0n) {
+  const nodos = geo.nodos;
+  /** @type {number[][]} */
+  const palabra = new Array(nodos.length);
+  palabra[0] = [];
+  for (let i = 1; i < nodos.length; i++) palabra[i] = palabra[nodos[i].padre].concat([nodos[i].mov]);
+  /** @param {number[]} w */
+  const inv = (w) => w.slice().reverse().map((m) => mod.inversoMov[m]);
+  const P = mod.soporte.puntos;
+  /** @type {Int16Array[]} */
+  const camino = new Array(nodos.length);
+  const id = new Int16Array(P); for (let i = 0; i < P; i++) id[i] = i;
+  camino[0] = id;
+  for (let i = 1; i < nodos.length; i++) camino[i] = permProducto(camino[nodos[i].padre], mod.MAPA[nodos[i].mov]);
+  // Generadores: los lazos más cortos que generan todo el grupo de la fase 2. Con muchas geometrías
+  // hay cientos de miles de lazos, la mayoría largos (hasta 2·diámetro + 1 giros), y con
+  // generadores largos las palabras de las tablas salen largas. Se ordenan por longitud y se toman
+  // 200, 400, 800… hasta que el grupo que generan tiene el orden de la fase 2.
+  const nA = geo.aristas.length / 3;
+  /** @param {number} a */
+  const lon = (a) => nodos[geo.aristas[3 * a]].d + 1 + nodos[geo.aristas[3 * a + 2]].d;
+  const orden = [...Array(nA).keys()].sort((a, b) => lon(a) - lon(b));
+  /** @param {number} a */
+  const lazo = (a) => {
+    const u = geo.aristas[3 * a], m = geo.aristas[3 * a + 1], v = geo.aristas[3 * a + 2];
+    return {
+      perm: permProducto(permProducto(camino[u], mod.MAPA[m]), permInversa(camino[v])),
+      palabra: mod.reducirPalabra(palabra[u].concat([m], inv(palabra[v]))),
+    };
+  };
+  let generadores = /** @type {Array<{ perm: Int16Array, palabra: number[] }>} */ ([]);
+  for (let cuantos = 200; ; cuantos *= 2) {
+    generadores = orden.slice(0, cuantos).map(lazo).filter((g) => g.palabra.length);
+    if (cuantos >= nA || !ordenG2) break;
+    const cad = crearCadena(P, { sinSchreier: true });
+    completarAleatorio(cad, generadores.map((g) => g.perm), rng, { seguidas: 30 });
+    if (cad.orden() === ordenG2) break;
+  }
+  // Orden de la base (qué piezas se colocan primero). Al final van las que tienen 3-ciclos puros
+  // cortos (wings, centros en X), porque las últimas tablas solo admiten elementos que no mueven
+  // nada más. Medido (DECISIONES.md, noche 13): en el 5x5, con las aristas centrales y los centros
+  // en cruz al final las tablas no se llenaban en 6 s; al principio, se llenan en 3 s y las
+  // soluciones bajan a ~400 giros. En el 4x4 (esquinas, aristas, centros) es lo mejor medido.
+  const ORDEN_TIPOS = ['arista-central', 'centro-t', 'esquina', 'arista', 'centro-x', 'centro'];
+  /** @param {number} i */
+  const rango = (i) => { const r = ORDEN_TIPOS.indexOf(mod.piezas[mod.moviles[i]].tipo); return r < 0 ? ORDEN_TIPOS.length : r; };
+  const idx = mod.moviles.map((k, i) => i).sort((a, b) => rango(a) - rango(b) || a - b);
+  const base = idx.map((i) => mod.resuelto[i]);
+  const t = crearTablasMinkwitz({ puntos: P, base, generadores, inverso: (m) => mod.inversoMov[m], reducir: mod.reducirPalabra, rng, msMax });
+  // nivel k de la base = pieza móvil idx[k]; centros iguales sueltos: su clase (vale cualquiera)
+  const clase = idx.map((i) => (mod.claseMovil[i] >= 0 && mod.enBloque[mod.moviles[i]] < 0 ? mod.claseMovil[i] : -1));
+  // Prefijos para varios intentos: los generadores y entradas de las tablas más cortos (lazos:
+  // legales desde cualquier estado de la geometría resuelta, porque la legalidad solo depende de ella)
+  /** @type {number[][]} */
+  const prefijos = [];
+  const vistos = new Set();
+  for (const w of generadores.map((g) => g.palabra).concat(t.tablas.flatMap((T) => T.flatMap((e) => (e ? [e.palabra] : []))))) {
+    if (!w.length || w.length > 8) continue;
+    const k = w.join(',');
+    if (!vistos.has(k)) { vistos.add(k); prefijos.push(w); }
+  }
+  prefijos.sort((a, b) => a.length - b.length);
+  return {
+    ...t,
+    prefijos: prefijos.length,
+    /**
+     * Palabra que resuelve S (desde la geometría resuelta) o null. Con `intentos`, prueba también
+     * a empezar por un lazo corto (un prefijo) y se queda con la más corta en total.
+     * @param {Int16Array} S @param {number} [intentos]
+     */
+    resolverS(S, intentos = 0) {
+      let mejor = t.resolver(idx.map((i) => S[i]), clase);
+      for (let j = 0; j < Math.min(intentos, prefijos.length); j++) {
+        const w = prefijos[Math.floor(rng() * prefijos.length)];
+        let T = S;
+        for (const m of w) T = mod.aplicar(T, m);
+        const r = t.resolver(idx.map((i) => T[i]), clase);
+        if (r && (!mejor || w.length + r.length < mejor.length)) {
+          const total = mod.reducirPalabra(w.concat(r));
+          if (!mejor || total.length < mejor.length) mejor = total;
+        }
+      }
+      return mejor;
+    },
+  };
 }
 
 /** Distancia a la geometría resuelta (exacta, de la tabla). @param {Analisis} A @param {Int16Array} S */
@@ -1054,6 +1199,11 @@ export function resolverBloqueos(A, S, opciones = {}) {
     const cota = res.B ? res.B.movs.length - s1.length - 1 : 40;
     if (cota < 0) return;
     let s2 = null, metodo2 = '';
+    if (A.mink) {
+      // 4x4, 5x5: tablas de Minkwitz (siempre llegan; las búsquedas, solo si está cerca)
+      const w = A.mink.resolverS(T, Math.max(0, Math.round(ms * 2)));
+      if (w) { s2 = w; metodo2 = 'Minkwitz'; }
+    }
     if (A.bfs) { s2 = caminoBFS(A, T, [ultima, s1.length > 1 ? s1[s1.length - 2] : -1]); metodo2 = 'BFS'; } else {
       if (rapida) { s2 = rapida(mod, T, { msMax: ms, maxLong: cota, ultima }); metodo2 = 'Kociemba con legalidad'; }
       if (!opciones.sinIDA) {
