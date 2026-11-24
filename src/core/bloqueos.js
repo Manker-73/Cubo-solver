@@ -26,7 +26,7 @@
 // estados alcanzables: |estados| = |geometrías| · |grupo de la fase 2|.
 // Detalles y demostración en DECISIONES.md.
 
-import { crearCadena, permProducto, permInversa } from './schreier.js';
+import { crearCadena, permProducto, permInversa, completarAleatorio } from './schreier.js';
 import { crearTablaEstados } from './tabla-estados.js';
 
 /**
@@ -128,7 +128,8 @@ export function crearModeloBloqueos(soporte, definicion) {
   const nM = movs.length;
   const MAPA = movs.map((m) => soporte.mapa(m));
   const CAPA = movs.map((m) => soporte.enCapa(m));
-  const caraDe = movs.map((m) => m.replace(/['2]/g, '')); // "familia" del giro, para no repetir
+  // "familia" del giro, para no repetir: sin el sufijo (U2 -> U, 3Uw' -> 3Uw, 2U2 -> 2U)
+  const caraDe = movs.map((m) => m.replace(/(2'|2|')$/, ''));
   const familias = [...new Set(caraDe)];
   const famIdx = caraDe.map((f) => familias.indexOf(f));
   const ejeFam = familias.map((f) => (soporte.ejeDe ? soporte.ejeDe(f) : f));
@@ -141,10 +142,14 @@ export function crearModeloBloqueos(soporte, definicion) {
   /** @param {number} m @param {number} ultima */
   const prohibido = (m, ultima) => ultima >= 0 && (famIdx[m] === famIdx[ultima] ||
     (ejeFam[famIdx[m]] === ejeFam[famIdx[ultima]] && famIdx[m] < famIdx[ultima]));
-  /** Redundante de verdad (la misma cara seguida, o tres del mismo eje: U D U). */
+  /**
+   * Redundante de verdad: la misma cara seguida, o la misma cara dos veces en tres giros del
+   * mismo eje (U D U). En el 3x3 (dos familias por eje) es lo mismo que "tres del mismo eje";
+   * en el 4x4 no: U Uw D no es redundante (noche 13).
+   */
   /** @param {number} m @param {number} u1 @param {number} u2 */
   const redundante = (m, u1, u2) => u1 >= 0 && (famIdx[m] === famIdx[u1] ||
-    (u2 >= 0 && ejeFam[famIdx[m]] === ejeFam[famIdx[u1]] && ejeFam[famIdx[u1]] === ejeFam[famIdx[u2]]));
+    (u2 >= 0 && ejeFam[famIdx[m]] === ejeFam[famIdx[u1]] && famIdx[m] === famIdx[u2]));
 
   // Puntos fijos de la búsqueda (centros y núcleo del 3x3 con giros de cara)
   const fijo = new Uint8Array(P);
@@ -272,6 +277,33 @@ export function crearModeloBloqueos(soporte, definicion) {
     for (let i = 0; i < nS; i++) if (S[i] !== resuelto[i]) return false;
     return true;
   }
+  // Piezas iguales (4x4, 5x5: centros del mismo color): clase de cada pieza móvil y las
+  // posiciones de su clase en el resuelto. "Resuelto por colores": cada pieza en su sitio o
+  // en el de otra igual (en un estado alcanzable los bloques están enteros, así que basta).
+  const claseMovil = new Int16Array(nS).fill(-1);
+  /** @type {Set<number>[]} */
+  const casasClase = [];
+  (soporte.iguales || []).forEach((cl, c) => {
+    casasClase.push(new Set());
+    for (const k of cl) {
+      const i = idxMovil[k];
+      if (i < 0) continue;
+      claseMovil[i] = c;
+      casasClase[c].add(resuelto[i]);
+    }
+  });
+  const hayIguales = casasClase.length > 0;
+  /** @param {Int16Array} S */
+  function resueltoColores(S) {
+    for (let i = 0; i < nS; i++) {
+      if (S[i] === resuelto[i]) continue;
+      const c = claseMovil[i];
+      if (c < 0 || !casasClase[c].has(S[i])) return false;
+    }
+    return true;
+  }
+  /** Resuelto a la vista: exacto o, con piezas iguales, por colores. @param {Int16Array} S */
+  const pareceResuelto = (S) => (hayIguales ? resueltoColores(S) : esResuelto(S));
 
   // ----- geometría -----
   // G: posiciones de las ranuras (bloque a bloque); canónica = bloques de la misma
@@ -361,7 +393,8 @@ export function crearModeloBloqueos(soporte, definicion) {
 
   return {
     soporte, errores, avisos, bloques, clases, piezas, movs, nM, caraDe, prohibido, redundante, MAPA, CAPA, fijo,
-    moviles, nS, resuelto, palabras, codigos: codigo, codigoArr, puntoAPieza, seguido, enBloque,
+    moviles, nS, resuelto, palabras, codigos: codigo, codigoArr, puntoAPieza, seguido, enBloque, idxMovil,
+    hayIguales, claseMovil, casasClase, resueltoColores, pareceResuelto,
     aplicar, aplicarEn, legal, esResuelto, geometriaDe, claveG, legalG, aplicarG, canonica,
     SDesdeDonde, dondeDesdeS, empaquetar, desempaquetar,
   };
@@ -419,8 +452,9 @@ function grupoFase2(mod, geo, rng) {
   const id = new Int16Array(P); for (let i = 0; i < P; i++) id[i] = i;
   camino[0] = id;
   for (let i = 1; i < nodos.length; i++) camino[i] = permProducto(camino[nodos[i].padre], MAPA[nodos[i].mov]);
-  const cadena = crearCadena(P);
   const nA = geo.aristas.length / 3;
+  if (mod.hayIguales) return grupoFase2Aleatorio(mod, geo, rng, camino);
+  const cadena = crearCadena(P);
   let orden = [...Array(nA).keys()];
   let exacto = true;
   if (nA > LIMITES.lazosExactos) {
@@ -437,7 +471,206 @@ function grupoFase2(mod, geo, rng) {
     if (!exacto && sinAmpliar >= 2000) break;
   }
   if (!exacto && usados === nA) exacto = true;
-  return { cadena, camino, orden: cadena.orden(), exacto: exacto && geo.completo };
+  return { cadena, camino, orden: cadena.orden(), exacto: exacto && geo.completo, aleatorio: false, prefijo: 0, libres: /** @type {number[]} */ ([]) };
+}
+
+/**
+ * Grupo de la fase 2 con piezas iguales (4x4, 5x5; noche 13). Dos cambios respecto al 3x3:
+ *  - Schreier–Sims aleatorio: el determinista tardaba 10–16 s en el 5x5. Se incluyen los lazos y
+ *    luego elementos al azar del grupo hasta que 50 seguidos no lo amplían: el orden es exacto
+ *    salvo con probabilidad ≤ 2⁻⁵⁰ (contrastado con el determinista y con el BFS en los tests).
+ *  - La base empieza por todos los puntos que no son de piezas iguales sueltas (prefijo): los
+ *    niveles siguientes son el subgrupo que solo mueve esas piezas, el que hace falta para contar
+ *    los estados distinguibles (contarDistinguibles).
+ * @param {ModeloBloqueos} mod
+ * @param {Geometrias} geo
+ * @param {Rng} rng
+ * @param {Int16Array[]} camino
+ */
+function grupoFase2Aleatorio(mod, geo, rng, camino) {
+  const sop = mod.soporte;
+  const P = sop.puntos;
+  // puntos de las piezas iguales que no están en ningún bloque ("libres")
+  const libre = new Uint8Array(P);
+  for (const cl of sop.iguales || []) for (const k of cl) if (mod.enBloque[k] < 0) for (const p of sop.piezas[k].puntos) libre[p] = 1;
+  const prefijo = /** @type {number[]} */ ([]), libres = /** @type {number[]} */ ([]);
+  for (let p = 0; p < P; p++) (libre[p] ? libres : prefijo).push(p);
+  const cadena = crearCadena(P, { prefijo, sinSchreier: true });
+  const nA = geo.aristas.length / 3;
+  // lazos: todos o, si son muchos, 20.000 al azar (los elementos al azar completan el resto)
+  let orden = [...Array(nA).keys()];
+  if (nA > 20000) {
+    for (let i = nA - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); const t = orden[i]; orden[i] = orden[j]; orden[j] = t; }
+    orden = orden.slice(0, 20000);
+  }
+  const lazos = orden.map((a) => {
+    const u = geo.aristas[3 * a], m = geo.aristas[3 * a + 1], v = geo.aristas[3 * a + 2];
+    return permProducto(permProducto(camino[u], mod.MAPA[m]), permInversa(camino[v]));
+  });
+  const azar = completarAleatorio(cadena, lazos, rng, { seguidas: 50 });
+  return { cadena, camino, orden: cadena.orden(), exacto: geo.completo, aleatorio: true, azar, prefijo: prefijo.length, libres };
+}
+
+// ---------------------------------------------------------------------------
+// Piezas iguales: estados distinguibles (noche 13; DECISIONES.md lo demuestra)
+// ---------------------------------------------------------------------------
+//
+// Con centros iguales, dos estados (con identidades) se ven igual si se pasa de uno a otro
+// cambiando entre sí piezas iguales sin cambiar qué posiciones están pegadas. Sea K el
+// conjunto de esos reetiquetados h con los que el resuelto (reetiquetado) sigue siendo
+// alcanzable. K es un grupo, y cada estado alcanzable tiene exactamente |K| versiones
+// alcanzables con su mismo aspecto, así que  distinguibles = estados / |K|.
+// |K| = |K libres| · n_bloq:
+//   K libres: elementos del grupo de la fase 2 que solo mueven piezas iguales sueltas (Gc, los
+//     niveles tras el prefijo de la base) y que conservan los colores: |Gc| / |órbita de la
+//     coloración|. Si Gc contiene el alternado de cada una de sus órbitas (se comprueba con su
+//     orden) y en cada órbita se repite algún color, la órbita es "todas las colocaciones con
+//     los mismos colores en cada órbita" (un multinomial por órbita).
+//   n_bloq: reetiquetados de las piezas iguales que están en bloques (cada bloque, por una
+//     rotación rígida, sobre otro de la misma forma y colores) con los que el resuelto es
+//     alcanzable salvo un reetiquetado de las libres: se enumeran y se comprueban uno a uno.
+
+/** n! como BigInt. @param {number} n */
+const factorial = (n) => { let f = 1n; for (let i = 2; i <= n; i++) f *= BigInt(i); return f; };
+
+/**
+ * @param {ModeloBloqueos} mod
+ * @param {Geometrias} geo
+ * @param {GrupoFase2} g2
+ * @param {Rng} rng
+ * @returns {{ K: bigint, exacto: boolean, Klibres: bigint, nBloq: number, detalle: string }}
+ */
+function contarSimetriaIguales(mod, geo, g2, rng) {
+  const sop = mod.soporte;
+  const P = sop.puntos;
+  const niv = g2.cadena.niveles;
+  let exacto = true;
+  /** @type {string[]} */
+  const detalle = [];
+  // clase de cada punto de pieza igual
+  const clasePunto = new Int16Array(P).fill(-1);
+  (sop.iguales || []).forEach((cl, c) => cl.forEach((k) => sop.piezas[k].puntos.forEach((p) => { clasePunto[p] = c; })));
+
+  // ---- K libres ----
+  let Gc = 1n;
+  for (let k = g2.prefijo; k < niv.length; k++) Gc *= BigInt(niv[k].rep.size);
+  const gensGc = niv.length > g2.prefijo ? niv[g2.prefijo].gens : [];
+  // órbitas de Gc (sobre los puntos libres)
+  const padre = new Int16Array(P); for (let i = 0; i < P; i++) padre[i] = i;
+  /** @param {number} x @returns {number} */
+  const raiz = (x) => { while (padre[x] !== x) { padre[x] = padre[padre[x]]; x = padre[x]; } return x; };
+  for (const g of gensGc) for (let p = 0; p < P; p++) { const a = raiz(p), b = raiz(g[p]); if (a !== b) padre[a] = b; }
+  /** @type {Map<number, number[]>} */
+  const orbitas = new Map();
+  for (const p of g2.libres) { const r = raiz(p); if (!orbitas.has(r)) orbitas.set(r, []); /** @type {number[]} */ (orbitas.get(r)).push(p); }
+  let orbitaColores = 1n;
+  for (const O of orbitas.values()) {
+    /** @type {Map<number, number>} */
+    const cuenta = new Map();
+    for (const p of O) cuenta.set(clasePunto[p], (cuenta.get(clasePunto[p]) || 0) + 1);
+    let multinomial = factorial(O.length);
+    for (const c of cuenta.values()) multinomial /= factorial(c);
+    if (O.length > 1 && multinomial > 1n) {
+      // ¿Gc contiene el alternado de O? Subgrupo que fija todos los demás puntos libres
+      const enO = new Set(O);
+      const cad = crearCadena(P, { prefijo: g2.libres.filter((p) => !enO.has(p)), sinSchreier: true });
+      completarAleatorio(cad, gensGc, rng, { seguidas: 40 });
+      let orden = 1n;
+      for (let k = g2.libres.length - O.length; k < cad.niveles.length; k++) orden *= BigInt(cad.niveles[k].rep.size);
+      const fO = factorial(O.length);
+      const conAlternado = orden * 2n >= fO;
+      const repite = [...cuenta.values()].some((c) => c >= 2);
+      if (!(conAlternado && (repite || orden === fO))) {
+        exacto = false;
+        detalle.push(`órbita de ${O.length} sin el alternado (${orden} de ${fO})`);
+      }
+    }
+    orbitaColores *= multinomial;
+  }
+  let Klibres = Gc / orbitaColores;
+  if (Klibres * orbitaColores !== Gc) { exacto = false; Klibres = Klibres || 1n; detalle.push('|Gc| no es múltiplo de la órbita'); }
+
+  // ---- n_bloq: reetiquetados de las piezas iguales que están en bloques ----
+  const bloquesConIguales = mod.bloques.map((b, bi) => bi).filter((bi) => mod.bloques[bi].piezas.some((k) => clasePunto[sop.piezas[k].puntos[0]] >= 0));
+  let nBloq = 1;
+  if (bloquesConIguales.length) {
+    // candidatos de cada bloque: (bloque destino, reetiquetado de piezas) por una rotación rígida
+    const puntosBloque = mod.bloques.map((b) => b.piezas.flatMap((k) => sop.piezas[k].puntos));
+    /** @type {Array<Array<{ destino: number, h: Map<number, number> }>>} */
+    const candidatos = bloquesConIguales.map((bi) => {
+      /** @type {Array<{ destino: number, h: Map<number, number> }>} */
+      const lista = [];
+      const vistos = new Set();
+      for (const Q of sop.rotaciones) {
+        let destino = -1, ok = true;
+        /** @type {Map<number, number>} */
+        const h = new Map();
+        for (const p of puntosBloque[bi]) {
+          const k = mod.puntoAPieza[p], k2 = mod.puntoAPieza[Q[p]];
+          if (k2 < 0 || mod.enBloque[k2] < 0) { ok = false; break; }
+          if (destino < 0) destino = mod.enBloque[k2]; else if (mod.enBloque[k2] !== destino) { ok = false; break; }
+          const iguales = k === k2 || (clasePunto[p] >= 0 && clasePunto[p] === clasePunto[Q[p]]);
+          if (!iguales) { ok = false; break; }
+          h.set(k, k2);
+        }
+        if (!ok || puntosBloque[destino].length !== puntosBloque[bi].length) continue;
+        const clave = destino + ':' + [...h].join(';');
+        if (vistos.has(clave)) continue;
+        vistos.add(clave);
+        lista.push({ destino, h });
+      }
+      return lista;
+    });
+    const total = candidatos.reduce((a, l) => a * l.length, 1);
+    if (total > 200000) { exacto = false; detalle.push(`${total} reetiquetados de bloques: no se enumeran`); } else {
+      nBloq = 0;
+      const ident = new Int16Array(P); for (let p = 0; p < P; p++) ident[p] = p;
+      /** @param {number} i @param {Set<number>} usados @param {Map<number, number>} h */
+      const recorrer = (i, usados, h) => {
+        if (i === candidatos.length) { if (resueltoReetiquetadoAlcanzable(h)) nBloq++; return; }
+        for (const c of candidatos[i]) {
+          if (usados.has(c.destino)) continue;
+          usados.add(c.destino);
+          const h2 = new Map(h); for (const [a, b] of c.h) h2.set(a, b);
+          recorrer(i + 1, usados, h2);
+          usados.delete(c.destino);
+        }
+      };
+      /** ¿El resuelto con las piezas reetiquetadas por h (k -> k2: k va al sitio de k2) es alcanzable salvo las libres? @param {Map<number, number>} h */
+      const resueltoReetiquetadoAlcanzable = (h) => {
+        const donde = ident.slice();
+        for (const [k, k2] of h) sop.piezas[k].puntos.forEach((p, j) => { donde[p] = sop.piezas[k2].puntos[j]; });
+        const S = mod.SDesdeDonde(donde);
+        const gi = geo.indice.get(mod.claveG(mod.geometriaDe(S)));
+        if (gi === undefined) return false;
+        // transportar a la geometría resuelta y cribar por los niveles del prefijo
+        const cam = g2.camino[gi];
+        const inv = new Int16Array(P); cam.forEach((x, i2) => { inv[x] = i2; });
+        let x = new Int16Array(P);
+        for (let p = 0; p < P; p++) x[p] = inv[donde[p]];
+        for (let k = 0; k < g2.prefijo; k++) {
+          const t = niv[k].inv.get(x[niv[k].punto]);
+          if (!t) return false;
+          x = permProducto(x, t);
+        }
+        // el resto solo mueve puntos libres: vale si cada órbita de Gc conserva sus colores
+        const xi = permInversa(x);
+        for (const O of orbitas.values()) {
+          /** @type {Map<number, number>} */
+          const c = new Map();
+          for (const p of O) { c.set(clasePunto[p], (c.get(clasePunto[p]) || 0) + 1); const q = xi[p]; c.set(clasePunto[q], (c.get(clasePunto[q]) || 0) - 1); }
+          for (const v of c.values()) if (v !== 0) return false;
+        }
+        for (const p of g2.libres) if (!orbitas.has(raiz(p)) && x[p] !== p) return false;
+        return true;
+      };
+      recorrer(0, new Set(), new Map());
+      if (nBloq === 0) { exacto = false; nBloq = 1; detalle.push('el resuelto no salió alcanzable (error interno)'); }
+    }
+  }
+  const K = Klibres * BigInt(nBloq);
+  detalle.unshift(`|Gc| = ${Gc}, órbita de colores = ${orbitaColores}, n_bloq = ${nBloq}`);
+  return { K, exacto: exacto && g2.exacto, Klibres, nBloq, detalle: detalle.join('; ') };
 }
 
 /** BFS completo de los estados (solo si caben). @param {ModeloBloqueos} mod @param {number} limite */
@@ -603,6 +836,15 @@ export function crearAnalisisBloqueos(soporte, definicion, opciones = {}) {
   info.grupoFase2 = g2.orden.toString();
   info.estados = (g2.orden * BigInt(geo.nodos.length)).toString();
   info.estadosExacto = g2.exacto;
+  if (mod.hayIguales) {
+    // estados distinguibles por colores (piezas iguales): estados / |K|
+    const sim = contarSimetriaIguales(mod, geo, g2, rngInterno);
+    const total = g2.orden * BigInt(geo.nodos.length);
+    info.simetriaIguales = sim.K.toString();
+    info.estadosDistinguibles = (total / sim.K).toString();
+    info.distinguiblesExacto = sim.exacto && (total % sim.K === 0n);
+    info.detalleDistinguibles = sim.detalle;
+  }
   info.msGrupo = Math.round(ahora() - tf);
 
   // BFS completo si cabe
@@ -970,8 +1212,11 @@ export function paseoAleatorio(A, rng, L, maxPasos = 200 * L, { pasosFijos = fal
       if (v === 0) nueva.splice(j, 1); else nueva[j] = /** @type {number[]} */ (deFamilia.get(mod.caraDe[m]))[v];
       desde = j;
     };
-    if (n && mod.caraDe[res[n - 1]] === mod.caraDe[m]) unir(n - 1);
-    else if (n >= 2 && eje(res[n - 1]) === eje(m) && mod.caraDe[res[n - 2]] === mod.caraDe[m]) unir(n - 2);
+    // la misma cara en el tramo final de giros del mismo eje (conmutan): se une a ella. En el 3x3
+    // es el anterior o el de antes (U D U); en el 4x4 puede estar más atrás (U Uw 3Uw U).
+    let j = n - 1;
+    while (j >= 0 && eje(res[j]) === eje(m) && mod.caraDe[res[j]] !== mod.caraDe[m]) j--;
+    if (j >= 0 && mod.caraDe[res[j]] === mod.caraDe[m]) unir(j);
     else {
       // lo normal: un giro más al final (ya se sabe que es legal)
       S = mod.aplicar(S, m);
@@ -1200,6 +1445,11 @@ export function puzzleConBloqueos(puzzle, definicion, opcionesAnalisis = {}) {
   }
   /** @type {Map<number, Movimiento>} */
   const traducciones = new Map();
+  // Nombres posibles de un giro en la orientación del usuario: los de búsqueda o, si el soporte
+  // los da, todos (en el 4x4 la búsqueda solo usa U, R y F; girado, un U puede ser un D)
+  const candidatos = (sop.todos || mod.movs).map((nombre) => ({ nombre, mapa: sop.mapa(nombre) }));
+  /** Notación preferida del soporte (4x4: 3Uw -> D + rotación), si la tiene. @param {Movimiento[]} movs */
+  const conNotacion = (movs) => (sop.notacion ? sop.notacion(movs) : movs);
   /**
    * Nombre en el marco original del giro m (índice) del marco normalizado por la rotación r.
    * (Siempre hay uno: las rotaciones llevan giros de cara a giros de cara.)
@@ -1213,11 +1463,11 @@ export function puzzleConBloqueos(puzzle, definicion, opcionesAnalisis = {}) {
     const M = mod.MAPA[m];
     /** @type {Movimiento | null} */
     let nombre = null;
-    for (let j = 0; j < mod.nM && !nombre; j++) {
-      const X = mod.MAPA[j];
+    for (let j = 0; j < candidatos.length && !nombre; j++) {
+      const X = candidatos[j].mapa;
       let igual = true;
       for (let p = 0; p < Q.length; p++) if (Qi[M[Q[p]]] !== X[p]) { igual = false; break; }
-      if (igual) nombre = mod.movs[j];
+      if (igual) nombre = candidatos[j].nombre;
     }
     traducciones.set(clave, /** @type {Movimiento} */ (nombre));
     return /** @type {Movimiento} */ (nombre);
@@ -1293,7 +1543,7 @@ export function puzzleConBloqueos(puzzle, definicion, opcionesAnalisis = {}) {
     if (!a.valido) return { ok: false, errores: a.errores };
     const r = resolverBloqueos(/** @type {Analisis} */ (A), /** @type {Int16Array} */ (a.S), opciones);
     if (!r) return { ok: false, errores: ['No se encontró solución en el tiempo disponible.'] };
-    const movimientos = r.movs.map((m) => traducir(/** @type {number} */ (a.r), m));
+    const movimientos = conNotacion(r.movs.map((m) => traducir(/** @type {number} */ (a.r), m)));
     /** @type {ResolverOk} */
     const res = {
       ok: true, movimientos, ms: ahora() - t0,
@@ -1303,7 +1553,7 @@ export function puzzleConBloqueos(puzzle, definicion, opcionesAnalisis = {}) {
         A: r.res.A ? { longitud: r.res.A.movs.length, metodo: r.res.A.metodo, optima: !!r.res.A.optima, ms: r.res.A.ms } : null,
         B: r.res.B ? {
           longitud: r.res.B.movs.length, fase1: /** @type {number} */ (r.res.B.fase1), fase2: /** @type {number} */ (r.res.B.fase2), metodo: r.res.B.metodo, ms: r.res.B.ms,
-          movimientos: r.res.B.movs.map((m) => traducir(/** @type {number} */ (a.r), m)),
+          movimientos: conNotacion(r.res.B.movs.map((m) => traducir(/** @type {number} */ (a.r), m))),
         } : null,
       },
     };
@@ -1326,7 +1576,7 @@ export function puzzleConBloqueos(puzzle, definicion, opcionesAnalisis = {}) {
     if (sinBloques) return puzzle.generarScramble(rng);
     inicializar();
     if (!A.ok) return [];
-    return scrambleBloqueos(A, rng).map((m) => mod.movs[m]);
+    return conNotacion(scrambleBloqueos(A, rng).map((m) => mod.movs[m]));
   }
 
   /** @param {string} fam */
@@ -1395,6 +1645,18 @@ export function puzzleConBloqueos(puzzle, definicion, opcionesAnalisis = {}) {
     invertirMovimiento: invertirNombre,
     infoMovimiento(mov) { const { fam } = partesMov(mov); return { eje: ejeDe(fam), clave: fam }; },
     buscarRedundancia(movs) {
+      if (sop.todos) {
+        // varias capas por cara (4x4, 5x5): redundante si en un tramo de giros del mismo eje se
+        // repite una familia (conmutan: se podrían unir). U Uw D no lo es.
+        let eje = null, fams = new Set();
+        for (let i = 0; i < movs.length; i++) {
+          const f = partesMov(movs[i]).fam, e = ejeDe(f);
+          if (e !== eje) { eje = e; fams = new Set(); }
+          if (fams.has(f)) return `movimiento redundante en la posición ${i + 1} (${movs[i]})`;
+          fams.add(f);
+        }
+        return null;
+      }
       for (let i = 1; i < movs.length; i++) {
         const a = partesMov(movs[i - 1]).fam, b = partesMov(movs[i]).fam;
         if (a === b) return `movimiento redundante en la posición ${i + 1} (${movs[i]})`;

@@ -453,6 +453,12 @@ export interface SoporteBloqueos<E> {
   busquedaRapida?(mod: ModeloBloqueos, S: Int16Array, opciones?: OpcionesBusquedaRapida): number[] | null;
   centrales?: Movimiento[];
   N?: number;
+  /** (noche 13) Todos los giros con nombre, para traducir una solución a la orientación del usuario (si no, `busqueda`). */
+  todos?: Movimiento[];
+  /** (noche 13) Clases de piezas iguales (índices de pieza): se ven igual y se cuentan una vez. */
+  iguales?: number[][];
+  /** (noche 13) Reescribe una secuencia en la notación preferida (p. ej. 3Uw -> D + rotación en el 4x4). */
+  notacion?(movs: Movimiento[]): Movimiento[];
 }
 
 export interface OpcionesBusquedaRapida {
@@ -488,6 +494,15 @@ export interface InfoBloqueos {
   msTotal?: number;
   msTablas?: number;
   sinBloques?: boolean;
+  /**
+   * (noche 13, puzzles con piezas iguales) Estados DISTINGUIBLES por colores: `estados` cuenta las
+   * piezas iguales como distintas; este es estados / |K| (DECISIONES.md, noche 13).
+   */
+  estadosDistinguibles?: string;
+  distinguiblesExacto?: boolean;
+  /** |K|: reetiquetados de piezas iguales que dejan el resuelto alcanzable con el mismo aspecto. */
+  simetriaIguales?: string;
+  detalleDistinguibles?: string;
 }
 
 export interface DetalleEstrategias {
