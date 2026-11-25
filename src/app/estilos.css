@@ -242,6 +242,8 @@ main:focus { outline: none; }
 .mensaje.error { background: var(--error-suave); color: var(--error); }
 .mensaje.ok { background: var(--ok-suave); color: var(--ok); }
 .mensaje.info { background: var(--acento-suave); color: var(--tinta); }
+/* «no se ha podido comprobar»: un aviso, no un error (deja intentar resolver) */
+.mensaje.aviso { background: var(--acento-suave); color: var(--tinta); border-left: 4px solid var(--aviso); }
 
 .solucion { border-top: 1px solid var(--linea); padding-top: 12px; display: flex; flex-direction: column; gap: 10px; }
 .solucion-cab { display: flex; justify-content: space-between; align-items: center; font-size: 0.88rem; color: var(--tenue); font-variant-numeric: tabular-nums; }

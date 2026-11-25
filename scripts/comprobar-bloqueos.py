@@ -306,6 +306,52 @@ async def comprobar_orden(b, errores, fallos, resumen):
                     resumen[clave] = info
                     await ctx.close()
 
+# Sesión «validador con muchas geometrías» (python3 scripts/comprobar-bloqueos.py geometrias): el 5x5 de
+# 16 bloques del fallo (más de 400.000 geometrías), escritorio y móvil: abrir el enlace, esperar al análisis,
+# cargar el scramble del fallo (antes: «Este estado no es posible» y «No se pudo comprobar la forma»),
+# resolver y reproducir; generar un scramble nuevo, cargarlo, resolver y reproducir. Sin mensajes de
+# error ni errores de consola. Capturas en docs/capturas/bandaged-geometrias-*.jpg.
+BARRAS_5X5 = 'B.B12.B32.DB-B11.B21.B31.DB3-B13.B23.B33.DB1-BL.BL1.BL3.DBL-BR.BR1.BR3.DBR-DF.F.F12.F32-DF1.F11.F21.F31-DF3.F13.F23.F33-DFL.FL.FL1.FL3-DFR.FR.FR1.FR3-DL.L.L12.L32-DL1.L11.L21.L31-DL3.L13.L23.L33-DR.R.R12.R32-DR1.R13.R23.R33-DR3.R11.R21.R31'
+SCRAMBLE_FALLO = "2R2 2B 2F' Fw' F Bw2 B2 R2 2B2 Bw' Fw F B L' B".split(' ')
+
+async def comprobar_geometrias(b, errores, fallos, resumen):
+    etiqueta = os.environ.get('ETIQUETA', 'despues')
+    for cfg, opts in CONFIGS:
+        clave = f'geometrias/{cfg}'
+        ctx = await b.new_context(**opts)
+        pg = await ctx.new_page()
+        pg.on('pageerror', lambda e, c=clave: errores.append(f'{c}: {e}'))
+        pg.on('console', lambda m, c=clave: errores.append(f'{c}: {m.text}') if m.type == 'error' else None)
+        await pg.goto(URL + '?puzzle=5x5&bloqueos=' + BARRAS_5X5)
+        await pg.wait_for_function("window.cuboSolver && window.cuboSolver.estado().puzzle === 'vendado-5x5' && window.cuboSolver.estado().bloqueos === 16", timeout=60000)
+        import time
+        t0 = time.time()
+        await pg.wait_for_function("/geometrías/.test(document.getElementById('bloq-analisis').textContent)", timeout=600000)
+        ms_analisis = round((time.time() - t0) * 1000)
+        await esperar_scramble(pg)
+        analisis = await pg.inner_text('#bloq-analisis')
+        modo3d = cfg == 'escritorio'
+        filas = {}
+        for caso in ('fallo', 'nuevo'):
+            if caso == 'fallo':
+                await pg.evaluate('(m) => window.cuboSolver.mostrarScramble(m)', SCRAMBLE_FALLO)
+            else:
+                await pg.click('#nuevo')
+                await pg.wait_for_timeout(200)
+                await esperar_scramble(pg)
+            longitud = await pg.inner_text('#longitud')
+            t1 = time.time()
+            d = await resolver_y_reproducir(pg, modo3d, fallos, f'{clave}/{caso}')
+            texto = await pg.inner_text('#mensajes')
+            if 'no es posible' in texto or 'No se pudo comprobar' in texto: fallos.append(f'{clave}/{caso}: {texto}')
+            filas[caso] = {'scramble': longitud, 'solucion': d and d['resumen'], 'ms': round((time.time() - t1) * 1000), 'mensajes': texto}
+            await pg.locator('#panel-resolver').screenshot(path=f'{OUT}/bandaged-geometrias-{etiqueta}-{cfg}-{caso}.jpg', quality=70, type='jpeg')
+        info = await pg.evaluate(INFO)
+        if info['scroll']: fallos.append(f'{clave}: scroll horizontal')
+        await pg.screenshot(path=f'{OUT}/bandaged-geometrias-{etiqueta}-{cfg}-pagina.jpg', quality=55, type='jpeg', full_page=True)
+        resumen[clave] = {'msAnalisis': ms_analisis, 'analisis': analisis, **filas}
+        await ctx.close()
+
 async def main():
     os.makedirs(OUT, exist_ok=True)
     errores, fallos, resumen = [], [], {}
@@ -313,6 +359,8 @@ async def main():
     async with async_playwright() as p:
         b = await p.chromium.launch(executable_path=os.environ.get('CHROME', '/usr/bin/google-chrome'),
                                     args=['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'])
+        if parte == 'geometrias':
+            await comprobar_geometrias(b, errores, fallos, resumen)
         if parte in ('todo', 'nxn'):
             await comprobar_nxn(b, errores, fallos, resumen)
         if parte in ('todo', 'orden'):

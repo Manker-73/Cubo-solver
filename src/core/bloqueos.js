@@ -594,11 +594,15 @@ function grupoFase2Aleatorio(mod, geo, rng, camino) {
   // por último 5.000 lazos más al azar tienen que estar todos dentro (si no, se sigue con ellos).
   const lon = (/** @type {number} */ a) => geo.nodos[geo.aristas[3 * a]].d + geo.nodos[geo.aristas[3 * a + 2]].d;
   const orden = ordenarPorLongitud(nA, lon);
+  // BFS de geometrías incompleto (sesión «validador con muchas geometrías»): los lazos de la bola no
+  // bastan para generar el grupo y cribarlos era el 45 % del análisis (10 s en el 5x5 de 16 bloques);
+  // se toman pocos aquí y el grupo se completa después con lazos al azar hasta su cota superior.
+  const seguidosMax = geo.completo ? 3000 : 300;
   let usados = 0, seguidos = 0;
-  for (; usados < nA && seguidos < 3000; usados++) { if (cadena.incluir(lazo(orden[usados]))) seguidos = 0; else seguidos++; }
-  let azar = completarAleatorio(cadena, [], rng, { seguidas: 50 });
+  for (; usados < nA && seguidos < seguidosMax; usados++) { if (cadena.incluir(lazo(orden[usados]))) seguidos = 0; else seguidos++; }
+  let azar = geo.completo ? completarAleatorio(cadena, [], rng, { seguidas: 50 }) : 0;
   let comprobados = 0;
-  for (let vuelta = 0; usados < nA && vuelta < 10; vuelta++) {
+  for (let vuelta = 0; geo.completo && usados < nA && vuelta < 10; vuelta++) {
     let amplia = false;
     for (let i = 0; i < 5000; i++) {
       const a = orden[usados + Math.floor(rng() * (nA - usados))];

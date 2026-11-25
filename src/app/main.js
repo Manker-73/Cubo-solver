@@ -21,6 +21,8 @@ const st = {
   p: null,
   scramble: [],
   estadoScramble: null,
+  /** Scramble con el que se cargó el editor (se manda al validar; el Worker comprueba que coincide). */
+  secuenciaEditor: null,
   editor: null,
   color: 0,       // índice en paleta + herramientas
   ultimoColor: 0, // último color de la paleta elegido (lo usan las herramientas con usaColor)
@@ -850,18 +852,26 @@ async function resolver() {
       if (!vigente()) return;
       limpiarMensajes();
     }
-    const v = await motor.pedir('validar', p.id, datosDe(p, { estado: st.editor }));
+    // Un scramble de la app cargado sin tocar es alcanzable por construcción: se manda con su
+    // secuencia (el Worker comprueba que el estado es exactamente el que da; si se ha editado, no
+    // lo es y se valida como siempre). Sesión «validador con muchas geometrías».
+    const secuencia = p.bloqueos && st.secuenciaEditor ? st.secuenciaEditor : null;
+    const v = await motor.pedir('validar', p.id, datosDe(p, secuencia ? { estado: st.editor, opciones: { secuencia } } : { estado: st.editor }));
     if (!vigente()) return;
-    if (!v.valido) {
+    // Tres resultados: válido e imposible (demostrados) y sin comprobar, que es un aviso (nunca un
+    // error) y deja intentar resolver
+    const resultado = v.resultado || (v.valido ? 'valido' : 'imposible');
+    if (resultado === 'imposible') {
       mensaje('error', 'Este estado no es posible:');
       v.errores.forEach((e) => mensaje('error', e));
       return;
     }
+    if (resultado === 'sin-comprobar') (v.avisos || []).forEach((e) => mensaje('aviso', e));
     const metodo = metodoActual(p);
     if (metodo) { await resolverAprendiendo(p, metodo, vigente); return; }
     mensaje('info', 'Buscando solución…');
     await esperarPintado();
-    const r = await motor.pedir('resolver', p.id, datosDe(p, p.bloqueos ? { estado: st.editor, opciones: { estrategia: panelBloqueos.estrategia() } } : { estado: st.editor }));
+    const r = await motor.pedir('resolver', p.id, datosDe(p, p.bloqueos ? { estado: st.editor, opciones: { estrategia: panelBloqueos.estrategia(), ...(secuencia ? { secuencia } : {}) } } : { estado: st.editor }));
     if (!vigente()) return;
     limpiarMensajes();
     if (!r.ok) {
@@ -1198,6 +1208,8 @@ function iniciar() {
     quitarSolucion();
     st.seleccion = null;
     st.editor = st.estadoScramble ? st.p.clonar(st.estadoScramble) : st.p.estadoResuelto();
+    // de dónde sale el estado (para el validador de los vendados: alcanzable por construcción)
+    st.secuenciaEditor = st.estadoScramble && st.p.bloqueos ? st.scramble.slice() : null;
     limpiarMensajes();
     pintarEditor();
   });
@@ -1235,6 +1247,9 @@ function iniciar() {
     estado: () => ({ seccion: st.seccion, tema: tema.actual(), puzzle: st.p && st.p.id, bloqueos: st.p && st.p.bloqueos ? st.p.bloqueos.length : 0, paso: st.paso, pasoScramble: st.pasoScramble, modo: { ...st.modo }, webgl: st.webgl }),
     editor: () => st.p.clonar(estadoMostrado()),
     resuelto: () => st.p.estaResuelto(estadoMostrado()),
+    // (para las comprobaciones en Chromium: muestra un scramble concreto como si lo hubiera generado
+    // la app; sesión «validador con muchas geometrías», el scramble del fallo)
+    mostrarScramble: (movs) => mostrarScramble(st.p, movs),
   };
   $('copiar').addEventListener('click', (e) => copiar(st.p.formatear(st.scramble), e.currentTarget));
   $('copiar-sol').addEventListener('click', (e) => st.sol && copiar(st.p.formatear(st.sol.movimientos), e.currentTarget));

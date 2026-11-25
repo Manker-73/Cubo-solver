@@ -622,3 +622,145 @@ for (const cfg of CONFIGS_NXN) {
     assert.equal(est.fallos.length, 0, `${cfg.nombre}: sin resolver ${est.fallos.length} de ${N_CASOS_NXN} (casos ${est.fallos.slice(0, 10).join(', ')})`);
   });
 }
+
+// ===========================================================================
+// Sesión «validador con muchas geometrías» (25/11/2026): configuraciones cuyo BFS de geometrías
+// no cabe (más de 400.000). Antes, el validador daba «imposible» a estados alcanzables (un scramble
+// de la propia app) porque su geometría no estaba en la tabla incompleta.
+// ===========================================================================
+import { bloquesSinCortes } from '../src/puzzles/nxn-identidad.js';
+
+/** Bloques en el formato de la URL (#/bandaged?bloqueos=…): piezas con '.', bloques con '-'. */
+const desdeTexto = (t) => t.split('-').map((b) => b.split('.'));
+// El 5x5 del fallo: 16 barras verticales (las columnas de F, R, B y L con la pieza de D de debajo)
+const BARRAS_5X5 = 'B.B12.B32.DB-B11.B21.B31.DB3-B13.B23.B33.DB1-BL.BL1.BL3.DBL-BR.BR1.BR3.DBR-DF.F.F12.F32-DF1.F11.F21.F31-DF3.F13.F23.F33-DFL.FL.FL1.FL3-DFR.FR.FR1.FR3-DL.L.L12.L32-DL1.L11.L21.L31-DL3.L13.L23.L33-DR.R.R12.R32-DR1.R13.R23.R33-DR3.R11.R21.R31';
+const SCRAMBLE_FALLO = "2R2 2B 2F' Fw' F Bw2 B2 R2 2B2 Bw' Fw F B L' B".split(' ');
+const CONFIGS_GRANDES = [
+  { N: 5, id: 'barras-16', nombre: '5x5: 16 barras verticales (el del fallo)', def: desdeTexto(BARRAS_5X5) },
+  // simulaciones de cuboides (twistypuzzles: «2x4x4 (bandaged 4x4x4)»): todas las piezas en bloques
+  { N: 4, id: '2x4x4', nombre: '4x4: simulación de un 2x4x4 (sin los cortes 1|2 y 3|4 de y)', def: bloquesSinCortes(4, [['y', 1], ['y', 3]]) },
+];
+/** @type {Map<string, any>} */
+const grandes = new Map();
+const puzzleGrande = (cfg) => {
+  if (!grandes.has(cfg.id)) { const p = crearNxNVendado(cfg.N, cfg.def, { rng: rngConSemilla(7) }); p.inicializar(); grandes.set(cfg.id, p); }
+  return grandes.get(cfg.id);
+};
+
+test('bloqueos grandes: el scramble de la app del 5x5 de 16 bloques se carga sin errores (antes: «imposible»)', { timeout: 600000 }, () => {
+  const p = puzzleGrande(CONFIGS_GRANDES[0]);
+  const info = p.analisis();
+  assert.deepEqual(info.errores, []);
+  assert.equal(info.geometriasExacto, false, 'esta configuración tiene más geometrías que el límite del BFS');
+  // cada giro es legal en su momento y los bloques siguen enteros
+  const e = aplicarComprobando(p, p.estadoResuelto(), SCRAMBLE_FALLO, 'scramble del fallo');
+  // el validador lo demuestra alcanzable (camino de geometría + grupo de la fase 2), sin la secuencia…
+  const v = p.validar(e);
+  assert.notEqual(v.resultado, 'imposible', `dice imposible: ${v.errores.join(' ')}`);
+  assert.equal(v.valido, true, `no demostrado: ${(v.avisos || []).join(' ')}`);
+  assert.deepEqual(v.errores, []);
+  // …y con ella (un scramble de la app sin tocar), por construcción
+  assert.equal(p.validar(e, { secuencia: SCRAMBLE_FALLO }).resultado, 'valido');
+  // se resuelve (comprobado giro a giro) o se dice claramente que no a tiempo
+  const r = p.resolver(e, { msMax: MS_SOLVER, compararSinBloqueos: false });
+  if (r.ok) {
+    const fin = aplicarComprobando(p, e, r.movimientos, 'solución del fallo');
+    assert.ok(p.estaResuelto(fin));
+  } else assert.match(r.errores.join(' '), /No se encontró solución en el tiempo disponible/);
+});
+
+test('bloqueos grandes: los estados de verdad imposibles siguen dando «imposible»', { timeout: 600000 }, () => {
+  const p = puzzleGrande(CONFIGS_GRANDES[0]);
+  const base = crearNxNVendado(5, []);
+  // un bloque roto: D (ilegal) aplicado con el cubo sin bloques
+  const roto = base.aplicarMovimiento(p.estadoResuelto(), 'D');
+  const v1 = p.validar(roto);
+  assert.equal(v1.resultado, 'imposible');
+  assert.match(v1.errores.join(' '), /roto/);
+  // piezas cambiadas que rompen la paridad: dos esquinas de U intercambiadas (pegatina a pegatina)
+  const sop = soporteBloqueosIdentidad(5);
+  const pz = (c) => sop.piezas.find((q) => q.clave === c).puntos;
+  const e = p.aplicarSecuencia(p.estadoResuelto(), SCRAMBLE_FALLO).slice();
+  const [a, b] = [pz('UFR'), pz('UBL')];
+  // (las dos esquinas con la misma orientación: pegatina de U con pegatina de U, etc.)
+  const ea = a.map((q) => e[q]), eb = b.map((q) => e[q]);
+  a.forEach((q, i) => { e[q] = eb[i]; }); b.forEach((q, i) => { e[q] = ea[i]; });
+  const v2 = p.validar(e);
+  assert.equal(v2.resultado, 'imposible', JSON.stringify(v2));
+  // y el grupo de la fase 2 encontrado es el entero (llega a la cota superior)
+  const info = p.analisis();
+  assert.equal(info.grupoFase2Exacto, true);
+  assert.equal(info.grupoFase2, info.cotaGrupoFase2);
+});
+
+test('bloqueos grandes: sin poder comprobarlo no se dice «imposible» (tres resultados)', { timeout: 600000 }, () => {
+  const p = puzzleGrande(CONFIGS_GRANDES[0]);
+  const A = p.analisisInterno();
+  // sin buscador (o sin tiempo para buscar) un estado lejos de la tabla queda sin comprobar
+  const e = p.aplicarSecuencia(p.estadoResuelto(), p.generarScramble(rngConSemilla(3)));
+  const buscador = A.buscador;
+  A.buscador = null;
+  try {
+    const v = p.validar(e);
+    assert.ok(v.resultado === 'sin-comprobar' || v.resultado === 'valido', JSON.stringify(v));
+    assert.notEqual(v.resultado, 'imposible');
+    if (v.resultado === 'sin-comprobar') { assert.equal(v.valido, false); assert.deepEqual(v.errores, []); assert.ok(v.avisos.length); }
+  } finally { A.buscador = buscador; }
+});
+
+const N_GRANDES = casosPor(200, 6, 'CASOS_GRANDES');
+const N_GRANDES_SOL = casosPor(200, 3, 'CASOS_GRANDES');
+for (const cfg of CONFIGS_GRANDES) {
+  test(`bloqueos grandes: ${cfg.nombre}: ${N_GRANDES} scrambles (legales, nunca «imposible») y ${N_GRANDES_SOL} soluciones`, { timeout: 3 * 3600 * 1000 }, async () => {
+    const tIni = performance.now();
+    const p = puzzleGrande(cfg);
+    const msIni = performance.now() - tIni;
+    const info = p.analisis();
+    assert.equal(info.geometriasExacto, false);
+    assert.equal(info.grupoFase2Exacto, true, 'el grupo de la fase 2 llega a su cota');
+    assert.equal(info.tipoScramble, 'fase2');
+    const rng = rngConSemilla(11);
+    const estados = [], longitudes = [];
+    const resultados = { valido: 0, imposible: 0, 'sin-comprobar': 0 };
+    let msVal = 0;
+    for (let i = 0; i < N_GRANDES; i++) {
+      const s = p.generarScramble(rng);
+      assert.equal(p.buscarRedundancia(s), null, `scramble ${i}: redundante`);
+      const e = aplicarComprobando(p, p.estadoResuelto(), s, `scramble ${i}`);
+      assert.ok(!p.estaResuelto(e));
+      const t = performance.now();
+      const v = p.validar(e);
+      msVal += performance.now() - t;
+      resultados[v.resultado]++;
+      assert.notEqual(v.resultado, 'imposible', `scramble ${i}: «imposible»\n${s.join(' ')}`);
+      assert.equal(p.validar(e, { secuencia: s }).resultado, 'valido');
+      estados.push(e); longitudes.push(s.length);
+    }
+    const sols = estados.slice(0, N_GRANDES_SOL);
+    const { resultados: rs } = !COMPLETO
+      ? { resultados: sols.map((e) => { const t = performance.now(); const r = p.resolver(e, { msMax: 2500, compararSinBloqueos: false }); return { r, ms: performance.now() - t }; }) }
+      : await resolverEnParalelo({
+        modulo: new URL('../src/puzzles/vendado.js', import.meta.url).href,
+        exportar: 'crearNxNVendado', args: [cfg.N, cfg.def],
+        estados: sols, opciones: { msMax: 2500, compararSinBloqueos: false },
+      });
+    const lon = [], ms = [];
+    let fallos = 0;
+    rs.forEach(({ r, ms: t }, i) => {
+      if (!r.ok) { fallos++; assert.match(r.errores.join(' '), /No se encontró solución/); return; }
+      const fin = aplicarComprobando(p, sols[i], r.movimientos, `solución ${i}`);
+      assert.ok(p.estaResuelto(fin), `caso ${i}: la solución no resuelve`);
+      lon.push(r.movimientos.length); ms.push(t);
+    });
+    const media = (a) => (a.length ? +(a.reduce((x, y) => x + y, 0) / a.length).toFixed(1) : null);
+    guardarResultado('bloqueos', { [`grande-${cfg.id}`]: {
+      nombre: cfg.nombre, geometrias: `más de ${info.geometrias}`, grupoFase2: info.grupoFase2, cota: info.cotaGrupoFase2, msTablas: Math.round(msIni),
+      scramble: { media: media(longitudes), min: Math.min(...longitudes), max: Math.max(...longitudes) },
+      validar: resultados, msValidar: +(msVal / N_GRANDES).toFixed(1),
+      resueltos: `${lon.length}/${sols.length}`, longitud: { media: media(lon), max: lon.length ? Math.max(...lon) : null },
+      ms: { media: media(ms), max: ms.length ? Math.round(Math.max(...ms)) : null },
+    } });
+    assert.equal(resultados.imposible, 0);
+    assert.equal(fallos, 0, `${cfg.nombre}: sin resolver ${fallos} de ${sols.length}`);
+  });
+}

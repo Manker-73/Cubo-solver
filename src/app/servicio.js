@@ -49,7 +49,7 @@ export function puzzleDePeticion(msg) {
  * Con `bloqueos` ([[clave de pieza, ...]], ver src/core/bloqueos.js) se usa el
  * puzzle vendado de esa configuración (sus tablas se generan una vez y se guardan).
  *   scramble                  -> { movimientos, ms }
- *   validar   (estado)        -> { valido, errores }
+ *   validar   (estado, opciones.secuencia) -> { valido, errores, resultado ('valido' | 'imposible' | 'sin-comprobar'), avisos }
  *   resolver  (estado)        -> { ok, movimientos, errores, ms, fases }
  *   aprender  (estado, opciones.metodo) -> guion del método humano (ver src/aprender/guion.js)
  * (Tipos de cada petición y su respuesta: Peticion y RespuestasPorOperacion en src/core/tipos.d.ts.)
@@ -75,8 +75,8 @@ export function atender(msg) {
     case 'validar': {
       if (!p.capacidades.validar) throw new Error(`${p.nombre} no tiene validador`);
       // capacidades.validar => validar existe (lo comprueba definirPuzzle al cargar; el tipo no lo sabe)
-      const v = /** @type {Required<Puzzle<unknown>>['validar']} */ (p.validar)(msg.estado);
-      return { valido: v.valido, errores: v.errores };
+      const v = /** @type {Required<Puzzle<unknown>>['validar']} */ (p.validar)(msg.estado, msg.opciones || {});
+      return { valido: v.valido, errores: v.errores, resultado: v.resultado || (v.valido ? 'valido' : 'imposible'), ...(v.avisos ? { avisos: v.avisos } : {}) };
     }
     case 'resolver': {
       if (!p.capacidades.resolver) throw new Error(`${p.nombre} no tiene solucionador`);

@@ -238,12 +238,17 @@ export function crearPanelBloqueos(ctx) {
     if (a.errores && a.errores.length) return;
     const caras = [...new Set((a.legalesResuelto || []).map((m) => m.replace(/['2]/g, '')))];
     fila(`Giros posibles con el cubo resuelto: ${caras.join(', ') || 'ninguno'}.`);
-    if (a.estadosDistinguibles) {
+    if (a.geometriasExacto === false) {
+      // Sesión «validador con muchas geometrías»: el BFS de geometrías no cabe. Lo que se sabe:
+      // más de N geometrías y el grupo de la fase 2 (exacto si llega a su cota superior).
+      fila(`Alcanzables: más de ${formatearNumero(a.geometrias)} geometrías (demasiadas para tenerlas todas en la tabla: las que faltan se buscan cuando hacen falta) y, en cada una, ${formatearNumero(a.grupoFase2)} estados${a.grupoFase2Exacto ? '' : ' o más'}${a.estadosDistinguibles ? ' (contando como distintos los centros del mismo color)' : ''}.`);
+    } else if (a.estadosDistinguibles) {
       // 4x4, 5x5: los estados que se ven distintos (los centros iguales no se distinguen)
       fila(`Alcanzables: ${formatearNumero(a.geometrias)} geometrías${a.geometriasExacto ? '' : ' (o más)'} y ${formatearNumero(a.estadosDistinguibles)} estados distinguibles${a.distinguiblesExacto ? '' : ' (aprox.)'} (${formatearNumero(a.estados)} si los centros del mismo color se contaran como distintos).`);
     } else fila(`Alcanzables: ${formatearNumero(a.geometrias)} geometrías${a.geometriasExacto ? '' : ' (o más)'} y ${formatearNumero(a.estados)} estados${a.estadosExacto ? '' : ' (aprox.)'}.`);
     if (a.sinBloques) fila(`Es el ${ctx.base().nombre} normal.`);
     else if (a.espacio === 'pequeño') fila(`Espacio pequeño: scramble de estado aleatorio uniforme y solución óptima (BFS completo, diámetro ${a.diametro}).`);
+    else if (a.tipoScramble === 'fase2') fila(`Espacio grande: scramble de estado aleatorio (estado uniforme de las permutaciones con la forma resuelta y ${formatearNumero(a.pasosGeometria || 0)} pasos de un paseo al azar para la forma), escrito como la inversa de una solución; solución en dos fases: geometría (búsqueda) y permutación con tablas de Minkwitz${a.minkwitz && !a.minkwitz.completo ? ' (INCOMPLETAS: puede que algún estado no se resuelva)' : ''}. Las soluciones son largas (cientos de giros) pero siempre se comprueban giro a giro.`);
     else if (a.minkwitz) fila(`Espacio grande: scramble de giros legales al azar (${formatearNumero(a.pasosScramble || 0)} pasos de un paseo al azar); solución en dos fases: geometría (búsqueda) y permutación con tablas de Minkwitz (${a.minkwitz.completo ? 'completas' : 'INCOMPLETAS: puede que algún estado no se resuelva'}). Las soluciones son largas (cientos de giros) pero siempre se comprueban giro a giro.`);
     else fila(`Espacio grande: scramble de giros legales al azar (${formatearNumero(a.pasosScramble || 0)} pasos de un paseo al azar, suficientes para mezclar geometría y piezas); solución por búsqueda directa y por dos fases (geometría y permutación), la más corta.`);
     if (a.msTablas != null) fila(`Tablas generadas en ${formatearNumero(a.msTablas)} ms${a.mbBFS ? ` (${a.mbBFS} MB)` : ''}.`, 'tenue');
