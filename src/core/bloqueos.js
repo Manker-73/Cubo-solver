@@ -59,8 +59,8 @@ const PASOS_LAZOS = 400;
  * de estado aleatorio de la fase 2, y del paseo perezoso cuando no se pueden hacer así (medidos con
  * scripts/mezcla-bloqueos.mjs; DECISIONES.md, sesión «validador con muchas geometrías»).
  */
-export const PASOS_GEOMETRIA_GRANDE = 12800;
-export const PASOS_PASEO_GRANDE = 102400;
+export const PASOS_GEOMETRIA_GRANDE = 409600;
+export const PASOS_PASEO_GRANDE = 409600;
 
 export const LIMITES = {
   geometrias: 400000,   // BFS de geometrías (fase 1 de la estrategia B)
@@ -1184,7 +1184,8 @@ function tablasFase2(mod, geo, rng, msMax, ordenG2 = 0n, extra = /** @type {Arra
  * colocación de un bloque (posiciones de sus piezas) a la colocación más cercana de un bloque de
  * su clase en el resuelto, moviéndolo solo a él (legalidad relajada a ese bloque); h = suma sobre
  * los bloques. No es una cota inferior (la suma), pero no hace falta: se busca un camino legal
- * cualquiera, no el más corto, y la búsqueda voraz llega en milisegundos (medido en DECISIONES.md).
+ * cualquiera, no el más corto. Búsqueda «best-first» con f = g + 2·h (A* con peso): llega en
+ * milisegundos con caminos cortos (medido en DECISIONES.md).
  * @param {ModeloBloqueos} mod @param {Geometrias} geo
  */
 function crearBuscadorGeometria(mod, geo) {
@@ -1239,26 +1240,28 @@ function crearBuscadorGeometria(mod, geo) {
     const t0 = ahora();
     const k0 = mod.claveG(G);
     if (geo.indice.has(k0)) return { movs: [], nodo: /** @type {number} */ (geo.indice.get(k0)), nodos: 0 };
-    /** @type {Map<string, { padre: string | null, m: number, G: Int16Array }>} */
-    const vistos = new Map([[k0, { padre: null, m: -1, G }]]);
+    /** @type {Map<string, { padre: string | null, m: number, G: Int16Array, g: number }>} */
+    const vistos = new Map([[k0, { padre: null, m: -1, G, g: 0 }]]);
     /** @type {string[][]} */
     const cubos = [];
     /** @param {number} f @param {string} k */
     const meter = (f, k) => { (cubos[f] || (cubos[f] = [])).push(k); };
-    meter(h(G), k0);
+    // prioridad f = g + 2·h (A* con peso: medido, de ~63 giros de media con la voraz pura, f = h,
+    // a ~20 con este peso, y más rápida; la distancia exacta media es 14,5)
+    meter(2 * h(G), k0);
     let f = 0, nodos = 0;
     for (;;) {
       while (f < cubos.length && !(cubos[f] && cubos[f].length)) f++;
       if (f >= cubos.length) return null; // (componente entera recorrida: no debería pasar)
       if ((++nodos & 255) === 0 && (ahora() - t0 > msMax || vistos.size > maxNodos)) return null;
       const k = /** @type {string} */ (cubos[f].pop());
-      const nd = /** @type {{ padre: string | null, m: number, G: Int16Array }} */ (vistos.get(k));
+      const nd = /** @type {{ padre: string | null, m: number, G: Int16Array, g: number }} */ (vistos.get(k));
       for (let m = 0; m < nM; m++) {
         if (!mod.legalG(nd.G, m)) continue;
         const H = mod.aplicarG(nd.G, m);
         const kh = mod.claveG(H);
         if (vistos.has(kh)) continue;
-        vistos.set(kh, { padre: k, m, G: H });
+        vistos.set(kh, { padre: k, m, G: H, g: nd.g + 1 });
         const gi = geo.indice.get(kh);
         if (gi !== undefined) {
           /** @type {number[]} */
@@ -1266,9 +1269,9 @@ function crearBuscadorGeometria(mod, geo) {
           for (let x = /** @type {string | null} */ (kh); x !== null;) { const v = /** @type {{ padre: string | null, m: number }} */ (vistos.get(x)); if (v.padre === null) break; movs.push(v.m); x = v.padre; }
           return { movs: movs.reverse(), nodo: gi, nodos };
         }
-        const hh = h(H);
-        if (hh < f) f = hh;
-        meter(hh, kh);
+        const fh = nd.g + 1 + 2 * h(H);
+        if (fh < f) f = fh;
+        meter(fh, kh);
       }
     }
   }
@@ -1726,8 +1729,12 @@ function scrambleFase2(A, rng) {
   const h = A.g2.cadena.aleatorio(rng);
   let X = new Int16Array(mod.nS);
   for (let i = 0; i < mod.nS; i++) X[i] = h[mod.resuelto[i]];
-  const paseo = paseoAleatorio(A, rng, 0, PASOS_GEOMETRIA_GRANDE, { pasosFijos: true });
-  for (const m of paseo) X = mod.aplicar(X, m);
+  // paseo perezoso de pasos fijos (solo hace falta el estado final, no la palabra: el scramble es
+  // la inversa de una solución)
+  for (let paso = 0; paso < PASOS_GEOMETRIA_GRANDE; paso++) {
+    const m = Math.floor(rng() * mod.nM);
+    if (mod.legal(X, m)) X = mod.aplicar(X, m);
+  }
   // el scramble: la inversa de una solución rápida de ese estado (camino de geometría + Minkwitz,
   // como la estrategia B). Escribir el estado como «palabra de h + paseo» daba ~1.000 giros; así,
   // lo que mide una solución (~500 en el 5x5 de 16 bloques).
