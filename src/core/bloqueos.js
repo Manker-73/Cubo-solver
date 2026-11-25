@@ -956,8 +956,12 @@ export function crearAnalisisBloqueos(soporte, definicion, opciones = {}) {
       else for (const x of perms) g2.cadena.incluir(x);
     };
     ampliar([]);
-    for (let vuelta = 0; vuelta < 12 && !(cota && g2.cadena.orden() === cota.cota); vuelta++) {
-      const nuevos = lazosAlAzar(mod, buscador, rngInterno, 40, PASOS_LAZOS);
+    // los paseos se alargan en cada vuelta (400, 800, … hasta 25.600 pasos): los cortos dan lazos
+    // cortos (mejores generadores para Minkwitz), pero algunas permutaciones de bloques solo salen con
+    // paseos largos (medido: con 12 vueltas de 400 pasos, a veces el grupo se quedaba 6 veces corto)
+    const tl = ahora();
+    for (let vuelta = 0; vuelta < 40 && ahora() - tl < 20000 && !(cota && g2.cadena.orden() === cota.cota); vuelta++) {
+      const nuevos = lazosAlAzar(mod, buscador, rngInterno, 40, PASOS_LAZOS * 2 ** Math.min(6, vuelta >> 1));
       lazosExtra = lazosExtra.concat(nuevos);
       ampliar(nuevos.map((l) => l.perm));
     }
@@ -1041,7 +1045,7 @@ export function crearAnalisisBloqueos(soporte, definicion, opciones = {}) {
   }
   // Cómo se hacen los scrambles (lo dice el análisis en la interfaz)
   if (bfs) info.tipoScramble = 'bfs';
-  else if (!geo.completo && mink && info.grupoFase2Exacto) { info.tipoScramble = 'fase2'; info.pasosGeometria = PASOS_GEOMETRIA_GRANDE; }
+  else if (!geo.completo && mink) { info.tipoScramble = 'fase2'; info.pasosGeometria = PASOS_GEOMETRIA_GRANDE; }
   else { info.tipoScramble = 'paseo'; if (!geo.completo) info.pasosScramble = PASOS_PASEO_GRANDE; }
   info.msTotal = Math.round(ahora() - t0);
   return { mod, info, ok: true, geo, distGeo, g2, bfs, proy, mink, objetivos, buscador };
@@ -1716,23 +1720,28 @@ export function scrambleBloqueos(A, rng, opciones = {}) {
 
 /**
  * Scramble de estado aleatorio de la fase 2 + paseo de la geometría (solo si el BFS de geometrías
- * no cabe, el grupo de la fase 2 es exacto y hay tablas de Minkwitz). El estado: h uniforme en el
- * grupo de la fase 2 (la cadena), y después un paseo perezoso w. Para cada w, h ↦ h·w es una
- * biyección del grupo en los estados de la geometría a la que lleva w, así que, dada la geometría,
- * el estado es uniforme; y la geometría del paseo tiende a la uniforme (cada geometría tiene los
- * mismos estados). La palabra de h es la inversa de la solución de Minkwitz del estado h (un lazo:
- * legal desde el resuelto). Devuelve null si algo no cuadra (y se usa el paseo largo).
+ * no cabe y hay buscador y tablas de Minkwitz). El estado: h uniforme en el grupo de la fase 2 (la
+ * cadena; solo si es exacto), y después un paseo perezoso w. Para cada w, h ↦ h·w es una biyección
+ * del grupo en los estados de la geometría a la que lleva w, así que, dada la geometría, el estado
+ * es uniforme; y la geometría del paseo tiende a la uniforme (cada geometría tiene los mismos
+ * estados). El scramble es la inversa de una solución rápida del estado (buscador + Minkwitz),
+ * comprobada giro a giro. Devuelve null si algo no cuadra (y se usa el paseo largo con su palabra).
  * @param {Analisis} A @param {Rng} rng
  * @returns {number[] | null}
  */
 function scrambleFase2(A, rng) {
   const { mod } = A;
-  if (!A.mink || !A.buscador || !A.info.grupoFase2Exacto) return null;
+  if (!A.mink || !A.buscador) return null;
   // el estado: h (uniforme en la fase 2) y después el paseo de la geometría (legal desde h: la
-  // legalidad solo depende de la geometría, y h tiene la resuelta)
-  const h = A.g2.cadena.aleatorio(rng);
-  let X = new Int16Array(mod.nS);
-  for (let i = 0; i < mod.nS; i++) X[i] = h[mod.resuelto[i]];
+  // legalidad solo depende de la geometría, y h tiene la resuelta). Si no se sabe si el grupo
+  // encontrado es el entero, sin h: el paseo solo (409.600 pasos también mezclan las piezas: medido
+  // en DECISIONES.md), escrito igualmente como la inversa de una solución.
+  let X = mod.resuelto;
+  if (A.info.grupoFase2Exacto) {
+    const h = A.g2.cadena.aleatorio(rng);
+    X = new Int16Array(mod.nS);
+    for (let i = 0; i < mod.nS; i++) X[i] = h[mod.resuelto[i]];
+  }
   // paseo perezoso de pasos fijos (solo hace falta el estado final, no la palabra: el scramble es
   // la inversa de una solución)
   for (let paso = 0; paso < PASOS_GEOMETRIA_GRANDE; paso++) {
