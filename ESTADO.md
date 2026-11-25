@@ -1,5 +1,7 @@
 # Estado del proyecto (sesión «orden de Bandaged Cubes» tras la noche 13 — 24/11/2026)
 
+> Progreso de la sesión «validador con muchas geometrías» (25/11/2026): en curso.
+
 > Progreso de la sesión «orden de Bandaged Cubes» (24/11/2026): suite completa de la noche 13 (45367622475, 500 casos por configuración): en curso al empezar y **terminada con éxito** ✔ · orden Tus bloques → Resolver → Scramble en `#/bandaged` (moviendo los nodos: el tabulador sigue el orden visual; antes iba Scramble → Resolver → Tus bloques) ✔ · escritorio ≥ 1000 px: Tus bloques | Resolver en la misma fila, Scramble debajo a todo el ancho ✔ · tablet/móvil: una columna ✔ · Resolver fijo (sticky) al bajar por una lista larga, solo si cabe en la ventana; nunca tapa el Scramble; nada fijo en móvil ✔ · WCA Puzzles igual que antes ✔ · `npm run tipos` ✔ · `test:humo` ✔ (43/43, con el orden del DOM en las dos secciones; sabotaje sin `ordenarPaneles` → falla) · `test:rapido` ✔ (217/217) · Chromium real: `comprobar-bloqueos.py orden` (3x3/4x4/5x5 × escritorio/móvil × oscuro/claro × 3D/2D: 24 combinaciones, bloque creado tocando el cubo de al lado, sin errores de consola ni scroll horizontal) ✔ y `comprobar-diseno.py` ✔ · capturas `docs/capturas/bandaged-orden-{antes,despues}-*.jpg` ✔ · DECISIONES.md y ARQUITECTURA.md ✔ · push, GitHub Pages ✔ y Action de `test:rapido` ✔ (45382120126) · artifact republicado ✔.
 
 ## Sesión: orden de los paneles en Bandaged Cubes
