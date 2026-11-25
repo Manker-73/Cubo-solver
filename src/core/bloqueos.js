@@ -1576,15 +1576,17 @@ export function resolverBloqueos(A, S, opciones = {}) {
   let f1 = solucionesFase1(A, S, { maxSol: opciones.solucionesFase1 ?? 12, msMax: Math.min(300, msMax * 0.1) });
   // BFS de geometrías incompleto y la geometría fuera de la tabla (sesión «validador con muchas
   // geometrías»): un camino hasta la tabla con el buscador, y desde ahí las de siempre
-  if (!f1.length && A.buscador && !A.info.geometriasExacto) {
-    const c = A.buscador.caminoABola(mod.geometriaDe(S), { msMax: Math.max(200, Math.min(2000, msMax * 0.3)) });
-    if (c) {
-      let T = S;
-      for (const m of c.movs) T = mod.aplicar(T, m);
-      f1 = solucionesFase1(A, T, { maxSol: opciones.solucionesFase1 ?? 12, msMax: Math.min(300, msMax * 0.1) })
-        .map((s1) => mod.reducirPalabra(c.movs.concat(s1)));
-    }
-  }
+  /** @param {number} ms */
+  const fase1PorBusqueda = (ms) => {
+    const c = /** @type {BuscadorGeometria} */ (A.buscador).caminoABola(mod.geometriaDe(S), { msMax: ms });
+    if (!c) return;
+    let T = S;
+    for (const m of c.movs) T = mod.aplicar(T, m);
+    f1 = solucionesFase1(A, T, { maxSol: opciones.solucionesFase1 ?? 12, msMax: Math.min(300, msMax * 0.1) })
+      .map((s1) => mod.reducirPalabra(c.movs.concat(s1)));
+  };
+  const porBusqueda = !f1.length && !!A.buscador && !A.info.geometriasExacto;
+  if (porBusqueda) fase1PorBusqueda(Math.max(500, Math.min(3000, msMax * 0.5)));
   /** @param {number[]} s1 @param {number} ms */
   const fase2 = (s1, ms) => {
     let T = S;
@@ -1631,6 +1633,8 @@ export function resolverBloqueos(A, S, opciones = {}) {
   while (!res.A && !res.B && pasado() < msDuro) {
     const ms = Math.min(extra, msDuro - pasado());
     directa(ms * 0.6);
+    // (sin fase 1 porque el buscador no llegó a tiempo: otra vez, con más tiempo)
+    if (porBusqueda && !f1.length) fase1PorBusqueda(ms);
     if (!res.A && f1.length) fase2(f1[0], ms * 0.4);
     extra *= 2;
   }

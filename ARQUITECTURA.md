@@ -380,6 +380,26 @@ Ya no queda nada específico del cubo en la capa (`src/core/bloqueos.js`): lo qu
      (`solucionComprobada`); si no pasa, devuelve un error.
 4. En el 3x3 la solución se traduce al marco del usuario (si el cubo está girado por M/E/S o x/y/z).
 
+### Configuraciones que no caben en el BFS de geometrías (sesión «validador con muchas geometrías»)
+Con más de `LIMITES.geometrias` (400.000) geometrías la tabla es solo una bola alrededor de la resuelta
+(`geo.completo` = false; el BFS para al llegar al límite). Entonces `crearAnalisisBloqueos` añade:
+- `crearBuscadorGeometria(mod, geo)` → `A.buscador`: `caminoABola(G)` (best-first con f = g + 2·h, h = suma
+  por bloque de la distancia de su colocación a una casa de su clase) y `caminoAResuelta(S)`.
+- Grupo de la fase 2: pocos lazos de la bola + `lazosAlAzar` (paseo + vuelta) hasta `cotaGrupoFase2`
+  (|R| · |H0|: ver DECISIONES.md); `info.grupoFase2Exacto` si llega. Cadenas con `completarAleatorio({ todos })`.
+- Tablas de Minkwitz con esos lazos (`tablasFase2(…, extra)`), y scrambles `tipoScramble: 'fase2'`
+  (`scrambleFase2`: estado uniforme de la fase 2 + paseo de `PASOS_GEOMETRIA_GRANDE` pasos, escrito como la
+  inversa de una solución comprobada). Si no: paseo perezoso de `PASOS_PASEO_GRANDE` pasos.
+- `resolverBloqueos`: si la geometría no está en la tabla, la fase 1 empieza con `caminoABola`.
+
+### Validación: tres resultados
+`validar(estado, { secuencia })` → `{ valido, errores, resultado: 'valido' | 'imposible' | 'sin-comprobar', avisos }`.
+'valido' e 'imposible' están demostrados; 'sin-comprobar' (no se encontró a tiempo un camino de geometría, o el
+grupo encontrado no se sabe si es el entero) nunca se muestra como imposible: es un aviso y `resolver` lo
+intenta igual. `secuencia` (el scramble de la app cargado sin tocar, que `main.js` guarda en `st.secuenciaEditor`):
+si aplicarla al resuelto con giros legales da exactamente el estado, es válido por construcción. `servicio.js`
+pasa las opciones y el resultado; `Validacion` y `OpcionesValidar` en `tipos.d.ts`.
+
 ### Interfaz y Worker
 - `servicio.js`: las peticiones pueden llevar `bloqueos`; el Worker crea (y guarda, las 3 últimas) la
   versión vendada de ese puzzle, con sus tablas. Los puzzles se buscan con `buscarPuzzle` (los del registro
