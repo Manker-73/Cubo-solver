@@ -45,10 +45,22 @@ import { crearTablasMinkwitz } from './minkwitz.js';
  * @typedef {ReturnType<typeof tablasProyeccion>} Proyecciones
  * @typedef {ReturnType<typeof tablasFase2>} TablasMinkwitz
  * @typedef {{ mod: ModeloBloqueos, info: InfoBloqueos, ok: true, geo: Geometrias, distGeo: Map<string, number>, g2: GrupoFase2,
- *   bfs: BFSEstados | null, proy: Proyecciones | null, mink?: TablasMinkwitz | null, objetivos?: Int16Array[] | null }} Analisis  análisis de una configuración válida
+ *   bfs: BFSEstados | null, proy: Proyecciones | null, mink?: TablasMinkwitz | null, objetivos?: Int16Array[] | null,
+ *   buscador?: BuscadorGeometria | null }} Analisis  análisis de una configuración válida
+ * @typedef {ReturnType<typeof crearBuscadorGeometria>} BuscadorGeometria
  * @typedef {{ movs: number[], optima?: boolean, metodo: string, ms?: number, fase1?: number, fase2?: number }} SolucionEstrategia
  * @typedef {{ rng?: Rng, limiteGeometrias?: number, limiteEstados?: number, msMinkwitz?: number }} OpcionesAnalisis
  */
+
+/** Pasos del paseo de cada lazo al azar (configuraciones que no caben; ver lazosAlAzar). */
+const PASOS_LAZOS = 400;
+/**
+ * Configuraciones cuyo BFS de geometrías no cabe: pasos del paseo de la geometría en los scrambles
+ * de estado aleatorio de la fase 2, y del paseo perezoso cuando no se pueden hacer así (medidos con
+ * scripts/mezcla-bloqueos.mjs; DECISIONES.md, sesión «validador con muchas geometrías»).
+ */
+export const PASOS_GEOMETRIA_GRANDE = 12800;
+export const PASOS_PASEO_GRANDE = 102400;
 
 export const LIMITES = {
   geometrias: 400000,   // BFS de geometrías (fase 1 de la estrategia B)
@@ -319,12 +331,25 @@ export function crearModeloBloqueos(soporte, definicion) {
   // G: posiciones de las ranuras (bloque a bloque); canónica = bloques de la misma
   // clase ordenados, porque bloques de la misma forma no se distinguen.
   const clasesMultiples = clases.filter((c) => c.bloques.length > 1);
+  // (Ordenación por inserción sobre una copia, sin crear arrays: da exactamente lo mismo que
+  // ordenar las tuplas con sort, pero el BFS de geometrías pasaba aquí el 80 % del tiempo.)
+  const copiaCanonica = new Int16Array(Math.max(1, ...clasesMultiples.map((c) => c.bloques.length * (inicioBloque[c.bloques[0] + 1] - inicioBloque[c.bloques[0]]))));
+  const ordenCanonica = new Int16Array(Math.max(1, ...clasesMultiples.map((c) => c.bloques.length)));
   /** @param {Int16Array} G */
   function canonica(G) {
     for (const cl of clasesMultiples) {
-      const tuplas = cl.bloques.map((b) => Array.from(G.subarray(inicioBloque[b], inicioBloque[b + 1])));
-      tuplas.sort((x, y) => { for (let i = 0; i < x.length; i++) if (x[i] !== y[i]) return x[i] - y[i]; return 0; });
-      cl.bloques.forEach((b, i) => G.set(tuplas[i], inicioBloque[b]));
+      const bs = cl.bloques, k = bs.length;
+      const L = inicioBloque[bs[0] + 1] - inicioBloque[bs[0]];
+      for (let i = 0; i < k; i++) { const a = inicioBloque[bs[i]]; for (let j = 0; j < L; j++) copiaCanonica[i * L + j] = G[a + j]; }
+      // ¿tupla x < tupla y? (lexicográfico)
+      /** @param {number} x @param {number} y */
+      const menor = (x, y) => { for (let j = 0; j < L; j++) { const d = copiaCanonica[x * L + j] - copiaCanonica[y * L + j]; if (d) return d < 0; } return false; };
+      for (let i = 0; i < k; i++) {
+        const t = i; let j = i - 1;
+        while (j >= 0 && menor(t, ordenCanonica[j])) { ordenCanonica[j + 1] = ordenCanonica[j]; j--; }
+        ordenCanonica[j + 1] = t;
+      }
+      for (let i = 0; i < k; i++) { const a = inicioBloque[bs[i]], o = ordenCanonica[i] * L; for (let j = 0; j < L; j++) G[a + j] = copiaCanonica[o + j]; }
     }
     return G;
   }
@@ -449,10 +474,15 @@ function bfsGeometrias(mod, limite) {
   const G0 = mod.geometriaDe(mod.resuelto);
   const nodos = [{ G: G0, d: 0, padre: -1, mov: -1 }];
   const indice = new Map([[mod.claveG(G0), 0]]);
-  /** @type {number[]} */
-  const aristas = []; // [u, m, v] que no son del árbol
+  // [u, m, v] de las aristas que no son del árbol, en un Int32Array que crece (con cientos de miles
+  // de geometrías son decenas de millones de números: un array normal tardaba y ocupaba el doble)
+  let aristas = new Int32Array(3 * 1024), nAr = 0;
   let completo = true;
-  for (let i = 0; i < nodos.length; i++) {
+  // Al llegar al límite se para del todo (sesión «validador con muchas geometrías»): antes se
+  // seguían recorriendo los giros de los 400.000 nodos solo para anotar aristas, que es el 75 % del
+  // tiempo (20 s en el 5x5 de 16 bloques) y no hace falta: las geometrías que faltan se buscan
+  // cuando hacen falta (caminoAGeometriaResuelta). Solo cambia en las configuraciones que no caben.
+  expandir: for (let i = 0; i < nodos.length; i++) {
     const { G, d } = nodos[i];
     for (let m = 0; m < mod.nM; m++) {
       if (!mod.legalG(G, m)) continue;
@@ -460,17 +490,36 @@ function bfsGeometrias(mod, limite) {
       const k = mod.claveG(H);
       const j = indice.get(k);
       if (j === undefined) {
-        if (nodos.length >= limite) { completo = false; continue; }
+        if (nodos.length >= limite) { completo = false; break expandir; }
         indice.set(k, nodos.length);
         nodos.push({ G: H, d: d + 1, padre: i, mov: m });
       } else if (!(nodos[j].padre === i && nodos[j].mov === m)) {
-        aristas.push(i, m, j);
+        if (nAr + 3 > aristas.length) { const a = new Int32Array(2 * aristas.length); a.set(aristas); aristas = a; }
+        aristas[nAr++] = i; aristas[nAr++] = m; aristas[nAr++] = j;
       }
     }
   }
   let diametro = 0;
   for (const n of nodos) diametro = Math.max(diametro, n.d);
-  return { nodos, indice, aristas, completo, diametro };
+  return { nodos, indice, aristas: aristas.subarray(0, nAr), completo, diametro };
+}
+
+/**
+ * Índices 0..n-1 ordenados por lon(i) (entero pequeño), y a igual longitud por índice: lo mismo que
+ * [...Array(n).keys()].sort((a, b) => lon(a) - lon(b)) (sort es estable), pero por cubos, sin
+ * comparaciones (con millones de lazos, el sort tardaba segundos).
+ * @param {number} n @param {(i: number) => number} lon
+ */
+function ordenarPorLongitud(n, lon) {
+  const L = new Int32Array(n);
+  let max = 0;
+  for (let i = 0; i < n; i++) { L[i] = lon(i); if (L[i] > max) max = L[i]; }
+  const inicio = new Int32Array(max + 2);
+  for (let i = 0; i < n; i++) inicio[L[i] + 1]++;
+  for (let l = 1; l <= max + 1; l++) inicio[l] += inicio[l - 1];
+  const orden = new Array(n);
+  for (let i = 0; i < n; i++) orden[inicio[L[i]]++] = i;
+  return orden;
 }
 
 /**
@@ -544,7 +593,7 @@ function grupoFase2Aleatorio(mod, geo, rng, camino) {
   // geometrías, todos); luego elementos al azar del grupo hasta que 50 seguidos no lo amplían, y
   // por último 5.000 lazos más al azar tienen que estar todos dentro (si no, se sigue con ellos).
   const lon = (/** @type {number} */ a) => geo.nodos[geo.aristas[3 * a]].d + geo.nodos[geo.aristas[3 * a + 2]].d;
-  const orden = [...Array(nA).keys()].sort((a, b) => lon(a) - lon(b));
+  const orden = ordenarPorLongitud(nA, lon);
   let usados = 0, seguidos = 0;
   for (; usados < nA && seguidos < 3000; usados++) { if (cadena.incluir(lazo(orden[usados]))) seguidos = 0; else seguidos++; }
   let azar = completarAleatorio(cadena, [], rng, { seguidas: 50 });
@@ -887,6 +936,32 @@ export function crearAnalisisBloqueos(soporte, definicion, opciones = {}) {
   // Grupo de la fase 2 y número de estados
   const tf = ahora();
   const g2 = grupoFase2(mod, geo, rngInterno);
+  // BFS de geometrías incompleto (sesión «validador con muchas geometrías»): buscador de caminos,
+  // lazos al azar hasta que el grupo de la fase 2 llega a su cota superior (o se agotan los intentos)
+  /** @type {ReturnType<typeof crearBuscadorGeometria> | null} */
+  let buscador = null;
+  /** @type {Array<{ perm: Int16Array, palabra: number[] }>} */
+  let lazosExtra = [];
+  if (!geo.completo) {
+    buscador = crearBuscadorGeometria(mod, geo);
+    const tc = ahora();
+    const cota = cotaGrupoFase2(mod, rngInterno);
+    if (cota) { info.cotaGrupoFase2 = cota.cota.toString(); info.permutacionesBloques = cota.R; }
+    const ampliar = (/** @type {Int16Array[]} */ perms) => {
+      if (mod.hayIguales) completarAleatorio(g2.cadena, perms, rngInterno, { seguidas: 50, todos: true });
+      else for (const x of perms) g2.cadena.incluir(x);
+    };
+    ampliar([]);
+    for (let vuelta = 0; vuelta < 12 && !(cota && g2.cadena.orden() === cota.cota); vuelta++) {
+      const nuevos = lazosAlAzar(mod, buscador, rngInterno, 40, PASOS_LAZOS);
+      lazosExtra = lazosExtra.concat(nuevos);
+      ampliar(nuevos.map((l) => l.perm));
+    }
+    g2.orden = g2.cadena.orden();
+    info.lazosAlAzar = lazosExtra.length;
+    info.grupoFase2Exacto = !!cota && g2.orden === cota.cota;
+    info.msCota = Math.round(ahora() - tc);
+  }
   info.grupoFase2 = g2.orden.toString();
   info.estados = (g2.orden * BigInt(geo.nodos.length)).toString();
   info.estadosExacto = g2.exacto;
@@ -948,9 +1023,9 @@ export function crearAnalisisBloqueos(soporte, definicion, opciones = {}) {
   // 4x4, 5x5 (espacio grande): tablas de Minkwitz para la fase 2 de la estrategia B
   /** @type {TablasMinkwitz | null} */
   let mink = null;
-  if (!bfs && mod.hayIguales && geo.completo && (opciones.msMinkwitz ?? 3000) > 0) {
+  if (!bfs && mod.hayIguales && (opciones.msMinkwitz ?? 3000) > 0) {
     const tm = ahora();
-    mink = tablasFase2(mod, geo, rngInterno, opciones.msMinkwitz ?? 3000, g2.orden);
+    mink = tablasFase2(mod, geo, rngInterno, opciones.msMinkwitz ?? 3000, g2.orden, lazosExtra);
     info.msMinkwitz = Math.round(ahora() - tm);
     info.minkwitz = mink.info;
   }
@@ -960,8 +1035,12 @@ export function crearAnalisisBloqueos(soporte, definicion, opciones = {}) {
   if (legalesResuelto.length <= total / 3 || geo.nodos.length > 1 && nEst < 100000n) {
     info.avisos.push(`El cubo queda muy limitado: ${formatearNumero(geo.nodos.length)} geometrías y ${formatearNumero(nEst)} estados alcanzables.`);
   }
+  // Cómo se hacen los scrambles (lo dice el análisis en la interfaz)
+  if (bfs) info.tipoScramble = 'bfs';
+  else if (!geo.completo && mink && info.grupoFase2Exacto) { info.tipoScramble = 'fase2'; info.pasosGeometria = PASOS_GEOMETRIA_GRANDE; }
+  else { info.tipoScramble = 'paseo'; if (!geo.completo) info.pasosScramble = PASOS_PASEO_GRANDE; }
   info.msTotal = Math.round(ahora() - t0);
-  return { mod, info, ok: true, geo, distGeo, g2, bfs, proy, mink, objetivos };
+  return { mod, info, ok: true, geo, distGeo, g2, bfs, proy, mink, objetivos, buscador };
 }
 
 /**
@@ -991,7 +1070,11 @@ function reetiquetadoMasCercano(A, S) {
  * centros).
  * @param {ModeloBloqueos} mod @param {Geometrias} geo @param {Rng} rng @param {number} msMax
  */
-function tablasFase2(mod, geo, rng, msMax, ordenG2 = 0n) {
+function tablasFase2(mod, geo, rng, msMax, ordenG2 = 0n, extra = /** @type {Array<{ perm: Int16Array, palabra: number[] }>} */ ([])) {
+  // extra (sesión «validador con muchas geometrías»): lazos que no salen de las aristas del BFS
+  // (paseo al azar + vuelta), solo cuando el BFS de geometrías no cabe; con ellos, las cadenas
+  // se completan con subproductos de todos los generadores (completarAleatorio, `todos`).
+  const todos = extra.length > 0;
   const nodos = geo.nodos;
   /** @type {number[][]} */
   const palabra = new Array(nodos.length);
@@ -1012,7 +1095,7 @@ function tablasFase2(mod, geo, rng, msMax, ordenG2 = 0n) {
   const nA = geo.aristas.length / 3;
   /** @param {number} a */
   const lon = (a) => nodos[geo.aristas[3 * a]].d + 1 + nodos[geo.aristas[3 * a + 2]].d;
-  const orden = [...Array(nA).keys()].sort((a, b) => lon(a) - lon(b));
+  const orden = ordenarPorLongitud(nA, lon);
   /** @param {number} a */
   const lazo = (a) => {
     const u = geo.aristas[3 * a], m = geo.aristas[3 * a + 1], v = geo.aristas[3 * a + 2];
@@ -1022,11 +1105,13 @@ function tablasFase2(mod, geo, rng, msMax, ordenG2 = 0n) {
     };
   };
   let generadores = /** @type {Array<{ perm: Int16Array, palabra: number[] }>} */ ([]);
+  const extraOrdenados = extra.slice().sort((a, b) => a.palabra.length - b.palabra.length);
   for (let cuantos = 200; ; cuantos *= 2) {
     generadores = orden.slice(0, cuantos).map(lazo).filter((g) => g.palabra.length);
-    if (cuantos >= nA || !ordenG2) break;
+    if (todos) generadores = generadores.concat(extraOrdenados.slice(0, cuantos)).sort((a, b) => a.palabra.length - b.palabra.length);
+    if ((cuantos >= nA && cuantos >= extra.length) || !ordenG2) break;
     const cad = crearCadena(P, { sinSchreier: true });
-    completarAleatorio(cad, generadores.map((g) => g.perm), rng, { seguidas: 30 });
+    completarAleatorio(cad, generadores.map((g) => g.perm), rng, todos ? { seguidas: 30, todos } : { seguidas: 30 });
     if (cad.orden() === ordenG2) break;
   }
   // Orden de la base (qué piezas se colocan primero). Al final van las que tienen 3-ciclos puros
@@ -1039,7 +1124,7 @@ function tablasFase2(mod, geo, rng, msMax, ordenG2 = 0n) {
   const rango = (i) => { const r = ORDEN_TIPOS.indexOf(mod.piezas[mod.moviles[i]].tipo); return r < 0 ? ORDEN_TIPOS.length : r; };
   const idx = mod.moviles.map((k, i) => i).sort((a, b) => rango(a) - rango(b) || a - b);
   const base = idx.map((i) => mod.resuelto[i]);
-  const t = crearTablasMinkwitz({ puntos: P, base, generadores, inverso: (m) => mod.inversoMov[m], reducir: mod.reducirPalabra, rng, msMax });
+  const t = crearTablasMinkwitz({ puntos: P, base, generadores, inverso: (m) => mod.inversoMov[m], reducir: mod.reducirPalabra, rng, msMax, todos });
   // nivel k de la base = pieza móvil idx[k]; centros iguales sueltos: su clase (vale cualquiera)
   const clase = idx.map((i) => (mod.claseMovil[i] >= 0 && mod.enBloque[mod.moviles[i]] < 0 ? mod.claseMovil[i] : -1));
   // Prefijos para varios intentos: los generadores y entradas de las tablas más cortos (lazos:
@@ -1076,6 +1161,245 @@ function tablasFase2(mod, geo, rng, msMax, ordenG2 = 0n) {
       return mejor;
     },
   };
+}
+
+// ---------------------------------------------------------------------------
+// Configuraciones cuyo BFS de geometrías no cabe (sesión «validador con muchas geometrías»)
+// ---------------------------------------------------------------------------
+//
+// Con más de LIMITES.geometrias geometrías la tabla solo tiene una bola alrededor de la resuelta
+// (todas las geometrías hasta cierta distancia). Lo que antes dependía de tener todas:
+//  - camino de una geometría cualquiera a la resuelta: búsqueda voraz (best-first) con una cota
+//    por bloques hasta caer en la bola, y de ahí el camino del árbol (crearBuscadorGeometria);
+//  - grupo de la fase 2: los lazos de la bola no tienen por qué generarlo entero (medido: en el
+//    5x5 de 16 bloques generan un subgrupo 36 veces menor); se añaden lazos al azar (paseo + vuelta)
+//    y se comprueba con una cota superior (cotaGrupoFase2) si ya es el grupo entero.
+
+/**
+ * Buscador de caminos de geometría. Heurística: para cada clase de bloques, la distancia de cada
+ * colocación de un bloque (posiciones de sus piezas) a la colocación más cercana de un bloque de
+ * su clase en el resuelto, moviéndolo solo a él (legalidad relajada a ese bloque); h = suma sobre
+ * los bloques. No es una cota inferior (la suma), pero no hace falta: se busca un camino legal
+ * cualquiera, no el más corto, y la búsqueda voraz llega en milisegundos (medido en DECISIONES.md).
+ * @param {ModeloBloqueos} mod @param {Geometrias} geo
+ */
+function crearBuscadorGeometria(mod, geo) {
+  const { bloques, clases, MAPA, CAPA, nM } = mod;
+  /** @type {number[]} */
+  const ini = [0];
+  for (const b of bloques) ini.push(ini[ini.length - 1] + b.piezas.length);
+  const G0 = mod.geometriaDe(mod.resuelto);
+  const tablas = clases.map((cl) => {
+    const L = ini[cl.bloques[0] + 1] - ini[cl.bloques[0]];
+    /** @type {Map<string, number>} */
+    const dist = new Map();
+    /** @type {number[][]} */
+    let cola = [];
+    for (const b of cl.bloques) {
+      const t = Array.from(G0.subarray(ini[b], ini[b] + L));
+      const k = t.join(',');
+      if (!dist.has(k)) { dist.set(k, 0); cola.push(t); }
+    }
+    for (let d = 0; cola.length; d++) {
+      /** @type {number[][]} */
+      const nueva = [];
+      for (const t of cola) {
+        for (let m = 0; m < nM; m++) {
+          const C = CAPA[m], v = C[t[0]];
+          if (t.some((p) => C[p] !== v)) continue;
+          const u = t.map((p) => MAPA[m][p]);
+          const k = u.join(',');
+          if (!dist.has(k)) { dist.set(k, d + 1); nueva.push(u); }
+        }
+      }
+      cola = nueva;
+    }
+    return { L, dist };
+  });
+  /** @param {Int16Array} G */
+  const h = (G) => {
+    let s = 0;
+    for (const cl of clases) {
+      const T = tablas[cl.id];
+      for (const b of cl.bloques) s += T.dist.get(Array.from(G.subarray(ini[b], ini[b] + T.L)).join(',')) ?? 0;
+    }
+    return s;
+  };
+  /**
+   * Giros desde la geometría G hasta una geometría de la tabla (la bola), o null si no se encuentra
+   * en msMax ms o maxNodos nodos. También devuelve en qué nodo de la tabla acaba.
+   * @param {Int16Array} G @param {{ msMax?: number, maxNodos?: number }} [opciones]
+   * @returns {{ movs: number[], nodo: number, nodos: number } | null}
+   */
+  function caminoABola(G, { msMax = 2000, maxNodos = 2000000 } = {}) {
+    const t0 = ahora();
+    const k0 = mod.claveG(G);
+    if (geo.indice.has(k0)) return { movs: [], nodo: /** @type {number} */ (geo.indice.get(k0)), nodos: 0 };
+    /** @type {Map<string, { padre: string | null, m: number, G: Int16Array }>} */
+    const vistos = new Map([[k0, { padre: null, m: -1, G }]]);
+    /** @type {string[][]} */
+    const cubos = [];
+    /** @param {number} f @param {string} k */
+    const meter = (f, k) => { (cubos[f] || (cubos[f] = [])).push(k); };
+    meter(h(G), k0);
+    let f = 0, nodos = 0;
+    for (;;) {
+      while (f < cubos.length && !(cubos[f] && cubos[f].length)) f++;
+      if (f >= cubos.length) return null; // (componente entera recorrida: no debería pasar)
+      if ((++nodos & 255) === 0 && (ahora() - t0 > msMax || vistos.size > maxNodos)) return null;
+      const k = /** @type {string} */ (cubos[f].pop());
+      const nd = /** @type {{ padre: string | null, m: number, G: Int16Array }} */ (vistos.get(k));
+      for (let m = 0; m < nM; m++) {
+        if (!mod.legalG(nd.G, m)) continue;
+        const H = mod.aplicarG(nd.G, m);
+        const kh = mod.claveG(H);
+        if (vistos.has(kh)) continue;
+        vistos.set(kh, { padre: k, m, G: H });
+        const gi = geo.indice.get(kh);
+        if (gi !== undefined) {
+          /** @type {number[]} */
+          const movs = [];
+          for (let x = /** @type {string | null} */ (kh); x !== null;) { const v = /** @type {{ padre: string | null, m: number }} */ (vistos.get(x)); if (v.padre === null) break; movs.push(v.m); x = v.padre; }
+          return { movs: movs.reverse(), nodo: gi, nodos };
+        }
+        const hh = h(H);
+        if (hh < f) f = hh;
+        meter(hh, kh);
+      }
+    }
+  }
+  /** Giros del nodo i de la tabla a la geometría resuelta (el camino del árbol, al revés). @param {number} i */
+  const vueltaArbol = (i) => { /** @type {number[]} */ const w = []; for (let n = i; n > 0; n = geo.nodos[n].padre) w.push(mod.inversoMov[geo.nodos[n].mov]); return w; };
+  /**
+   * Giros legales de S a un estado con la geometría resuelta (no necesariamente los menos), o null.
+   * @param {Int16Array} S @param {{ msMax?: number }} [opciones]
+   */
+  function caminoAResuelta(S, opciones = {}) {
+    const c = caminoABola(mod.geometriaDe(S), opciones);
+    return c ? c.movs.concat(vueltaArbol(c.nodo)) : null;
+  }
+  return { caminoABola, caminoAResuelta, vueltaArbol, h };
+}
+
+/**
+ * Lazos al azar en la geometría resuelta: paseo perezoso de `pasos` pasos y vuelta con el
+ * buscador. Son elementos del grupo de la fase 2 (palabras de giros legales que salen de la
+ * geometría resuelta y vuelven a ella) que no tienen por qué estar en el subgrupo de los lazos
+ * de la bola.
+ * @param {ModeloBloqueos} mod @param {ReturnType<typeof crearBuscadorGeometria>} buscador @param {Rng} rng
+ * @param {number} cuantos @param {number} pasos
+ * @returns {Array<{ perm: Int16Array, palabra: number[] }>}
+ */
+function lazosAlAzar(mod, buscador, rng, cuantos, pasos) {
+  const P = mod.soporte.puntos;
+  const claveRes = mod.claveG(mod.geometriaDe(mod.resuelto));
+  /** @type {Array<{ perm: Int16Array, palabra: number[] }>} */
+  const res = [];
+  for (let i = 0; i < cuantos; i++) {
+    const ida = paseoAleatorio({ mod }, rng, 0, pasos, { pasosFijos: true });
+    let S = mod.resuelto;
+    for (const m of ida) S = mod.aplicar(S, m);
+    const vuelta = buscador.caminoAResuelta(S, { msMax: 1000 });
+    if (!vuelta) continue;
+    const palabra = mod.reducirPalabra(ida.concat(vuelta));
+    // se comprueba giro a giro (legal y de vuelta en la geometría resuelta)
+    let T = mod.resuelto, ok = true;
+    const perm = new Int16Array(P); for (let p = 0; p < P; p++) perm[p] = p;
+    for (const m of palabra) { if (!mod.legal(T, m)) { ok = false; break; } T = mod.aplicar(T, m); const M = mod.MAPA[m]; for (let p = 0; p < P; p++) perm[p] = M[perm[p]]; }
+    if (ok && palabra.length && mod.claveG(mod.geometriaDe(T)) === claveRes) res.push({ perm, palabra });
+  }
+  return res;
+}
+
+/**
+ * Cota superior del orden del grupo de la fase 2: todo lazo es un elemento g del grupo del puzzle
+ * SIN bloques (generado por los giros de búsqueda) que lleva cada bloque, ranura a ranura, sobre
+ * un bloque de su clase en el resuelto. Esos g son una unión de clases del estabilizador punto a
+ * punto H0 de las ranuras de los bloques, una por cada permutación π de los bloques (dentro de cada
+ * clase) que algún elemento del grupo sin bloques realiza: |cota| = |R| · |H0|. H0 sale de una
+ * cadena con la base empezando por las ranuras; R se cuenta con un recorrido con poda que criba la
+ * imagen de las ranuras nivel a nivel. Si el grupo de la fase 2 encontrado tiene este orden, es el
+ * grupo entero (demostrado, con la misma salvedad que el Schreier–Sims aleatorio: 2⁻⁵⁰).
+ * Devuelve null si contar R cuesta demasiado (ver maxNodos).
+ * @param {ModeloBloqueos} mod @param {Rng} rng
+ * @returns {{ cota: bigint, R: number, H0: bigint } | null}
+ */
+function cotaGrupoFase2(mod, rng) {
+  const P = mod.soporte.puntos;
+  const G0 = mod.geometriaDe(mod.resuelto);
+  const ranuras = Array.from(G0);
+  const nR = ranuras.length;
+  const cad = crearCadena(P, { prefijo: ranuras, sinSchreier: true });
+  completarAleatorio(cad, mod.MAPA, rng, { seguidas: 50, todos: true });
+  const niv = cad.niveles;
+  let H0 = 1n;
+  for (let k = nR; k < niv.length; k++) H0 *= BigInt(niv[k].rep.size);
+  /** @type {number[]} */
+  const ini = [0];
+  for (const b of mod.bloques) ini.push(ini[ini.length - 1] + b.piezas.length);
+  // a qué clase pertenece cada bloque y su índice dentro de la clase
+  const usados = mod.clases.map((c) => new Uint8Array(c.bloques.length));
+  // |R| sin enumerar R: R es un grupo (la imagen, en los bloques, de los elementos del grupo sin
+  // bloques que dejan las ranuras como en el resuelto salvo el orden dentro de cada clase), así que
+  // |R| = producto, para b = 0, 1, …, del número de bloques i a los que puede ir b fijando los
+  // anteriores en su sitio. Cada «puede ir» se decide buscando UNA permutación completa (en
+  // profundidad, cribando la imagen de las ranuras nivel a nivel, con poda). W es la transformación
+  // acumulada de la criba (el resto lleva la ranura p a W[imagen de p]).
+  let nodos = 0;
+  const maxNodos = 200000;
+  /** Lleva el bloque b sobre el b2 (ranura a ranura) desde W; null si no cabe. @param {number} b @param {number} b2 @param {Int16Array} W */
+  const colocar = (b, b2, W) => {
+    let Wb = W;
+    for (let j = ini[b]; j < ini[b + 1]; j++) {
+      // nivel j de la cadena = ranura j (prefijo en el orden de G0)
+      const u = niv[j].inv.get(Wb[ranuras[ini[b2] + j - ini[b]]]);
+      if (!u) return null;
+      const W2 = new Int16Array(P);
+      for (let p = 0; p < P; p++) W2[p] = u[Wb[p]];
+      Wb = W2;
+    }
+    return Wb;
+  };
+  /** ¿Se puede completar desde el bloque b? @param {number} b @param {Int16Array} W @returns {boolean} */
+  function completar(b, W) {
+    if (++nodos > maxNodos) throw new Error('cota');
+    if (b === mod.bloques.length) return true;
+    const cl = mod.clases[mod.bloques[b].clase];
+    for (let i = 0; i < cl.bloques.length; i++) {
+      if (usados[cl.id][i]) continue;
+      const Wb = colocar(b, cl.bloques[i], W);
+      if (!Wb) continue;
+      usados[cl.id][i] = 1;
+      const ok = completar(b + 1, Wb);
+      usados[cl.id][i] = 0;
+      if (ok) return true;
+    }
+    return false;
+  }
+  const id = new Int16Array(P); for (let p = 0; p < P; p++) id[p] = p;
+  let R = 1n;
+  /** @type {Int16Array<ArrayBufferLike>} */
+  let W = id;
+  try {
+    for (let b = 0; b < mod.bloques.length; b++) {
+      const cl = mod.clases[mod.bloques[b].clase];
+      const propio = cl.bloques.indexOf(b);
+      let orbita = 0;
+      for (let i = 0; i < cl.bloques.length; i++) {
+        if (usados[cl.id][i]) continue;
+        const Wb = colocar(b, cl.bloques[i], W);
+        if (!Wb) continue;
+        usados[cl.id][i] = 1;
+        if (completar(b + 1, Wb)) orbita++;
+        usados[cl.id][i] = 0;
+      }
+      R *= BigInt(orbita);
+      // fijar b en su sitio para los siguientes
+      usados[cl.id][propio] = 1;
+      W = /** @type {Int16Array} */ (colocar(b, b, W));
+    }
+  } catch { return null; } // demasiada búsqueda (más de maxNodos nodos): sin cota
+  return { cota: R * H0, R: Number(R), H0 };
 }
 
 /** Distancia a la geometría resuelta (exacta, de la tabla). @param {Analisis} A @param {Int16Array} S */
@@ -1242,7 +1566,18 @@ export function resolverBloqueos(A, S, opciones = {}) {
 
   // ---- Estrategia B: geometría y luego permutación ----
   const tB = ahora();
-  const f1 = solucionesFase1(A, S, { maxSol: opciones.solucionesFase1 ?? 12, msMax: Math.min(300, msMax * 0.1) });
+  let f1 = solucionesFase1(A, S, { maxSol: opciones.solucionesFase1 ?? 12, msMax: Math.min(300, msMax * 0.1) });
+  // BFS de geometrías incompleto y la geometría fuera de la tabla (sesión «validador con muchas
+  // geometrías»): un camino hasta la tabla con el buscador, y desde ahí las de siempre
+  if (!f1.length && A.buscador && !A.info.geometriasExacto) {
+    const c = A.buscador.caminoABola(mod.geometriaDe(S), { msMax: Math.max(200, Math.min(2000, msMax * 0.3)) });
+    if (c) {
+      let T = S;
+      for (const m of c.movs) T = mod.aplicar(T, m);
+      f1 = solucionesFase1(A, T, { maxSol: opciones.solucionesFase1 ?? 12, msMax: Math.min(300, msMax * 0.1) })
+        .map((s1) => mod.reducirPalabra(c.movs.concat(s1)));
+    }
+  }
   /** @param {number[]} s1 @param {number} ms */
   const fase2 = (s1, ms) => {
     let T = S;
@@ -1349,13 +1684,65 @@ export function scrambleBloqueos(A, rng, opciones = {}) {
       return invertirSecuencia(mod, /** @type {number[]} */ (sol));
     }
   }
-  const T = opciones.pasos ?? longitudScramble(A);
+  // BFS de geometrías incompleto (sesión «validador con muchas geometrías»): el diámetro de las
+  // geometrías no se conoce y la fórmula 4·d² no vale (con el de la bola salían 200 pasos y 15
+  // giros). Si el grupo de la fase 2 es exacto y hay tablas de Minkwitz: estado aleatorio uniforme
+  // de la fase 2 (elemento uniforme de la cadena, escrito con las tablas) seguido de un paseo
+  // perezoso de PASOS_GEOMETRIA_GRANDE pasos que mezcla la geometría. Si no, paseo perezoso de
+  // PASOS_PASEO_GRANDE pasos. Medido en DECISIONES.md.
+  if (!A.info.geometriasExacto && opciones.pasos === undefined) {
+    const s = scrambleFase2(A, rng);
+    if (s) return s;
+  }
+  const T = opciones.pasos ?? (A.info.geometriasExacto ? longitudScramble(A) : PASOS_PASEO_GRANDE);
   for (let intento = 0; ; intento++) {
     const w = paseoAleatorio(A, rng, 0, T, { pasosFijos: true });
     let S = mod.resuelto;
     for (const m of w) S = mod.aplicar(S, m);
     if (!mod.pareceResuelto(S) || intento >= 20) return w;
   }
+}
+
+/**
+ * Scramble de estado aleatorio de la fase 2 + paseo de la geometría (solo si el BFS de geometrías
+ * no cabe, el grupo de la fase 2 es exacto y hay tablas de Minkwitz). El estado: h uniforme en el
+ * grupo de la fase 2 (la cadena), y después un paseo perezoso w. Para cada w, h ↦ h·w es una
+ * biyección del grupo en los estados de la geometría a la que lleva w, así que, dada la geometría,
+ * el estado es uniforme; y la geometría del paseo tiende a la uniforme (cada geometría tiene los
+ * mismos estados). La palabra de h es la inversa de la solución de Minkwitz del estado h (un lazo:
+ * legal desde el resuelto). Devuelve null si algo no cuadra (y se usa el paseo largo).
+ * @param {Analisis} A @param {Rng} rng
+ * @returns {number[] | null}
+ */
+function scrambleFase2(A, rng) {
+  const { mod } = A;
+  if (!A.mink || !A.buscador || !A.info.grupoFase2Exacto) return null;
+  // el estado: h (uniforme en la fase 2) y después el paseo de la geometría (legal desde h: la
+  // legalidad solo depende de la geometría, y h tiene la resuelta)
+  const h = A.g2.cadena.aleatorio(rng);
+  let X = new Int16Array(mod.nS);
+  for (let i = 0; i < mod.nS; i++) X[i] = h[mod.resuelto[i]];
+  const paseo = paseoAleatorio(A, rng, 0, PASOS_GEOMETRIA_GRANDE, { pasosFijos: true });
+  for (const m of paseo) X = mod.aplicar(X, m);
+  // el scramble: la inversa de una solución rápida de ese estado (camino de geometría + Minkwitz,
+  // como la estrategia B). Escribir el estado como «palabra de h + paseo» daba ~1.000 giros; así,
+  // lo que mide una solución (~500 en el 5x5 de 16 bloques).
+  const f1 = A.buscador.caminoAResuelta(X, { msMax: 2000 });
+  if (!f1) return null;
+  let T = X;
+  for (const m of f1) T = mod.aplicar(T, m);
+  const f2 = A.mink.resolverS(T, 20);
+  if (!f2) return null;
+  const sol = mod.reducirPalabra(f1.concat(f2));
+  // comprobación giro a giro: la solución resuelve X, así que su inversa, desde el resuelto, lleva a
+  // un estado con el aspecto de X (con piezas iguales, quizá con centros iguales cambiados entre sí)
+  let S = X;
+  for (const m of sol) { if (!mod.legal(S, m)) return null; S = mod.aplicar(S, m); }
+  if (!mod.pareceResuelto(S)) return null;
+  const w = invertirSecuencia(mod, sol);
+  S = mod.resuelto;
+  for (const m of w) { if (!mod.legal(S, m)) return null; S = mod.aplicar(S, m); }
+  return mod.pareceResuelto(S) ? null : w;
 }
 
 /**
@@ -1742,37 +2129,92 @@ export function puzzleConBloqueos(puzzle, definicion, opcionesAnalisis = {}) {
   }
 
   /**
-   * Validación con los bloques; si es válido, también S (normalizado) y la rotación r.
-   * @param {EstadoPegatinas} estado
-   * @returns {{ valido: boolean, errores: string[], S?: Int16Array, r?: number }}
+   * ¿Sale `estado` de aplicar `secuencia` al resuelto con giros legales? Es la prueba de que un
+   * estado que viene de un scramble de la app (y no se ha tocado) es alcanzable: por construcción,
+   * sin buscar nada (sesión «validador con muchas geometrías»).
+   * @param {EstadoPegatinas} estado @param {Movimiento[]} secuencia
    */
-  function analizar(estado) {
+  function vieneDeSecuencia(estado, secuencia) {
+    let e = puzzle.estadoResuelto();
+    try {
+      for (const m of secuencia) {
+        const id = identificar(e);
+        if (id.errores || !comprobarMovimiento(id.donde, m).legal) return false;
+        e = aplicarMovimiento(e, m);
+      }
+    } catch { return false; }
+    return e.length === estado.length && e.every((x, i) => x === estado[i]);
+  }
+
+  /**
+   * Validación con los bloques. Tres resultados (sesión «validador con muchas geometrías»):
+   *  - 'valido': demostrado (hay una forma de llegar con giros legales: está en el grupo);
+   *  - 'imposible': demostrado (un bloque roto, piezas que no pueden quedar así en el cubo sin
+   *    bloques, una geometría fuera de la tabla COMPLETA, o fuera del grupo de la fase 2 sabiendo
+   *    que el grupo encontrado es el entero);
+   *  - 'sin-comprobar': no se ha podido decidir (p. ej. no se encontró a tiempo un camino de la
+   *    geometría a la resuelta). Nunca se da como imposible: la interfaz lo muestra como aviso y deja
+   *    intentar resolver.
+   * `valido` es true solo con 'valido'. Si es válido, también S (normalizado) y la rotación r; si
+   * no se ha podido comprobar pero el estado se puede normalizar, también S y r (para intentar
+   * resolver). `opciones.secuencia`: giros que llevan del resuelto al estado (un scramble de la app).
+   * @param {EstadoPegatinas} estado
+   * @param {{ secuencia?: Movimiento[], msMax?: number }} [opciones]
+   * @returns {{ valido: boolean, resultado: 'valido' | 'imposible' | 'sin-comprobar', errores: string[], avisos?: string[], S?: Int16Array, r?: number, porSecuencia?: boolean }}
+   */
+  function analizar(estado, opciones = {}) {
     inicializar();
-    if (!A.ok) return { valido: false, errores: A.info.errores.slice() };
-    if (sinBloques) return puzzle.validar ? puzzle.validar(estado) : { valido: true, errores: [] };
+    /** @param {string[]} errores */
+    const imposible = (errores) => ({ valido: false, resultado: /** @type {'imposible'} */ ('imposible'), errores });
+    if (!A.ok) return imposible(A.info.errores.slice());
+    if (sinBloques) {
+      const v = puzzle.validar ? puzzle.validar(estado) : { valido: true, errores: [] };
+      return { ...v, resultado: v.valido ? 'valido' : 'imposible' };
+    }
     if (puzzle.validar) {
       const v = puzzle.validar(estado);
-      if (!v.valido) return v;
+      if (!v.valido) return imposible(v.errores);
     }
     const n = normalizar(estado);
-    if (n.errores) return { valido: false, errores: n.errores };
+    if (n.errores) return imposible(n.errores);
     const rotos = bloquesRotos(n.donde);
-    if (rotos.length) return { valido: false, errores: rotos.map((bi) => `El bloque ${nombreBloque(bi)} está roto: sus piezas no están juntas como en el cubo resuelto.`) };
+    if (rotos.length) return imposible(rotos.map((bi) => `El bloque ${nombreBloque(bi)} está roto: sus piezas no están juntas como en el cubo resuelto.`));
     const S = A.mod.SDesdeDonde(n.donde);
+    // Un scramble de la app sin tocar: alcanzable por construcción
+    if (opciones.secuencia && vieneDeSecuencia(estado, opciones.secuencia)) return { valido: true, resultado: 'valido', errores: [], S, r: n.r, porSecuencia: true };
     const G = A.mod.geometriaDe(S);
-    const gi = A.geo.indice.get(A.mod.claveG(G));
+    let gi = A.geo.indice.get(A.mod.claveG(G));
+    // Lo que falta para llegar a la geometría de la tabla gi (si la geometría no está en ella)
+    let prefijo = /** @type {number[]} */ ([]);
     if (gi === undefined) {
-      return { valido: false, errores: [A.info.geometriasExacto ? 'Con estos bloques no se puede llegar a esta forma (los bloques no pueden quedar colocados así).' : 'No se pudo comprobar la forma (demasiadas geometrías).'] };
+      if (A.info.geometriasExacto) return imposible(['Con estos bloques no se puede llegar a esta forma (los bloques no pueden quedar colocados así).']);
+      // BFS incompleto: buscar un camino de giros legales hasta una geometría de la tabla
+      const c = A.buscador ? A.buscador.caminoABola(G, { msMax: opciones.msMax ?? 3000 }) : null;
+      if (!c) {
+        return {
+          valido: false, resultado: 'sin-comprobar', errores: [], S, r: n.r,
+          avisos: ['No se ha podido comprobar si este estado es alcanzable: hay demasiadas geometrías para tenerlas todas en la tabla y no se encontró a tiempo un camino de giros legales hasta la forma resuelta. Puedes intentar resolverlo igualmente.'],
+        };
+      }
+      prefijo = c.movs;
+      gi = c.nodo;
     }
-    // ¿pertenece al grupo de la fase 2? (deshacer el camino del árbol hasta la geometría resuelta)
+    // ¿pertenece al grupo de la fase 2? (llevarlo, por el prefijo y el camino del árbol, a la
+    // geometría resuelta). x = donde · prefijo · camino(gi)⁻¹
+    let d = n.donde;
+    for (const m of prefijo) { const M = A.mod.MAPA[m]; const d2 = new Int16Array(d.length); for (let p = 0; p < d.length; p++) d2[p] = M[d[p]]; d = d2; }
     const cam = A.g2.camino[gi];
     const inv = new Int16Array(cam.length); cam.forEach((x, i) => { inv[x] = i; });
-    const x = new Int16Array(n.donde.length);
-    for (let p = 0; p < x.length; p++) x[p] = inv[n.donde[p]];
-    if (A.info.estadosExacto && !A.g2.cadena.contiene(x)) {
-      return { valido: false, errores: ['Con estos bloques no se puede llegar a este estado: las piezas no pueden quedar así sin romper ningún bloque.'] };
-    }
-    return { valido: true, errores: [], S, r: n.r };
+    const x = new Int16Array(d.length);
+    for (let p = 0; p < x.length; p++) x[p] = inv[d[p]];
+    if (A.g2.cadena.contiene(x)) return { valido: true, resultado: 'valido', errores: [], S, r: n.r };
+    // fuera del grupo encontrado: imposible solo si ese grupo es el entero
+    const grupoExacto = A.info.geometriasExacto ? !!A.info.estadosExacto : !!A.info.grupoFase2Exacto;
+    if (grupoExacto) return imposible(['Con estos bloques no se puede llegar a este estado: las piezas no pueden quedar así sin romper ningún bloque.']);
+    return {
+      valido: false, resultado: 'sin-comprobar', errores: [], S, r: n.r,
+      avisos: ['No se ha podido comprobar si este estado es alcanzable: la forma de los bloques sí lo es, pero no se ha podido demostrar que las piezas puedan quedar así. Puedes intentar resolverlo igualmente.'],
+    };
   }
 
   /**
@@ -1786,10 +2228,16 @@ export function puzzleConBloqueos(puzzle, definicion, opcionesAnalisis = {}) {
     const t0 = ahora();
     // (los puzzles con soporteBloqueos tienen solucionador: el 3x3)
     if (sinBloques) { inicializar(); return { ...(/** @type {Required<Puzzle<EstadoPegatinas>>['resolver']} */ (puzzle.resolver))(estado, opciones), estrategia: 'sin bloqueos' }; }
-    const a = analizar(estado);
-    if (!a.valido) return { ok: false, errores: a.errores };
+    const a = analizar(estado, { secuencia: opciones.secuencia });
+    // sin comprobar (sesión «validador con muchas geometrías»): se intenta resolver igualmente; si
+    // sale una solución, se comprueba giro a giro, y eso demuestra que era alcanzable
+    if (!a.valido && !(a.resultado === 'sin-comprobar' && a.S)) return { ok: false, errores: a.errores };
     const r = resolverBloqueos(/** @type {Analisis} */ (A), /** @type {Int16Array} */ (a.S), opciones);
-    if (!r) return { ok: false, errores: ['No se encontró solución en el tiempo disponible.'] };
+    if (!r) {
+      return { ok: false, errores: [a.resultado === 'sin-comprobar'
+        ? 'No se encontró solución en el tiempo disponible (y no se ha podido comprobar si el estado es alcanzable).'
+        : 'No se encontró solución en el tiempo disponible: el estado es alcanzable, pero el solucionador no ha llegado a tiempo.'] };
+    }
     const movimientos = conNotacion(r.movs.map((m) => traducir(/** @type {number} */ (a.r), m)));
     if (!solucionComprobada(estado, movimientos)) return { ok: false, errores: ['La solución encontrada no ha pasado la comprobación giro a giro, así que no se muestra (es un error del programa: por favor, avísalo).'] };
     /** @type {ResolverOk} */
@@ -1923,7 +2371,10 @@ export function puzzleConBloqueos(puzzle, definicion, opcionesAnalisis = {}) {
     inicializar,
     estaInicializado: () => !!A,
     avisoInicializacion: 'Analizando los bloques y generando las tablas…',
-    validar: (e) => { const a = analizar(e); return { valido: a.valido, errores: a.errores }; },
+    validar: (e, opciones = {}) => {
+      const a = analizar(e, opciones);
+      return { valido: a.valido, errores: a.errores, resultado: a.resultado, ...(a.avisos ? { avisos: a.avisos } : {}) };
+    },
     resolver,
     aprender: undefined,
     metodosAprender: undefined,

@@ -29,10 +29,10 @@ import { permProducto as producto, permInversa as inversa, crearCadena, completa
 
 /**
  * @param {{ puntos: number, base: number[], generadores: Generador[], inverso: (m: number) => number,
- *   reducir?: (palabra: number[]) => number[], rng: Rng, msMax?: number, longitudMax?: number }} opciones
+ *   reducir?: (palabra: number[]) => number[], rng: Rng, msMax?: number, longitudMax?: number, todos?: boolean }} opciones
  *   inverso: índice del giro inverso; reducir: simplifica una palabra (U U -> U2…) sin cambiar el elemento.
  */
-export function crearTablasMinkwitz({ puntos: P, base, generadores, inverso, reducir = (w) => w, rng, msMax = 3000, longitudMax = 3000 }) {
+export function crearTablasMinkwitz({ puntos: P, base, generadores, inverso, reducir = (w) => w, rng, msMax = 3000, longitudMax = 3000, todos = false }) {
   const t0 = Date.now();
   const n = base.length;
   /** @param {number[]} w */
@@ -42,7 +42,8 @@ export function crearTablasMinkwitz({ puntos: P, base, generadores, inverso, red
 
   // Órbitas que hay que cubrir: las de una cadena con esta base (Schreier–Sims aleatorio)
   const cadena = crearCadena(P, { prefijo: base, sinSchreier: true });
-  completarAleatorio(cadena, generadores.map((g) => g.perm), rng, { seguidas: 40 });
+  // (todos: ver completarAleatorio; solo en las configuraciones cuyo BFS de geometrías no cabe)
+  completarAleatorio(cadena, generadores.map((g) => g.perm), rng, todos ? { seguidas: 40, todos } : { seguidas: 40 });
   const orbita = base.map((_, k) => cadena.niveles[k].rep.size);
   if (cadena.niveles.length > n) throw new Error('Minkwitz: la base no es una base del grupo');
 

@@ -124,7 +124,7 @@ export function crearCadena(n, opciones = {}) {
  * ella con probabilidad ≥ 1/2, así que el orden es exacto salvo con probabilidad ≤ 2^-seguidas.
  * Devuelve el número de elementos al azar usados.
  */
-export function completarAleatorio(cadena, gens, rng, { seguidas = 50, maxElementos = 100000 } = {}) {
+export function completarAleatorio(cadena, gens, rng, { seguidas = 50, maxElementos = 100000, todos = false } = {}) {
   for (const g of gens) cadena.incluir(g);
   // generadores fuertes hasta ahora (los del primer nivel generan el grupo)
   const base = cadena.niveles.length ? cadena.niveles[0].gens.slice() : [];
@@ -132,7 +132,20 @@ export function completarAleatorio(cadena, gens, rng, { seguidas = 50, maxElemen
   const n = base[0].length;
   const r = Math.max(10, Math.min(base.length, 30));
   const tupla = [];
-  for (let i = 0; i < r; i++) tupla.push(base[i % base.length]);
+  if (todos && base.length > r) {
+    // (sesión «validador con muchas geometrías») Con más de r generadores, la tupla de siempre solo
+    // lleva los r primeros, y el product replacement solo da elementos del subgrupo que generan: con
+    // miles de lazos ese subgrupo puede ser propio y la cadena se da por completa sin estarlo
+    // (medido: un factor 3 en el 5x5 de 16 bloques). Con `todos`, cada elemento de la tupla es un
+    // subproducto aleatorio de TODOS los generadores (cada uno entra con probabilidad 1/2): si los
+    // r no generasen el grupo, cada subproducto caería fuera de cualquier subgrupo propio con
+    // probabilidad ≥ 1/2 (Babai, «random subproducts»). Sin la opción, todo como antes.
+    for (let i = 0; i < r; i++) {
+      let x = new Int16Array(n); for (let p = 0; p < n; p++) x[p] = p;
+      for (const g of base) if (rng() < 0.5) x = producto(x, g);
+      tupla.push(x);
+    }
+  } else for (let i = 0; i < r; i++) tupla.push(base[i % base.length]);
   let acc = new Int16Array(n); for (let i = 0; i < n; i++) acc[i] = i;
   const paso = () => {
     const i = Math.floor(rng() * r);

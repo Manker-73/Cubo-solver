@@ -44,9 +44,24 @@ export interface InfoMovimiento {
 }
 
 export interface Validacion {
+  /** true solo si está demostrado que el estado es posible. */
   valido: boolean;
   /** Mensajes en lenguaje claro (vacío si es válido). */
   errores: string[];
+  /**
+   * (Sesión «validador con muchas geometrías».) Tres resultados: 'valido' y 'imposible' están
+   * demostrados; 'sin-comprobar' no (se muestra como aviso y se deja intentar resolver). Los
+   * puzzles que no lo dan: 'valido' si `valido`, 'imposible' si no.
+   */
+  resultado?: 'valido' | 'imposible' | 'sin-comprobar';
+  /** Avisos (con 'sin-comprobar'). */
+  avisos?: string[];
+}
+
+/** Opciones de `validar`: giros que llevan del resuelto al estado (un scramble de la app sin tocar). */
+export interface OpcionesValidar {
+  secuencia?: Movimiento[];
+  msMax?: number;
 }
 
 /** Tramo de una solución (barra de fases). `grupo` = clase de color `f-<grupo>`. */
@@ -92,6 +107,8 @@ export interface OpcionesResolver {
   /** Bloqueos: 'A' o 'B' para forzar una estrategia. */
   estrategia?: 'A' | 'B';
   compararSinBloqueos?: boolean;
+  /** Bloqueos: giros que llevan del resuelto al estado (scramble de la app sin tocar): alcanzable por construcción. */
+  secuencia?: Movimiento[];
   [opcion: string]: unknown;
 }
 
@@ -304,7 +321,7 @@ export interface DefinicionPuzzle<E> {
   renderizar(estado: E, opciones?: OpcionesRender): string;
 
   // ---- opcional (según capacidades) ----
-  validar?(estado: E): Validacion;
+  validar?(estado: E, opciones?: OpcionesValidar): Validacion;
   /** Genera las tablas (idempotente). */
   inicializar?(): { ms: number; yaEstaba?: boolean };
   estaInicializado?(): boolean;
@@ -508,6 +525,20 @@ export interface InfoBloqueos {
   /** (noche 13) Tablas de Minkwitz de la fase 2 (4x4, 5x5 en espacio grande). */
   msMinkwitz?: number;
   minkwitz?: { niveles: number; entradas: number; longitudMedia: number; completo: boolean; ms: number; pasos: number };
+  /**
+   * (Sesión «validador con muchas geometrías»; solo si el BFS de geometrías no cabe.) Cota superior
+   * del grupo de la fase 2 (|R| · |H0|, ver cotaGrupoFase2), permutaciones de bloques realizables |R|,
+   * lazos al azar añadidos y si el grupo encontrado llega a la cota (entonces es exacto).
+   */
+  cotaGrupoFase2?: string;
+  permutacionesBloques?: number;
+  lazosAlAzar?: number;
+  grupoFase2Exacto?: boolean;
+  msCota?: number;
+  /** Pasos del paseo de la geometría en los scrambles de estado aleatorio de la fase 2 (si el BFS no cabe). */
+  pasosGeometria?: number;
+  /** Cómo se hacen los scrambles: 'bfs' (estado uniforme), 'paseo' (paseo fijo) o 'fase2' (estado aleatorio de la fase 2 + paseo). */
+  tipoScramble?: 'bfs' | 'paseo' | 'fase2';
 }
 
 export interface DetalleEstrategias {
@@ -548,7 +579,7 @@ export type Peticion =
   | { op: 'ping' }
   | (PeticionPuzzle & { op: 'inicializar' })
   | (PeticionPuzzle & { op: 'scramble' })
-  | (PeticionPuzzle & { op: 'validar'; estado: unknown })
+  | (PeticionPuzzle & { op: 'validar'; estado: unknown; opciones?: OpcionesValidar })
   | (PeticionPuzzle & { op: 'resolver'; estado: unknown; opciones?: OpcionesResolver })
   | (PeticionPuzzle & { op: 'aprender'; estado: unknown; opciones?: { metodo?: string } });
 
