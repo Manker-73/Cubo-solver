@@ -1,5 +1,7 @@
 # Estado del proyecto (sesión «orden de Bandaged Cubes» tras la noche 13 — 24/11/2026)
 
+> Noche 14 (introducir el estado de un cubo físico colocando piezas y bloques): en curso.
+
 > Progreso de la sesión «longitud del scramble práctico» (26/11/2026): longitud WCA por defecto (40 en 4x4, 60 en 5x5) ✔ · selector 30 · WCA · 100 · mezclado con URL y navegador ✔ · calidad por longitud medida con la distribución exacta (5x5 de 16 barras y 2x4x4) y mostrada junto al selector ✔ · determinismo de cada longitud ✔ · configuraciones sin práctico sin cambios ✔ · tests del selector y la URL ✔ · `test:humo` ✔ · tests de la app 25/25 ✔ · Action `test:rapido` ✔ · Chromium escritorio y móvil (CPU ×4) cambiando de longitud y resolviendo con cada una, sin errores ✔ · docs ✔ · artifact ✔.
 
 ## Sesión: longitud del scramble práctico
