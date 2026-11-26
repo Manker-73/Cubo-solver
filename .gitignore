@@ -5,3 +5,4 @@ scripts/tmp/
 copia-repo.bundle.b64.txt
 tests/.resultados-parciales/
 .tmp/
+repomix-output.xml
