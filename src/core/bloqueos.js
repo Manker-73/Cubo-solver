@@ -29,6 +29,7 @@
 import { crearCadena, permProducto, permInversa, completarAleatorio } from './schreier.js';
 import { crearTablaEstados } from './tabla-estados.js';
 import { crearTablasMinkwitz } from './minkwitz.js';
+import { rngConSemilla } from './rng.js';
 
 /**
  * Tipos de los contratos (soporte, definición, análisis, puzzle vendado) en ./tipos.d.ts;
@@ -60,6 +61,12 @@ const PASOS_LAZOS = 400;
  * scripts/mezcla-bloqueos.mjs; DECISIONES.md, sesión «validador con muchas geometrías»).
  */
 export const PASOS_GEOMETRIA_GRANDE = 409600;
+/** Semilla fija del análisis de las configuraciones que no caben (ver crearAnalisisBloqueos). */
+const SEMILLA_GRANDES = 20261126;
+/** Presupuesto de las tablas de Minkwitz en esas configuraciones: en pasos, no en milisegundos. */
+const PRESUPUESTO_MINKWITZ_GRANDE = { productos: 100000, mejoras: 60000 };
+/** Nodos máximos del buscador de geometría cuando no puede tener límite de tiempo. */
+const NODOS_BUSCADOR_GRANDE = 2000000;
 export const PASOS_PASEO_GRANDE = 409600;
 
 export const LIMITES = {
@@ -467,7 +474,16 @@ export function crearModeloBloqueos(soporte, definicion) {
 // Análisis: geometrías (BFS), grupo de la fase 2, conteo, BFS completo
 // ---------------------------------------------------------------------------
 
-const ahora = () => (globalThis.performance || Date).now();
+/** Reloj (se puede cambiar en los tests para simular una máquina lenta: fijarRelojBloqueos). */
+let reloj = /** @type {(() => number) | null} */ (null);
+const ahora = () => (reloj ? reloj() : (globalThis.performance || Date).now());
+/**
+ * Solo para los tests (sesión «509 giros, determinismo…»): cambia el reloj de este módulo (null =
+ * el de siempre). Con un reloj que corre más, todo lo que tiene límite de tiempo se corta antes:
+ * así se comprueba que los scrambles no dependen de la velocidad de la máquina.
+ * @param {(() => number) | null} f
+ */
+export function fijarRelojBloqueos(f) { reloj = f; }
 
 /** BFS sobre las geometrías desde la resuelta. @param {ModeloBloqueos} mod @param {number} limite */
 function bfsGeometrias(mod, limite) {
@@ -939,7 +955,12 @@ export function crearAnalisisBloqueos(soporte, definicion, opciones = {}) {
 
   // Grupo de la fase 2 y número de estados
   const tf = ahora();
-  const g2 = grupoFase2(mod, geo, rngInterno);
+  // BFS de geometrías incompleto (sesión «509 giros, determinismo…»): todo lo que llega a los
+  // scrambles (grupo de la fase 2, lazos al azar, tablas de Minkwitz) sale de una semilla fija y de
+  // presupuestos contados en pasos, no en tiempo: la misma semilla del scramble da el mismo
+  // scramble en cualquier máquina. (En las configuraciones que caben, todo como antes.)
+  const rngG = geo.completo ? rngInterno : rngConSemilla(SEMILLA_GRANDES);
+  const g2 = grupoFase2(mod, geo, rngG);
   // BFS de geometrías incompleto (sesión «validador con muchas geometrías»): buscador de caminos,
   // lazos al azar hasta que el grupo de la fase 2 llega a su cota superior (o se agotan los intentos)
   /** @type {ReturnType<typeof crearBuscadorGeometria> | null} */
@@ -949,19 +970,18 @@ export function crearAnalisisBloqueos(soporte, definicion, opciones = {}) {
   if (!geo.completo) {
     buscador = crearBuscadorGeometria(mod, geo);
     const tc = ahora();
-    const cota = cotaGrupoFase2(mod, rngInterno);
+    const cota = cotaGrupoFase2(mod, rngG);
     if (cota) { info.cotaGrupoFase2 = cota.cota.toString(); info.permutacionesBloques = cota.R; }
     const ampliar = (/** @type {Int16Array[]} */ perms) => {
-      if (mod.hayIguales) completarAleatorio(g2.cadena, perms, rngInterno, { seguidas: 50, todos: true });
+      if (mod.hayIguales) completarAleatorio(g2.cadena, perms, rngG, { seguidas: 50, todos: true });
       else for (const x of perms) g2.cadena.incluir(x);
     };
     ampliar([]);
     // los paseos se alargan en cada vuelta (400, 800, … hasta 25.600 pasos): los cortos dan lazos
     // cortos (mejores generadores para Minkwitz), pero algunas permutaciones de bloques solo salen con
     // paseos largos (medido: con 12 vueltas de 400 pasos, a veces el grupo se quedaba 6 veces corto)
-    const tl = ahora();
-    for (let vuelta = 0; vuelta < 40 && ahora() - tl < 20000 && !(cota && g2.cadena.orden() === cota.cota); vuelta++) {
-      const nuevos = lazosAlAzar(mod, buscador, rngInterno, 40, PASOS_LAZOS * 2 ** Math.min(6, vuelta >> 1));
+    for (let vuelta = 0; vuelta < 40 && !(cota && g2.cadena.orden() === cota.cota); vuelta++) {
+      const nuevos = lazosAlAzar(mod, buscador, rngG, 40, PASOS_LAZOS * 2 ** Math.min(6, vuelta >> 1));
       lazosExtra = lazosExtra.concat(nuevos);
       ampliar(nuevos.map((l) => l.perm));
     }
@@ -1033,7 +1053,9 @@ export function crearAnalisisBloqueos(soporte, definicion, opciones = {}) {
   let mink = null;
   if (!bfs && mod.hayIguales && (opciones.msMinkwitz ?? 3000) > 0) {
     const tm = ahora();
-    mink = tablasFase2(mod, geo, rngInterno, opciones.msMinkwitz ?? 3000, g2.orden, lazosExtra);
+    mink = geo.completo
+      ? tablasFase2(mod, geo, rngInterno, opciones.msMinkwitz ?? 3000, g2.orden, lazosExtra)
+      : tablasFase2(mod, geo, rngG, 0, g2.orden, lazosExtra, PRESUPUESTO_MINKWITZ_GRANDE);
     info.msMinkwitz = Math.round(ahora() - tm);
     info.minkwitz = mink.info;
   }
@@ -1078,7 +1100,7 @@ function reetiquetadoMasCercano(A, S) {
  * centros).
  * @param {ModeloBloqueos} mod @param {Geometrias} geo @param {Rng} rng @param {number} msMax
  */
-function tablasFase2(mod, geo, rng, msMax, ordenG2 = 0n, extra = /** @type {Array<{ perm: Int16Array, palabra: number[] }>} */ ([])) {
+function tablasFase2(mod, geo, rng, msMax, ordenG2 = 0n, extra = /** @type {Array<{ perm: Int16Array, palabra: number[] }>} */ ([]), presupuesto = /** @type {{ productos: number, mejoras: number } | null} */ (null)) {
   // extra (sesión «validador con muchas geometrías»): lazos que no salen de las aristas del BFS
   // (paseo al azar + vuelta), solo cuando el BFS de geometrías no cabe; con ellos, las cadenas
   // se completan con subproductos de todos los generadores (completarAleatorio, `todos`).
@@ -1132,7 +1154,7 @@ function tablasFase2(mod, geo, rng, msMax, ordenG2 = 0n, extra = /** @type {Arra
   const rango = (i) => { const r = ORDEN_TIPOS.indexOf(mod.piezas[mod.moviles[i]].tipo); return r < 0 ? ORDEN_TIPOS.length : r; };
   const idx = mod.moviles.map((k, i) => i).sort((a, b) => rango(a) - rango(b) || a - b);
   const base = idx.map((i) => mod.resuelto[i]);
-  const t = crearTablasMinkwitz({ puntos: P, base, generadores, inverso: (m) => mod.inversoMov[m], reducir: mod.reducirPalabra, rng, msMax, todos });
+  const t = crearTablasMinkwitz({ puntos: P, base, generadores, inverso: (m) => mod.inversoMov[m], reducir: mod.reducirPalabra, rng, msMax, todos, ...(presupuesto ? { presupuesto } : {}) });
   // nivel k de la base = pieza móvil idx[k]; centros iguales sueltos: su clase (vale cualquiera)
   const clase = idx.map((i) => (mod.claseMovil[i] >= 0 && mod.enBloque[mod.moviles[i]] < 0 ? mod.claseMovil[i] : -1));
   // Prefijos para varios intentos: los generadores y entradas de las tablas más cortos (lazos:
@@ -1154,10 +1176,10 @@ function tablasFase2(mod, geo, rng, msMax, ordenG2 = 0n, extra = /** @type {Arra
      * a empezar por un lazo corto (un prefijo) y se queda con la más corta en total.
      * @param {Int16Array} S @param {number} [intentos]
      */
-    resolverS(S, intentos = 0) {
+    resolverS(S, intentos = 0, rngPrefijos = rng) {
       let mejor = t.resolver(idx.map((i) => S[i]), clase);
       for (let j = 0; j < Math.min(intentos, prefijos.length); j++) {
-        const w = prefijos[Math.floor(rng() * prefijos.length)];
+        const w = prefijos[Math.floor(rngPrefijos() * prefijos.length)];
         let T = S;
         for (const m of w) T = mod.aplicar(T, m);
         const r = t.resolver(idx.map((i) => T[i]), clase);
@@ -1283,7 +1305,7 @@ function crearBuscadorGeometria(mod, geo) {
   const vueltaArbol = (i) => { /** @type {number[]} */ const w = []; for (let n = i; n > 0; n = geo.nodos[n].padre) w.push(mod.inversoMov[geo.nodos[n].mov]); return w; };
   /**
    * Giros legales de S a un estado con la geometría resuelta (no necesariamente los menos), o null.
-   * @param {Int16Array} S @param {{ msMax?: number }} [opciones]
+   * @param {Int16Array} S @param {{ msMax?: number, maxNodos?: number }} [opciones]
    */
   function caminoAResuelta(S, opciones = {}) {
     const c = caminoABola(mod.geometriaDe(S), opciones);
@@ -1310,7 +1332,7 @@ function lazosAlAzar(mod, buscador, rng, cuantos, pasos) {
     const ida = paseoAleatorio({ mod }, rng, 0, pasos, { pasosFijos: true });
     let S = mod.resuelto;
     for (const m of ida) S = mod.aplicar(S, m);
-    const vuelta = buscador.caminoAResuelta(S, { msMax: 1000 });
+    const vuelta = buscador.caminoAResuelta(S, { msMax: Infinity, maxNodos: NODOS_BUSCADOR_GRANDE });
     if (!vuelta) continue;
     const palabra = mod.reducirPalabra(ida.concat(vuelta));
     // se comprueba giro a giro (legal y de vuelta en la geometría resuelta)
@@ -1751,11 +1773,12 @@ function scrambleFase2(A, rng) {
   // el scramble: la inversa de una solución rápida de ese estado (camino de geometría + Minkwitz,
   // como la estrategia B). Escribir el estado como «palabra de h + paseo» daba ~1.000 giros; así,
   // lo que mide una solución (~500 en el 5x5 de 16 bloques).
-  const f1 = A.buscador.caminoAResuelta(X, { msMax: 2000 });
+  // (sin límite de tiempo: solo de nodos, para que no dependa de la máquina)
+  const f1 = A.buscador.caminoAResuelta(X, { msMax: Infinity, maxNodos: NODOS_BUSCADOR_GRANDE });
   if (!f1) return null;
   let T = X;
   for (const m of f1) T = mod.aplicar(T, m);
-  const f2 = A.mink.resolverS(T, 20);
+  const f2 = A.mink.resolverS(T, 20, rng);
   if (!f2) return null;
   const sol = mod.reducirPalabra(f1.concat(f2));
   // comprobación giro a giro: la solución resuelve X, así que su inversa, desde el resuelto, lleva a

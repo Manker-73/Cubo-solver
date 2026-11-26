@@ -764,3 +764,29 @@ for (const cfg of CONFIGS_GRANDES) {
     assert.equal(fallos, 0, `${cfg.nombre}: sin resolver ${fallos} de ${sols.length}`);
   });
 }
+
+// ===========================================================================
+// Sesión «509 giros, determinismo y scramble práctico» (26/11/2026): con la misma semilla, el
+// mismo scramble en cualquier máquina (sin presupuestos de tiempo en lo que lo genera).
+// ===========================================================================
+import * as moduloBloqueos from '../src/core/bloqueos.js';
+
+test('bloqueos grandes: con la misma semilla, el mismo scramble (mezclado y práctico) en dos «máquinas» distintas', { timeout: 900000 }, () => {
+  const cfg = CONFIGS_GRANDES[0];
+  /** Una «máquina»: semilla del análisis, presupuesto de tiempo de Minkwitz y reloj distintos. */
+  const maquina = ({ rngAnalisis, msMinkwitz, relojRapido }) => {
+    if (relojRapido) moduloBloqueos.fijarRelojBloqueos?.(() => performance.now() * 25); // máquina «25 veces más lenta»
+    try {
+      const p = crearNxNVendado(cfg.N, cfg.def, { rng: rngConSemilla(rngAnalisis), msMinkwitz });
+      p.inicializar();
+      return {
+        mezclados: [0, 1, 2].map((i) => p.generarScramble(rngConSemilla(500 + i), { modo: 'mezclado' }).join(' ')),
+        practicos: [0, 1, 2].map((i) => p.generarScramble(rngConSemilla(900 + i)).join(' ')),
+      };
+    } finally { moduloBloqueos.fijarRelojBloqueos?.(null); }
+  };
+  const a = maquina({ rngAnalisis: 7, msMinkwitz: 3000, relojRapido: false });
+  const b = maquina({ rngAnalisis: 4242, msMinkwitz: 150, relojRapido: true });
+  assert.deepEqual(b.mezclados, a.mezclados, 'el scramble mezclado depende de la máquina');
+  assert.deepEqual(b.practicos, a.practicos, 'el scramble práctico depende de la máquina');
+});

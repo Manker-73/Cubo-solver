@@ -29,10 +29,13 @@ import { permProducto as producto, permInversa as inversa, crearCadena, completa
 
 /**
  * @param {{ puntos: number, base: number[], generadores: Generador[], inverso: (m: number) => number,
- *   reducir?: (palabra: number[]) => number[], rng: Rng, msMax?: number, longitudMax?: number, todos?: boolean }} opciones
+ *   reducir?: (palabra: number[]) => number[], rng: Rng, msMax?: number, longitudMax?: number, todos?: boolean,
+ *   presupuesto?: { productos: number, mejoras: number } | null }} opciones
  *   inverso: índice del giro inverso; reducir: simplifica una palabra (U U -> U2…) sin cambiar el elemento.
  */
-export function crearTablasMinkwitz({ puntos: P, base, generadores, inverso, reducir = (w) => w, rng, msMax = 3000, longitudMax = 3000, todos = false }) {
+export function crearTablasMinkwitz({ puntos: P, base, generadores, inverso, reducir = (w) => w, rng, msMax = 3000, longitudMax = 3000, todos = false, presupuesto = null }) {
+  // presupuesto (sesión «509 giros, determinismo…»): { productos, mejoras } en pasos en vez de
+  // msMax en milisegundos: las tablas salen iguales en cualquier máquina (más lenta = más tiempo).
   const t0 = Date.now();
   const n = base.length;
   /** @param {number[]} w */
@@ -118,8 +121,10 @@ export function crearTablasMinkwitz({ puntos: P, base, generadores, inverso, red
   let largo = 4;
   // (si al acabar faltan entradas, se sigue en modo rescate, hasta 2·msMax: se admiten palabras
   // largas en los niveles que faltan)
-  while ((Date.now() - t0 < limiteFase) || (llenas < n && Date.now() - t0 < 2 * msMax)) {
-    rescate = Date.now() - t0 >= limiteFase;
+  const enFase = () => (presupuesto ? pasos < presupuesto.productos * 0.6 : Date.now() - t0 < limiteFase);
+  const enRescate = () => llenas < n && (presupuesto ? pasos < 2 * presupuesto.productos : Date.now() - t0 < 2 * msMax);
+  while (enFase() || enRescate()) {
+    rescate = !enFase();
     let g = id, w = /** @type {number[]} */ ([]);
     for (let i = 0; i < largo; i++) {
       const s = conInv[Math.floor(rng() * 2 * nG)];
@@ -137,7 +142,7 @@ export function crearTablasMinkwitz({ puntos: P, base, generadores, inverso, red
   const recoger = () => { todas = []; for (const T of tablas) for (const e of T) if (e && e.palabra.length) todas.push(e); todas.sort((x, y) => x.palabra.length - y.palabra.length); };
   recoger();
   let ronda = 0;
-  while (Date.now() - t0 < msMax && todas.length) {
+  while ((presupuesto ? ronda < presupuesto.mejoras : Date.now() - t0 < msMax) && todas.length) {
     const elegir = () => todas[Math.floor(rng() * rng() * todas.length)];
     const a = elegir(), b = elegir();
     if (rng() < 0.5) cribar(producto(a.perm, b.perm), unir(a.palabra, b.palabra));
