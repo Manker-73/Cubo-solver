@@ -2434,6 +2434,14 @@ export function puzzleConBloqueos(puzzle, definicion, opcionesAnalisis = {}) {
         const n2 = normalizar(e);
         if (!n2.errores) return { valido: true, resultado: 'valido', errores: [], S: A.mod.SDesdeDonde(n2.donde), r: n2.r, estado: e };
       }
+      // La búsqueda solo es completa si cada órbita de los centros sueltos tiene el alternado (lo
+      // comprueba el recuento de distinguibles); si no se pudo demostrar, no se da como imposible.
+      if (!A.info.distinguiblesExacto) {
+        return {
+          valido: false, resultado: 'sin-comprobar', errores: [], S, r: n.r,
+          avisos: ['No se ha podido comprobar si este estado es alcanzable eligiendo qué centro es cuál (en esta configuración no se ha podido demostrar que basten los cambios entre centros iguales). Puedes intentar resolverlo igualmente.'],
+        };
+      }
     }
     // fuera del grupo encontrado: imposible solo si ese grupo es el entero
     const grupoExacto = A.info.geometriasExacto ? !!A.info.estadosExacto : !!A.info.grupoFase2Exacto;

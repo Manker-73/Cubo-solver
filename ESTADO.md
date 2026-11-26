@@ -1,6 +1,30 @@
-# Estado del proyecto (sesión «orden de Bandaged Cubes» tras la noche 13 — 24/11/2026)
+# Estado del proyecto (noche 14 — 26/11/2026)
 
-> Noche 14 (introducir el estado de un cubo físico colocando piezas y bloques): en curso.
+> Progreso de la noche 14 (introducir el estado de un cubo físico colocando piezas y bloques): punto de partida documentado ✔ · modo «Colocar piezas» en WCA Puzzles (2x2–7x7, Pyraminx, Skewb, Megaminx, FTO) y Bandaged Cubes (3x3, 4x4, 5x5) ✔ · Square-1 ✘ (sin huecos fijos; sigue su editor de piezas) · pantalla completa (API Fullscreen + capa fija), una mano en el móvil ✔ · bandeja con bloques primero y piezas por tipo ✔ · bloques solo en posiciones que caben (Girar / Siguiente posición) ✔ · piezas sueltas con lista, Girar y colocación automática si no hay alternativa ✔ · deshacer, quitar, contador y validación en vivo con tres resultados ✔ · validación contra el estado conocido (resuelto) reutilizando los validadores ✔ · piezas iguales elegidas por la app (`elegirIguales`, con demostración) ✔ · tests de ida y vuelta, rechazos y piezas iguales ✔ · prueba de humo de la app (WCA y Bandaged, 3x3 y 4x4) ✔ · Chromium real (escritorio/móvil, oscuro/claro, 2D/3D) sin errores ✔ · `npm run tipos` ✔ · Action `test:rapido` y Pages ✔ · bloques idénticos intercambiables ✘ (pendiente).
+
+## Noche 14: colocar piezas y bloques
+
+Cómo se usa: README.md («Introducir el estado de tu cubo físico»). Decisiones, método de las piezas iguales y lo que no funcionó: DECISIONES.md («Noche 14»). Cómo está hecho: ARQUITECTURA.md («Colocar piezas»).
+
+### Qué hay
+- `src/core/colocar.js` (modelo y sesión, genérico), `src/app/colocar-ui.js` (pantalla completa), `colocarPiezas` en cada puzzle (`src/puzzles/nxn-colocar.js` para los NxN), opción `elegirIguales` del validador vendado, `tests/colocar.test.mjs`, el test `app: colocar piezas…` y `scripts/comprobar-colocar.py`.
+- En los vendados 4x4/5x5 es la primera forma de introducir un estado a mano (pintar sigue desactivado; su aviso ya remite a «Colocar piezas»).
+
+### Resultados
+- **Ida y vuelta** (`tests/colocar.test.mjs`; mismas acciones que el usuario; equivalencia = mismos colores y mismos bloques en las mismas posiciones; validado como alcanzable): WCA 3x3, 4x4 y 5x5; vendados 3x3 (pareja, varios, 2x2x2), 4x4 (varios, centros), 5x5 (varios, opuestos) y 5x5 de 16 barras. CASOS_RESULTADO
+- **Toques para introducir un estado mezclado** (media del test; elegir y tocar cuentan 1 cada uno, cada Girar 1): TOQUES
+- **Rechazos** con mensaje: bloque donde no cabe (la interfaz no ofrece las posiciones que chocan; tocar un hueco imposible lo explica), pieza en un hueco de otro tipo («La arista … no cabe ahí: es un hueco de esquina»), paridad / esquina girada / arista volteada (mensajes del validador; el editor señala además la última pieza tocada como sospechosa), bloque roto («El bloque UFR+UF está roto…»), esquina girada en un 4x4 vendado aunque se elijan los centros.
+- **Piezas iguales**: en el WCA 4x4 los dos estados son el mismo; en los vendados 4x4/5x5, cambiar dos centros blancos sueltos da otro estado de identidades que sin la opción a veces no es alcanzable y con ella siempre se valida (y con los mismos colores). Dos esquinas cambiadas en un 4x4 vendado: alcanzable (la paridad la compensan los centros).
+- **App (jsdom)**: abrir, colocar pulsando la red 2D y los botones, Aplicar y salir, Resolver y reproducir hasta «Resuelto» en WCA 3x3/4x4 y Bandaged 3x3 (pareja) / 4x4 (varios): 51 / 118 / 52 / 105 toques; Cancelar no cambia nada.
+- **Chromium real** (`python scripts/comprobar-colocar.py`, Chrome instalado, WebGL por software): WCA 3x3 y Bandaged 3x3 en las 8 combinaciones (escritorio 1280 / móvil 390 táctil × oscuro / claro × 2D / 3D); WCA 4x4 y Bandaged 4x4 en 4 (escritorio oscuro 3D y claro 2D, ídem en móvil); RESTO_CHROMIUM. En todas: pantalla completa de verdad (`document.fullscreenElement`) y capa del tamaño de la ventana, botones ≥ 44 px, sin scroll horizontal, foco visible y dentro del diálogo, toque real en el modelo 3D que elige un hueco (y otro toque lo deselecciona), «Estado válido», salir de la pantalla completa, resolver y reproducir hasta «Resuelto»; **0 errores de consola, 0 fallos**. Capturas `docs/capturas/editor-piezas-<puzzle>-<dispositivo>-<tema>-<2d|3d>-{vacio,medio,completo,resuelto}.jpg`.
+- **Tests**: TESTS_RESULTADO
+
+### Pendiente / limitaciones
+- **Square-1**: no tiene «Colocar piezas» (sus piezas no tienen huecos fijos); para él sigue el editor de la noche 2.
+- **Bloques idénticos** (misma forma y colores) no se prueban intercambiados al validar: si el usuario los pone cambiados, el estado puede salir imposible.
+- En el 6x6/7x7 funciona (modelo y tests del modelo), pero introducir 150–210 piezas a mano es largo; no hay atajos (p. ej. «rellenar una cara de centros»).
+- Las órbitas se calculan en el hilo principal al abrir (≤ 45 ms en el 7x7): no hace falta el Worker.
+
 
 > Progreso de la sesión «longitud del scramble práctico» (26/11/2026): longitud WCA por defecto (40 en 4x4, 60 en 5x5) ✔ · selector 30 · WCA · 100 · mezclado con URL y navegador ✔ · calidad por longitud medida con la distribución exacta (5x5 de 16 barras y 2x4x4) y mostrada junto al selector ✔ · determinismo de cada longitud ✔ · configuraciones sin práctico sin cambios ✔ · tests del selector y la URL ✔ · `test:humo` ✔ · tests de la app 25/25 ✔ · Action `test:rapido` ✔ · Chromium escritorio y móvil (CPU ×4) cambiando de longitud y resolviendo con cada una, sin errores ✔ · docs ✔ · artifact ✔.
 

@@ -23,8 +23,39 @@ Tema oscuro por defecto; el botón de la cabecera cambia a claro (y lo recuerda 
 
 1. Entra en **WCA Puzzles** y elige el puzzle (2x2 … 7x7, Pyraminx, Skewb, Square-1, Megaminx, FTO); la URL cambia a `#/wca/<puzzle>`, así que se puede guardar o compartir.
 2. **Scramble**: pulsa *Nuevo scramble*; *Copiar* lo copia al portapapeles. Los scrambles se preparan por adelantado en segundo plano, así que al cambiar de puzzle suele salir al momento; la primera vez en cada puzzle, las tablas del solucionador se generan en segundo plano (unos segundos; hasta ~8 s en el 7x7) sin retrasar el scramble.
-3. **Resolver** (un clic basta; si las tablas aún se están generando, se ve "Generando tablas… X s" y la solución aparece al terminar): pinta el estado de tu puzzle eligiendo un color de la paleta y tocando las pegatinas (o pulsa *Cargar scramble actual*) y luego *Resolver*. Puedes sujetar el puzzle en cualquier orientación: la solución sale para como lo tengas. *Rellenar cara* (cubos grandes y Megaminx) pinta una cara entera de un toque y *Deshacer* (o Ctrl+Z) deshace el último cambio. Si el estado es imposible, la app dice qué pieza falla. Resolver un 4x4–7x7 tarda 1–7 s de media (hasta ~13 s en el peor caso medido); un Megaminx, unos 2,5–3 s (prueba muchas orientaciones y se queda con la solución más corta); un FTO, ~1 s (las tablas, la primera vez, ~2 s en un ordenador y ~8–9 s en un móvil lento).
+3. **Resolver** (un clic basta; si las tablas aún se están generando, se ve "Generando tablas… X s" y la solución aparece al terminar): pinta el estado de tu puzzle eligiendo un color de la paleta y tocando las pegatinas, **colócalo pieza a pieza con *Colocar piezas*** (ver abajo) o pulsa *Cargar scramble actual*, y luego *Resolver*. Puedes sujetar el puzzle en cualquier orientación: la solución sale para como lo tengas. *Rellenar cara* (cubos grandes y Megaminx) pinta una cara entera de un toque y *Deshacer* (o Ctrl+Z) deshace el último cambio. Si el estado es imposible, la app dice qué pieza falla. Resolver un 4x4–7x7 tarda 1–7 s de media (hasta ~13 s en el peor caso medido); un Megaminx, unos 2,5–3 s (prueba muchas orientaciones y se queda con la solución más corta); un FTO, ~1 s (las tablas, la primera vez, ~2 s en un ordenador y ~8–9 s en un móvil lento).
 4. Recorre la solución con los botones de reproducción (paso a paso, play y velocidad); *Copiar* copia los movimientos. En los puzzles con etapas (cubos grandes, Megaminx) la barra de fases muestra en qué etapa está cada tramo.
+
+### Introducir el estado de tu cubo físico: «Colocar piezas» (noche 14)
+En lugar de pintar pegatinas, puedes **colocar las piezas** de tu puzzle una a una, como si lo montaras.
+Funciona en todos los puzzles de WCA Puzzles salvo el Square-1 (2x2–7x7, Pyraminx, Skewb, Megaminx, FTO) y en
+Bandaged Cubes (3x3, 4x4 y 5x5, con sus bloques). En el 4x4 y el 5x5 vendados es la única forma de introducir
+un estado a mano (pintar no puede saber qué centro es cuál).
+
+1. Pulsa **Colocar piezas** (debajo del editor). El editor pasa a **pantalla completa**: arriba, lo que falta y
+   2D / 3D; en medio, el puzzle **vacío** (huecos en gris); abajo, al alcance del pulgar, la **bandeja** con
+   todo lo que hay que colocar —primero los bloques, si los hay, y luego las piezas sueltas por tipo
+   (esquinas, aristas o wings, centros X, centros +…)— y la barra con *Deshacer*, *Vaciar* y *Aplicar y salir*.
+   Las piezas que no pueden ir en otro sitio (los centros del 3x3, del 5x5 y del Megaminx) ya están puestas.
+2. **Bloques** (vendados): elige un bloque en la bandeja y toca un hueco que vaya a ocupar. Aparece colocado
+   en una posición que incluye ese hueco; **Girar** prueba las demás orientaciones que pasan por ese hueco y
+   **Siguiente posición**, cualquier otra posición en la que el bloque entero quepa sin chocar con lo ya
+   colocado. Las piezas de un bloque van siempre juntas: no aparecen sueltas en la bandeja.
+3. **Piezas sueltas**: toca un hueco gris y elige en la lista la pieza que tiene tu cubo ahí (solo salen las
+   que quedan y caben: en un hueco de esquina, esquinas). Mira los colores de tu pieza y pulsa **Girar** hasta
+   que coincidan. Si solo queda una pieza posible para ese hueco, se coloca sola. También puedes elegir
+   primero la pieza en la bandeja y luego tocar el hueco.
+4. Para corregir: toca una pieza o bloque colocado y pulsa **Quitar** (vuelve a la bandeja), o *Deshacer*.
+   Las piezas iguales (los cuatro centros blancos de un 4x4, por ejemplo) no hay que distinguirlas: la app
+   elige cuál es cuál.
+5. En cuanto está todo colocado, la app lo comprueba: **válido** (se puede llegar a ese estado desde el cubo
+   resuelto), **imposible** (con el motivo: una esquina girada, dos piezas cambiadas, un bloque que no puede
+   quedar así…) o **sin comprobar** (configuraciones enormes en las que no se ha podido decidir; deja
+   intentar resolver). Con un estado válido, **Aplicar y salir** sale de la pantalla completa y deja el estado
+   en el editor: pulsa *Resolver* y reproduce la solución como siempre. *Cancelar* (o Escape) sale sin cambiar nada.
+
+Toques para introducir un estado mezclado (medidos con el test de ida y vuelta): ~52 en el 3x3, ~120 en el 4x4 y
+~195 en el 5x5 (unos 45–50 en un 3x3 vendado con bloques: cada bloque se coloca de una vez).
 
 ### Modo aprender (2x2, 3x3, 4x4, 5x5, Pyraminx, Skewb y Square-1)
 Para aprender a resolver el puzzle, no solo resolverlo. Encima de *Resolver* hay un selector **Solución**: *Solución óptima (por ordenador)* o *Aprender (método …)*.
@@ -91,7 +122,7 @@ Tres niveles (tiempos con 2 núcleos), más la comprobación de tipos:
 ```
 npm run tipos         # < 1 s: TypeScript (tsc --noEmit) comprueba los ficheros con // @ts-check contra src/core/tipos.d.ts
 npm run test:humo     # ~3 min: tipos, humo de cada puzzle, registro, diseño (rutas y contraste) y humo de la app (sin Worker, con Worker,
-                      # navegación entre secciones, tema, enlaces antiguos y recorrido completo en WCA y Bandaged)
+                      # navegación entre secciones, tema, enlaces antiguos, recorrido completo en WCA y Bandaged y «Colocar piezas»)
 npm run test:rapido   # ~8 min 20 s: las mismas comprobaciones que npm test, con menos casos en los tests caros
 npm test              # suite completa (1000 casos por puzzle; 500 en 4x4, 5x5, Megaminx, el modo aprender
                       # y cada configuración vendada; 100 en 6x6 y 7x7); ~1 h
@@ -106,7 +137,7 @@ npm run bench         # benchmark de los solvers (N=200 npm run bench para más 
   npm run test:solo -- 4x4          # el fichero de cubos grandes solo con el 4x4 (TAMANOS=4)
   ```
 
-  Áreas: `2x2`, `3x3`, `4x4`–`7x7`, `nxn`, `diseno` (o `tema`), `pyraminx`, `skewb`, `square1` (o `sq1`), `megaminx`, `vendado` (o `bloqueos`), `aprender`, `3d`, `app`, `humo`, `registro`. Cada área ejecuta sus ficheros enteros y, en los compartidos (humo, aprender, vista 3D, registro), los tests cuyo nombre la menciona.
+  Áreas: `2x2`, `3x3`, `4x4`–`7x7`, `nxn`, `diseno` (o `tema`), `pyraminx`, `skewb`, `square1` (o `sq1`), `megaminx`, `vendado` (o `bloqueos`), `colocar`, `aprender`, `3d`, `app`, `humo`, `registro`. Cada área ejecuta sus ficheros enteros y, en los compartidos (humo, aprender, vista 3D, registro), los tests cuyo nombre la menciona.
 - Variables: `HILOS=n` (hilos de los tests largos), `CASOS_NXN`, `CASOS_MEGA`, `CASOS_BLOQUEOS`, `CASOS_APRENDER` (casos de esos tests), `TAMANOS=4,5` (cubos grandes), `BLOQUEOS=pareja,cab` (configuraciones vendadas).
 - Los resultados (porcentajes, longitudes, tiempos) de `npm test` se guardan en `tests/resultados/`; los de los niveles con menos casos van a `tests/.resultados-parciales/` (ignorado por git), para no pisar los de la suite completa (`GUARDAR=1` lo fuerza).
 
@@ -132,4 +163,5 @@ python3 scripts/comprobar-aprender.py        # modo aprender
 python3 scripts/comprobar-cambios.py         # cambios rápidos de puzzle
 python3 scripts/comprobar-primer-resolver.py # un clic en Resolver nada más cargar
 python3 scripts/comprobar-fto.py             # FTO: tiempos (CPU ×4) y recorrido completo en 4 modos
+python3 scripts/comprobar-colocar.py         # «Colocar piezas» en pantalla completa: WCA y Bandaged 3x3/4x4, escritorio/móvil, oscuro/claro, 2D/3D
 ```

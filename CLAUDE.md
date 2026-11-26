@@ -22,10 +22,11 @@ Antes de diseñar cambios estructurales, tomar decisiones técnicas o planificar
   * `geometria.js`, `geopuzzle.js`, `modelo3d.js`, `render.js`: Modelado 3D genérico de poliedros mediante planos de corte, pegatinas, centroides, rotaciones y redes desplegadas en 2D.
   * `bloqueos.js`, `tabla-estados.js`, `calidad-practico.js`: Motor de restricciones y configuraciones *bandaged* (piezas pegadas o giros bloqueados).
   * `puzzle.js`, `piezas.js`, `scramble.js`, `rng.js`, `tipos.d.ts`: Contratos base de puzles, generación de mezclas y definiciones de tipos.
+  * `colocar.js`: «Colocar piezas» genérico (noche 14): huecos, órbitas de cada pieza, bandeja por grupos de piezas iguales, bloques rígidos y la sesión con las acciones del usuario.
 
 * **`src/puzzles/` — Implementación de motores y solvers por puzle**
   * `index.js`, `tpr4.js`, `vendado.js`: Registro central de puzles y variantes *bandaged*.
-  * **Cubos NxN (`nxn*.js`, `cubo-comun.js`, `cubo2.js`, `cubo3.js`, `cubo3-bloqueos.js`, `cubo-grande.js`)**: Soporte de 2x2 a 7x7, scrambles WCA sin redundancias, orientación libre, bloqueos NxN y detección de estados imposibles.
+  * **Cubos NxN (`nxn*.js` —incluido `nxn-colocar.js`: generadores y nombres de tipos para colocar piezas—, `cubo-comun.js`, `cubo2.js`, `cubo3.js`, `cubo3-bloqueos.js`, `cubo-grande.js`)**: Soporte de 2x2 a 7x7, scrambles WCA sin redundancias, orientación libre, bloqueos NxN y detección de estados imposibles.
   * **Kociemba (`kociemba.js`)**: Solver en dos fases para 3x3.
   * **Poliedros y otros WCA**: `pyraminx.js`, `skewb.js`, `megaminx*.js`, `square1.js` / `square1-motor.js` (solver en 2 fases + detección de formas/paridades) y `fto*.js` (*Face-Turning Octahedron*, 72 pegatinas, cota inferior de 21 giros).
 
@@ -35,6 +36,7 @@ Antes de diseñar cambios estructurales, tomar decisiones técnicas o planificar
 
 * **`src/app/` — Interfaz, WebGL y concurrencia**
   * `main.js`, `motor.js`, `secciones.js`, `reproductor.js`, `bloqueos-ui.js`, `servicio.js`, `tema.js`, `plantilla.html`, `estilos.css`: Lógica de aplicación, controles, temas claro/oscuro y UI de bloqueos.
+  * `colocar-ui.js`: editor «Colocar piezas» en pantalla completa (puzzle vacío 2D/3D, bandeja, Girar / Siguiente posición, validación en vivo).
   * `vista3d.js`, `escena3d.js`: Motor WebGL nativo a 60 FPS con animaciones de giro, resaltado con transparencia y pintado interactivo.
   * `worker.js`: Web Worker dedicado para tablas de poda y búsquedas IDA* sin bloquear el hilo principal.
   * `fuentes/`: Tipografías `.woff2` locales incrustadas en el build.
@@ -51,7 +53,7 @@ Antes de diseñar cambios estructurales, tomar decisiones técnicas o planificar
 1. **Cero dependencias en producción**: No introducir librerías externas (ni Three.js, ni frameworks UI, ni librerías matemáticas) en `src/`. Todo el renderizado WebGL, matemáticas vectoriales/matriciales y algoritmos de búsqueda deben mantenerse autocontenidos.
 2. **Idioma y tipos**: Todo el código nuevo (nombres de archivos, variables, funciones, comentarios) y los textos de la interfaz / modo Aprender deben redactarse en **español**, manteniendo coherencia con el proyecto y respetando el chequeo de tipos de `tsconfig.json` / `src/core/tipos.d.ts`.
 3. **Separación de hilos (UI vs. Cálculo)**: Cualquier generación de tablas de poda (*pruning tables*), algoritmo de Schreier–Sims/Minkwitz o búsqueda IDA* pesada debe ejecutarse dentro de `src/app/worker.js` y comunicarse vía mensajes con la UI.
-4. **Integridad matemática y validación**: Todo puzle nuevo debe validar estados ingresados manualmente por el usuario (conteo de pegatinas, paridad de permutación/orientación y alcanzabilidad mediante el grupo generado o tablas de estados) antes de invocar su solver.
+4. **Integridad matemática y validación**: Todo puzle nuevo debe validar estados ingresados manualmente por el usuario (conteo de pegatinas, paridad de permutación/orientación y alcanzabilidad mediante el grupo generado o tablas de estados) antes de invocar su solver. Si sus piezas tienen huecos fijos, debe dar `colocarPiezas.generadores` para ofrecer «Colocar piezas» (las piezas iguales las elige la app: `validar(estado, { elegirIguales: true })` en los vendados).
 5. **Compatibilidad con el empaquetado único**: Evitar cargas dinámicas de recursos externos en tiempo de ejecución que puedan romper la generación de `dist/index.html` y `dist/artifact.html`.
 6. **Sincronización documental**: Al añadir un nuevo puzle (ej. cuboides), motor, solver o cambio arquitectónico relevante:
    * Actualiza `ESTADO.md` con el avance completado.

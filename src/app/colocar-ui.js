@@ -60,6 +60,8 @@ export function abrirColocar(doc, op) {
   let aviso = null;
   /** @type {'info' | 'error' | 'ok' | 'aviso'} */
   let tipoAviso = 'info';
+  /** Última pieza suelta colocada o girada (hueco): la sospechosa si sobra un giro o un volteo. */
+  let ultimaPieza = -1;
   const anterior = /** @type {HTMLElement | null} */ (doc.activeElement);
 
   const raiz = doc.createElement('div');
@@ -115,6 +117,7 @@ export function abrirColocar(doc, op) {
     aviso = null;
     try {
       f();
+      if (sel && sel.tipo === 'hueco') { const c = S.colocada(sel.h); if (c && c.bloque < 0) ultimaPieza = sel.h; }
     } catch (err) {
       aviso = /** @type {Error} */ (err).message;
       tipoAviso = 'error';
@@ -425,7 +428,11 @@ export function abrirColocar(doc, op) {
       else if (r === 'valido') lineas.push({ tipo: 'ok', texto: 'Estado válido: se puede llegar a él desde el puzzle resuelto. Pulsa «Aplicar y salir» y luego «Resolver».' });
       else if (r === 'imposible') {
         lineas.push({ tipo: 'error', texto: 'Este estado no es posible:' });
-        for (const e of (validacion.v && validacion.v.errores) || []) lineas.push({ tipo: 'error', texto: e });
+        const errores = (validacion.v && validacion.v.errores) || [];
+        for (const e of errores) lineas.push({ tipo: 'error', texto: e });
+        // un giro o un volteo de más no tiene una única pieza culpable: se señala la última tocada
+        const c = ultimaPieza >= 0 ? S.colocada(ultimaPieza) : null;
+        if (c && c.bloque < 0 && errores.some((e) => /girad|voltead|orientaci/i.test(e))) lineas.push({ tipo: 'error', texto: `Revisa la orientación de la última pieza que has colocado o girado (la ${M.piezas[c.pieza].nombre}), o la de cualquier otra del mismo tipo: con Girar se arregla.` });
       } else if (r === 'sin-comprobar') {
         lineas.push({ tipo: 'aviso', texto: 'Sin comprobar:' });
         for (const e of (validacion.v && validacion.v.avisos) || []) lineas.push({ tipo: 'aviso', texto: e });

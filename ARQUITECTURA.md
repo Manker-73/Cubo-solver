@@ -21,6 +21,7 @@ src/
     bloqueos.js     BLOQUEOS (puzzles vendados), genérico: legalidad, geometrías, grupo de la fase 2, BFS, scramble, estrategias A y B, envoltorio puzzleConBloqueos
     schreier.js     cadena de estabilizadores con arrays tipados (orden, pertenencia, elemento al azar)
     tabla-estados.js  tabla hash de estados empaquetados (BFS completo de los espacios pequeños)
+    colocar.js      COLOCAR PIEZAS (noche 14), genérico: piezas y huecos, órbitas (dónde y cómo cabe cada pieza), bandeja por grupos de piezas iguales, bloques rígidos, sesión con las acciones del usuario
   puzzles/        un módulo por puzzle
     index.js        REGISTRO: la única lista de puzzles (con su `categoria`: sección de la app) y PUZZLES_PRONTO (anunciados)
     nxn.js          cubos NxN (modelo de pegatinas, notación, dibujo, scramble aleatorio, simplificación de capas)
@@ -33,6 +34,7 @@ src/
     cubo2.js        2x2 (validador, IDA* óptimo, estado aleatorio)
     cubo3.js        3x3 (validador, Kociemba, estado aleatorio)
     kociemba.js     algoritmo de dos fases (cubies, coordenadas, tablas, búsqueda; filtro de legalidad opcional; óptima por IDA* para comparar)
+    nxn-colocar.js  NxN: generadores y nombres de los tipos de pieza para «Colocar piezas» (wings, centros X, centros +…)
     nxn-bloqueos.js soporte de bloqueos de los NxN (piezas y núcleo, M/E/S, capas, identificar por colores) y firmas de la comunidad
     cubo3-bloqueos.js  3x3 vendado: Kociemba con legalidad (búsqueda directa), comparación sin bloqueos y ejemplos
     vendado.js      fábrica crear3x3Vendado(bloques | firma) para tests y scripts
@@ -75,9 +77,11 @@ src/
     vista3d.js      dibujo con WebGL (sin librerías), girar con ratón/dedo, animaciones, tocar para pintar
     reproductor.js  reproductor de una secuencia (scramble o solución): pasos animados, atrás, play/pausa
     bloqueos-ui.js  sección "Bloqueos": grupos tocando piezas (2D/3D), ejemplos, guardar, URL, firmas
+    colocar-ui.js   «Colocar piezas» en pantalla completa: puzzle vacío (2D/3D), bandeja, Girar / Siguiente posición / Quitar, validación en vivo
 tests/            node --test (npm test; niveles: ver "Tests" más abajo)
   diseno.test.mjs rutas de las secciones y contraste ≥ 4,5:1 de los colores de los dos temas
   humo.test.mjs   prueba de humo de cada puzzle del registro, huellas de los giros, vendado y modo aprender
+  colocar.test.mjs  colocar piezas: ida y vuelta (WCA y vendados), rechazos y piezas iguales
   huellas.json    huellas (hash del estado) de cada giro básico y de una secuencia fija por puzzle
   aprender-comprobar.mjs  objetivos por etapa y comprobación de una solución del modo aprender (aprender y humo)
   util.mjs        CASOS, NIVEL, casosPor, guardarResultado, probarScrambles, probarSolver, debeRechazar
@@ -95,6 +99,7 @@ scripts/
   comprobar-aprender.py  modo aprender en Chromium real (escritorio y móvil)
   comprobar-primer-resolver.py  un solo clic en "Resolver" nada más cargar la página (caché vacía; móvil con la CPU a ×4)
   comprobar-bloqueos.py  cubo vendado en Chromium real (escritorio y móvil, con y sin 3D)
+  comprobar-colocar.py   «Colocar piezas» en Chromium real (WCA y Bandaged 3x3/4x4; escritorio/móvil, oscuro/claro, 2D/3D)
   mezcla-bloqueos.mjs    cuánto hay que mezclar un cubo vendado con giros al azar (criterio de la longitud del scramble)
 ```
 
@@ -211,7 +216,8 @@ Action de tests. No genera nada ni cambia el bundle (esbuild recibe un tsconfig 
 - **Qué se comprueba**: solo los ficheros que empiezan con `// @ts-check` (`tsconfig.json`: `allowJs`,
   `checkJs: false`, `strict`). Hoy: `core/puzzle.js`, `core/piezas.js`, `core/modelo3d.js`, `core/bloqueos.js`,
   `aprender/guion.js`, `puzzles/index.js`, `app/servicio.js`, `app/secciones.js` y los puzzles `skewb.js`,
-  `pyraminx.js`, `cubo2.js` y los cuatro módulos del FTO. Los demás se leen para conocer sus tipos, pero no dan errores.
+  `pyraminx.js`, `cubo2.js` y los cuatro módulos del FTO; desde la noche 14, también `core/colocar.js`,
+  `puzzles/nxn-colocar.js` y `app/colocar-ui.js`. Los demás se leen para conocer sus tipos, pero no dan errores.
 - **Cómo se usan desde JavaScript**: `/** @import { Puzzle, EstadoPegatinas } from '../core/tipos.js' */` y
   comentarios `@param`, `@returns`, `@type`, `@typedef`. Un cast es `/** @type {X} */ (expresión)`: los
   paréntesis no cambian nada al ejecutar. **Nunca** se cambia código para contentar al comprobador (ni
@@ -412,6 +418,40 @@ pasa las opciones y el resultado; `Validacion` y `OpcionesValidar` en `tipos.d.t
   editan, el editor (2D o 3D) enseña el cubo resuelto con cada bloque de un color.
 - Vista 3D: una pegatina con `expandir: [bool por lado]` llega hasta el borde por esos lados (sin el
   hueco negro); en 2D, `svgDePegatinas(..., { expandir })` hace lo mismo con la red.
+
+## Colocar piezas (noche 14)
+
+Introducir el estado de un puzzle físico colocando piezas y bloques (en lugar de pintar pegatinas). Tres capas:
+
+1. **El puzzle** da `colocarPiezas: { generadores, nombreTipo? }` (`ColocarPiezas` en `tipos.d.ts`): los giros
+   que generan el grupo y, si quiere, el nombre (plural, singular) del tipo de una pieza por sus pegatinas.
+   Lo tienen el 2x2–7x7 (`colocarNxN(N)` en `nxn-colocar.js`, que también usan los vendados 4x4/5x5), el
+   Pyraminx, el Skewb, el Megaminx y el FTO. El Square-1 no (sin huecos fijos): la interfaz no ofrece el modo.
+2. **`src/core/colocar.js`** (sin DOM, genérico):
+   - `crearModeloColocar(puzzle, { bloques, rotaciones })`: piezas = pegatinas de cada pieza de
+     `vista3D(resuelto)`; hueco k = casa de la pieza k; para cada pieza, la **órbita de su tupla** con los
+     generadores (`opciones(pieza, hueco)` = tuplas con las que cabe ahí); tipos (piezas con las mismas casas;
+     `fija` si solo tienen la suya); **grupos** de la bandeja (sueltas del mismo tipo y colores); bloques con sus
+     colocaciones rígidas (rotaciones del soporte de bloqueos en las que cada pieza cae en su órbita). Puzzle
+     sin bloques: el de debajo (`baseDe(p)`), para que los giros no se comprueben contra los bloques.
+   - `crearSesionColocar(modelo)`: lo colocado y las acciones (`colocar`, `girar`, `colocarBloque`,
+     `girarBloque`, `siguientePosicion`, `quitar`, `deshacer`, `vaciar`, `autoRellenar`, `candidatos`,
+     `faltan`, `estado()` —del tipo del puzzle: colores o identidades, −1 vacío—, `colores()`,
+     `bloqueEnPosicion()`). Los errores se lanzan con el mensaje para el usuario. Los tests de ida y vuelta
+     usan estas mismas acciones.
+3. **`src/app/colocar-ui.js`**: `abrirColocar(document, { puzzle, base, bloques, rotaciones, validar, alAplicar, … })`
+   crea la capa a pantalla completa (`#colocar`, `role="dialog"`), dibuja con `puzzle.renderizar` /
+   `puzzle.vista3D` del puzzle ACTIVO (el vendado dibuja unidos los bloques con `bloqueEnPosicion`), traduce
+   toques en acciones y pide `validar` al Worker cuando está todo. `main.js` (`abrirEditorColocar`) le da el
+   validador (`motor.pedir('validar', …, { opciones: { elegirIguales: true } })`) y, al aplicar, pone el estado
+   en el editor (con `recordar()` para *Deshacer*). `window.cuboSolver.colocar()` devuelve el editor abierto
+   (sus acciones, la sesión y el modelo) para los tests y las comprobaciones en Chromium.
+
+**Validación**: la de siempre (`validar` del puzzle o del envoltorio de bloqueos; tres resultados). Opción nueva
+`OpcionesValidar.elegirIguales` (solo la usan los vendados con piezas iguales): si el estado no está en el grupo
+tal cual, se buscan las identidades de los centros sueltos que lo hacen alcanzable (`elegirIguales` en
+`puzzleConBloqueos`, con la cadena de Schreier–Sims de la fase 2 y su prefijo) y se devuelven en
+`Validacion.estado`; `servicio.js` lo pasa a la interfaz. Método y demostración en DECISIONES.md (noche 14).
 
 ## Interfaz: secciones, navegación y temas (noche 11)
 

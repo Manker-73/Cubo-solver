@@ -32,7 +32,16 @@ PUZZLES = {
     'band3': ('#/bandaged?bloqueos=UFR.UF', 'Bandaged 3x3 (pareja)'),
     'wca4': ('#/wca/4x4', 'WCA 4x4'),
     'band4': ('#/bandaged?puzzle=4x4&bloqueos=UFR.UF2-DBL.DB1.DB2.DBR-F11.UF1', 'Bandaged 4x4 (varios)'),
+    # el resto de puzzles (PUZZLES=resto): una combinación por dispositivo
+    'wca2': ('#/wca/2x2', 'WCA 2x2'),
+    'wca5': ('#/wca/5x5', 'WCA 5x5'),
+    'pyraminx': ('#/wca/pyraminx', 'Pyraminx'),
+    'skewb': ('#/wca/skewb', 'Skewb'),
+    'megaminx': ('#/wca/megaminx', 'Megaminx'),
+    'fto': ('#/wca/fto', 'FTO'),
+    'band5': ('#/bandaged?puzzle=5x5&bloqueos=UFR.UF3', 'Bandaged 5x5 (pareja)'),
 }
+RESTO = ['wca2', 'wca5', 'pyraminx', 'skewb', 'megaminx', 'fto', 'band5']
 
 # Coloca el objetivo: devuelve los pasos que la página tiene que hacer (lo decide el modelo del editor)
 PLAN = """(objetivo) => {
@@ -201,6 +210,7 @@ async def main():
     errores, fallos, resumen = [], [], {}
     rapido = len(sys.argv) > 1 and sys.argv[1] == 'rapido'
     lista = os.environ.get('PUZZLES', 'wca3,band3,wca4,band4').split(',')
+    if lista == ['resto']: lista = RESTO
     async with async_playwright() as p:
         b = await p.chromium.launch(executable_path=CHROME, args=['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'])
         for puzzle in lista:
@@ -208,7 +218,7 @@ async def main():
                 for tema in ('dark', 'light'):
                     for modo in ('2d', '3d'):
                         # los 4x4: una combinación por dispositivo (tardan más) salvo que se pidan todas
-                        if puzzle in ('wca4', 'band4') and not os.environ.get('TODAS') and (tema, modo) not in (('dark', '3d'), ('light', '2d')):
+                        if puzzle not in ('wca3', 'band3') and not os.environ.get('TODAS') and (tema, modo) not in (('dark', '3d'), ('light', '2d')):
                             continue
                         if rapido and (tema, modo) != ('dark', '2d'): continue
                         todas = (dispositivo, tema, modo) in (('escritorio', 'dark', '3d'), ('movil', 'light', '2d'))
