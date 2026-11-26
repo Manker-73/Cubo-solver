@@ -710,8 +710,8 @@ test('bloqueos grandes: sin poder comprobarlo no se dice «imposible» (tres res
 
 const N_GRANDES = casosPor(200, 6, 'CASOS_GRANDES');
 const N_GRANDES_SOL = casosPor(200, 3, 'CASOS_GRANDES');
-for (const cfg of CONFIGS_GRANDES) {
-  test(`bloqueos grandes: ${cfg.nombre}: ${N_GRANDES} scrambles (legales, nunca «imposible») y ${N_GRANDES_SOL} soluciones`, { timeout: 3 * 3600 * 1000 }, async () => {
+for (const cfg of CONFIGS_GRANDES) for (const modo of ['practico', 'mezclado']) {
+  test(`bloqueos grandes: ${cfg.nombre} (${modo}): ${N_GRANDES} scrambles (legales, nunca «imposible») y ${N_GRANDES_SOL} soluciones`, { timeout: 3 * 3600 * 1000 }, async () => {
     const tIni = performance.now();
     const p = puzzleGrande(cfg);
     const msIni = performance.now() - tIni;
@@ -722,9 +722,11 @@ for (const cfg of CONFIGS_GRANDES) {
     const rng = rngConSemilla(11);
     const estados = [], longitudes = [];
     const resultados = { valido: 0, imposible: 0, 'sin-comprobar': 0 };
-    let msVal = 0;
+    let msVal = 0, msScr = 0;
     for (let i = 0; i < N_GRANDES; i++) {
-      const s = p.generarScramble(rng);
+      const t0 = performance.now();
+      const s = p.generarScramble(rng, { modo });
+      msScr += performance.now() - t0;
       assert.equal(p.buscarRedundancia(s), null, `scramble ${i}: redundante`);
       const e = aplicarComprobando(p, p.estadoResuelto(), s, `scramble ${i}`);
       assert.ok(!p.estaResuelto(e));
@@ -753,11 +755,11 @@ for (const cfg of CONFIGS_GRANDES) {
       lon.push(r.movimientos.length); ms.push(t);
     });
     const media = (a) => (a.length ? +(a.reduce((x, y) => x + y, 0) / a.length).toFixed(1) : null);
-    guardarResultado('bloqueos', { [`grande-${cfg.id}`]: {
+    guardarResultado('bloqueos', { [`grande-${cfg.id}-${modo}`]: {
       nombre: cfg.nombre, geometrias: `más de ${info.geometrias}`, grupoFase2: info.grupoFase2, cota: info.cotaGrupoFase2, msTablas: Math.round(msIni),
-      scramble: { media: media(longitudes), min: Math.min(...longitudes), max: Math.max(...longitudes) },
+      scramble: { media: media(longitudes), min: Math.min(...longitudes), max: Math.max(...longitudes), ms: +(msScr / N_GRANDES).toFixed(1) },
       validar: resultados, msValidar: +(msVal / N_GRANDES).toFixed(1),
-      resueltos: `${lon.length}/${sols.length}`, longitud: { media: media(lon), max: lon.length ? Math.max(...lon) : null },
+      resueltos: `${lon.length}/${sols.length}`, longitud: { media: media(lon), min: lon.length ? Math.min(...lon) : null, max: lon.length ? Math.max(...lon) : null },
       ms: { media: media(ms), max: ms.length ? Math.round(Math.max(...ms)) : null },
     } });
     assert.equal(resultados.imposible, 0);
@@ -789,4 +791,32 @@ test('bloqueos grandes: con la misma semilla, el mismo scramble (mezclado y prá
   const b = maquina({ rngAnalisis: 4242, msMinkwitz: 150, relojRapido: true });
   assert.deepEqual(b.mezclados, a.mezclados, 'el scramble mezclado depende de la máquina');
   assert.deepEqual(b.practicos, a.practicos, 'el scramble práctico depende de la máquina');
+});
+
+// Bloque 3: modo práctico (~100 giros al azar) por defecto cuando mezclar necesita más de 10.000 pasos
+test('bloqueos grandes: scramble práctico por defecto (100 giros, palabra reducida) y mezclado a petición (si el mezclado es largo)', { timeout: 900000 }, () => {
+  for (const cfg of CONFIGS_GRANDES) {
+    const p = puzzleGrande(cfg);
+    const info = p.analisis();
+    assert.ok(info.pasosMezcla > 10000);
+    // práctico solo si el mezclado es largo (más de 200 giros); si no, el mezclado es el de por defecto
+    assert.equal(!!info.scramblePractico, info.longitudMezclado > 200, `${cfg.nombre}: mezclado de ${info.longitudMezclado} giros`);
+    if (!info.scramblePractico) { aplicarComprobando(p, p.estadoResuelto(), p.generarScramble(rngConSemilla(30)), 'por defecto'); continue; }
+    assert.ok(info.longitudMezclado > 200, 'longitud esperada del scramble mezclado');
+    const rng = rngConSemilla(31);
+    for (let i = 0; i < 20; i++) {
+      const s = p.generarScramble(rng);
+      assert.equal(s.length, 100, `${cfg.nombre}: el práctico tiene ${s.length} giros`);
+      assert.equal(p.buscarRedundancia(s), null, 'palabra reducida');
+      const e = aplicarComprobando(p, p.estadoResuelto(), s, `práctico ${i}`);
+      assert.equal(p.validar(e, { secuencia: s }).resultado, 'valido');
+    }
+    const m = p.generarScramble(rngConSemilla(32), { modo: 'mezclado' });
+    assert.ok(m.length > 0);
+    aplicarComprobando(p, p.estadoResuelto(), m, 'mezclado');
+  }
+  // las configuraciones que caben no cambian: ni práctico ni modos
+  const chico = crearNxNVendado(5, EJEMPLOS_NXN[5][0].bloques, { rng: rngConSemilla(7) });
+  chico.inicializar();
+  assert.equal(!!chico.analisis().scramblePractico, false);
 });

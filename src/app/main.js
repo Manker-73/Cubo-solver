@@ -25,6 +25,9 @@ const st = {
   secuenciaEditor: null,
   /** Scramble cargado en el editor y su huella (para saber si se ha tocado; ver seguirScrambleEnEditor). */
   editorCargado: null,
+  /** Análisis del vendado actual (del Worker) y clave del puzzle con el scramble mezclado pedido. */
+  analisisBloqueos: null,
+  modoMezclado: null,
   editor: null,
   color: 0,       // índice en paleta + herramientas
   ultimoColor: 0, // último color de la paleta elegido (lo usan las herramientas con usaColor)
@@ -370,7 +373,11 @@ async function generarTablas(p) {
     const r = await tablasEnCamino.get(k);
     const ms = r.yaEstaba ? Math.round(performance.now() - t0) : r.ms;
     st.listos.add(k);
-    if (st.p === p && p.bloqueos) panelBloqueos.fijarAnalisis({ ...r.analisis, msTablas: r.analisis && r.analisis.msTablas != null ? r.analisis.msTablas : ms });
+    if (st.p === p && p.bloqueos) {
+      panelBloqueos.fijarAnalisis({ ...r.analisis, msTablas: r.analisis && r.analisis.msTablas != null ? r.analisis.msTablas : ms });
+      st.analisisBloqueos = r.analisis ? { clave: k, ...r.analisis } : null;
+      pintarAvisoScramble();
+    }
     if (st.p === p) aviso.textContent = `Tablas de ${p.nombre} generadas en ${ms} ms ${motor.modo() === 'worker' ? 'en un Web Worker (la página no se bloquea)' : 'en el hilo principal'}.`;
   } finally {
     clearInterval(reloj);
@@ -387,6 +394,9 @@ async function generarTablas(p) {
 const esMovil = () => !!(typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(max-width: 700px), (pointer: coarse)').matches);
 const COSTE_PESADO = 500; // ms: en el móvil, no se precargan los que tardan más hasta que se elige el puzzle
 
+/** Tiempo de generación (ms, en el Worker) de cada scramble recibido. */
+const msGeneracion = new WeakMap();
+
 function pedirScramble(p, prioridad) {
   const k = claveP(p);
   let prom = st.enCamino.get(k);
@@ -397,6 +407,7 @@ function pedirScramble(p, prioridad) {
   const peticion = motor.pedir('scramble', p.id, datosDe(p), { prioridad });
   prom = peticion.then((r) => {
     st.enCamino.delete(k);
+    msGeneracion.set(r.movimientos, r.ms); // (para las mediciones en Chromium: cuánto tardó el Worker)
     // nadie la espera (precarga) o la esperaba una generación ya pasada: se guarda
     if (!prom.reclamada && !st.precargados.has(k)) st.precargados.set(k, r.movimientos);
     return r.movimientos;
@@ -466,7 +477,32 @@ function mostrarScramble(p, movimientos) {
   const nota = $('nota-scramble');
   nota.textContent = p.notaScramble ? p.notaScramble(st.scramble) : '';
   nota.hidden = !p.notaScramble;
+  pintarAvisoScramble();
   seguirScrambleEnEditor(p);
+}
+
+/** ¿Se ha pedido el scramble de estado mezclado (y esta configuración tiene los dos modos)? */
+/** Análisis del vendado p (si ya ha llegado y es de esta configuración). */
+const analisisDe = (p) => (p && p.bloqueos && st.analisisBloqueos && st.analisisBloqueos.clave === claveP(p) ? st.analisisBloqueos : null);
+const mezcladoPedido = (p) => { const a = analisisDe(p); return !!(a && a.scramblePractico && st.modoMezclado === claveP(p)); };
+
+/**
+ * Aviso del scramble práctico (bloque 3 de la sesión «509 giros…»): en las configuraciones donde
+ * mezclar necesita más de 10.000 pasos, el scramble por defecto son 100 giros al azar; se dice, y un
+ * botón pide el de estado mezclado (diciendo antes cuánto mide) o vuelve al práctico.
+ */
+function pintarAvisoScramble() {
+  const caja = $('aviso-scramble');
+  const p = st.p;
+  const a = analisisDe(p);
+  if (!a || !a.scramblePractico || !st.scramble.length) { caja.hidden = true; return; }
+  caja.hidden = false;
+  const fmt = (n) => Number(n).toLocaleString('es-ES');
+  const mezclado = mezcladoPedido(p);
+  $('aviso-scramble-texto').textContent = mezclado
+    ? `Scramble de estado mezclado: la inversa de una solución comprobada de un estado bien mezclado (${fmt(a.pasosMezcla)} pasos de un paseo al azar). Es largo: unos ${fmt(a.longitudMezclado)} giros.`
+    : `Configuración muy restringida: scramble práctico de giros al azar, no de estado aleatorio. Mezclar de verdad necesita unos ${fmt(a.pasosMezcla)} pasos de un paseo al azar.`;
+  $('modo-scramble').textContent = mezclado ? 'Volver al scramble práctico (100 giros)' : `Scramble de estado mezclado (unos ${fmt(a.longitudMezclado)} giros)`;
 }
 
 /** Huella de un estado para compararlos (arrays, typed arrays u objetos). */
@@ -508,6 +544,19 @@ function cargarScrambleEnEditor(p) {
 async function nuevoScramble() {
   const p = st.p;
   const gen = ++st.gen;
+  // Scramble de estado mezclado pedido a mano (vendados con mezcla extrema: bloque 3 de la sesión
+  // «509 giros…»): no sale de las precargas (que son prácticas), se pide aparte
+  if (mezcladoPedido(p)) {
+    mostrarGenerando(p);
+    let r;
+    try { r = await motor.pedir('scramble', p.id, datosDe(p, { opciones: { modo: 'mezclado' } }), { prioridad: 'alta' }); } catch (err) {
+      if (gen === st.gen) mensaje('error', `No se pudo generar el scramble: ${err.message}`);
+      return;
+    }
+    msGeneracion.set(r.movimientos, r.ms);
+    if (gen === st.gen && st.p === p) mostrarScramble(p, r.movimientos);
+    return;
+  }
   const listo = st.precargados.get(claveP(p));
   if (listo) {
     st.precargados.delete(claveP(p));
@@ -1251,6 +1300,11 @@ function iniciar() {
     pintarEditor();
   });
   $('resolver').addEventListener('click', resolver);
+  $('modo-scramble').addEventListener('click', () => {
+    if (!st.p) return;
+    st.modoMezclado = mezcladoPedido(st.p) ? null : claveP(st.p);
+    nuevoScramble();
+  });
   $('sel-metodo').addEventListener('change', cambiarMetodo);
   try { st.metodos = JSON.parse(localStorage.getItem('cubo-solver:metodos') || '{}') || {}; } catch { /* */ }
   $('r-inicio').addEventListener('click', () => repSol.irA(0));
@@ -1281,7 +1335,7 @@ function iniciar() {
   window.cuboSolver = {
     vista3D: (cual) => st.v3d[cual] || null,
     resaltarPiezas: (cual, piezas, modo) => { const v = st.v3d[cual]; if (v) v.resaltarPiezas(piezas, modo); },
-    estado: () => ({ seccion: st.seccion, tema: tema.actual(), puzzle: st.p && st.p.id, bloqueos: st.p && st.p.bloqueos ? st.p.bloqueos.length : 0, paso: st.paso, pasoScramble: st.pasoScramble, modo: { ...st.modo }, webgl: st.webgl }),
+    estado: () => ({ msScramble: st.scramble ? msGeneracion.get(st.scramble) ?? null : null, seccion: st.seccion, tema: tema.actual(), puzzle: st.p && st.p.id, bloqueos: st.p && st.p.bloqueos ? st.p.bloqueos.length : 0, paso: st.paso, pasoScramble: st.pasoScramble, modo: { ...st.modo }, webgl: st.webgl }),
     editor: () => st.p.clonar(estadoMostrado()),
     resuelto: () => st.p.estaResuelto(estadoMostrado()),
     // (para las comprobaciones en Chromium: muestra un scramble concreto como si lo hubiera generado

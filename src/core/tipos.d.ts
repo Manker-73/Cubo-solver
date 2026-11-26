@@ -314,7 +314,8 @@ export interface DefinicionPuzzle<E> {
   aplicarMovimiento(estado: E, mov: Movimiento): E;
   /** true si está resuelto (en cualquier orientación). */
   estaResuelto(estado: E): boolean;
-  generarScramble(rng: Rng): Movimiento[];
+  /** opciones.modo (vendados con mezcla extrema): 'practico' (por defecto) o 'mezclado'. */
+  generarScramble(rng: Rng, opciones?: { modo?: 'practico' | 'mezclado' }): Movimiento[];
   invertirMovimiento(mov: Movimiento): Movimiento;
   infoMovimiento(mov: Movimiento): InfoMovimiento;
   /** SVG (texto); las pegatinas editables llevan class="pegatina" data-i="i". */
@@ -537,6 +538,15 @@ export interface InfoBloqueos {
   msCota?: number;
   /** Pasos del paseo de la geometría en los scrambles de estado aleatorio de la fase 2 (si el BFS no cabe). */
   pasosGeometria?: number;
+  /**
+   * (Sesión «509 giros…».) Pasos de paseo perezoso que hacen falta para mezclar; si pasan de 10.000,
+   * el scramble por defecto es práctico (100 giros al azar) y el mezclado se pide aparte, con su
+   * longitud esperada (media de 3).
+   */
+  pasosMezcla?: number;
+  scramblePractico?: boolean;
+  longitudMezclado?: number;
+  msLongitudMezclado?: number;
   /** Cómo se hacen los scrambles: 'bfs' (estado uniforme), 'paseo' (paseo fijo) o 'fase2' (estado aleatorio de la fase 2 + paseo). */
   tipoScramble?: 'bfs' | 'paseo' | 'fase2';
 }
@@ -578,7 +588,7 @@ interface PeticionPuzzle {
 export type Peticion =
   | { op: 'ping' }
   | (PeticionPuzzle & { op: 'inicializar' })
-  | (PeticionPuzzle & { op: 'scramble' })
+  | (PeticionPuzzle & { op: 'scramble'; opciones?: { modo?: 'practico' | 'mezclado' } })
   | (PeticionPuzzle & { op: 'validar'; estado: unknown; opciones?: OpcionesValidar })
   | (PeticionPuzzle & { op: 'resolver'; estado: unknown; opciones?: OpcionesResolver })
   | (PeticionPuzzle & { op: 'aprender'; estado: unknown; opciones?: { metodo?: string } });

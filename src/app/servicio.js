@@ -69,7 +69,7 @@ export function atender(msg) {
     }
     case 'scramble': {
       const t0 = ahora();
-      const movimientos = p.generarScramble(rng);
+      const movimientos = msg.opciones ? p.generarScramble(rng, msg.opciones) : p.generarScramble(rng);
       return { movimientos, ms: ahora() - t0 };
     }
     case 'validar': {

@@ -61,12 +61,17 @@ const PASOS_LAZOS = 400;
  * scripts/mezcla-bloqueos.mjs; DECISIONES.md, sesión «validador con muchas geometrías»).
  */
 export const PASOS_GEOMETRIA_GRANDE = 409600;
+/** Bloque 3 (sesión «509 giros…»): umbral de pasos de mezcla para el scramble práctico, y sus giros. */
+export const UMBRAL_PRACTICO = 10000;
+export const PRACTICO_GIROS = 100;
 /** Semilla fija del análisis de las configuraciones que no caben (ver crearAnalisisBloqueos). */
 const SEMILLA_GRANDES = 20261126;
 /** Presupuesto de las tablas de Minkwitz en esas configuraciones: en pasos, no en milisegundos. */
 const PRESUPUESTO_MINKWITZ_GRANDE = { productos: 100000, mejoras: 60000 };
 /** Nodos máximos del buscador de geometría cuando no puede tener límite de tiempo. */
 const NODOS_BUSCADOR_GRANDE = 2000000;
+/** Prefijos al azar que prueba Minkwitz al escribir un scramble mezclado (se queda con el más corto). */
+const INTENTOS_MEZCLADO = 20;
 export const PASOS_PASEO_GRANDE = 409600;
 
 export const LIMITES = {
@@ -1069,8 +1074,25 @@ export function crearAnalisisBloqueos(soporte, definicion, opciones = {}) {
   if (bfs) info.tipoScramble = 'bfs';
   else if (!geo.completo && mink) { info.tipoScramble = 'fase2'; info.pasosGeometria = PASOS_GEOMETRIA_GRANDE; }
   else { info.tipoScramble = 'paseo'; if (!geo.completo) info.pasosScramble = PASOS_PASEO_GRANDE; }
+  // Scramble práctico (sesión «509 giros…», bloque 3): si mezclar necesita más de UMBRAL_PRACTICO
+  // pasos de paseo perezoso, el scramble por defecto son PRACTICO_GIROS giros legales al azar (una
+  // palabra reducida), con un aviso en la interfaz; el de estado mezclado se pide aparte
+  // ({ modo: 'mezclado' }). Con el BFS completo los pasos son max(80, 4·d²) (≤ 2.304 en todas las
+  // configuraciones probadas): esas no cambian.
+  info.pasosMezcla = bfs ? 0 : geo.completo ? (info.pasosScramble ?? 0) : PASOS_GEOMETRIA_GRANDE;
+  const res = { mod, info, ok: true, geo, distGeo, g2, bfs, proy, mink, objetivos, buscador };
+  if (info.pasosMezcla > UMBRAL_PRACTICO) {
+    // longitud esperada del mezclado (para decírsela al usuario antes de pedirlo): media de 3 con semilla fija
+    const tm = ahora();
+    const r = rngConSemilla(SEMILLA_GRANDES + 1);
+    const lon = [0, 1, 2].map(() => scrambleBloqueos(/** @type {Analisis} */ (res), r, { modo: 'mezclado' }).length);
+    info.longitudMezclado = Math.round(lon.reduce((a, b) => a + b, 0) / lon.length);
+    info.msLongitudMezclado = Math.round(ahora() - tm);
+    // si el mezclado ya es corto (el 2x4x4: ~100 giros), no hace falta el práctico: es peor y no más corto
+    info.scramblePractico = info.longitudMezclado > 2 * PRACTICO_GIROS;
+  }
   info.msTotal = Math.round(ahora() - t0);
-  return { mod, info, ok: true, geo, distGeo, g2, bfs, proy, mink, objetivos, buscador };
+  return res;
 }
 
 /**
@@ -1136,13 +1158,27 @@ function tablasFase2(mod, geo, rng, msMax, ordenG2 = 0n, extra = /** @type {Arra
   };
   let generadores = /** @type {Array<{ perm: Int16Array, palabra: number[] }>} */ ([]);
   const extraOrdenados = extra.slice().sort((a, b) => a.palabra.length - b.palabra.length);
-  for (let cuantos = 200; ; cuantos *= 2) {
-    generadores = orden.slice(0, cuantos).map(lazo).filter((g) => g.palabra.length);
-    if (todos) generadores = generadores.concat(extraOrdenados.slice(0, cuantos)).sort((a, b) => a.palabra.length - b.palabra.length);
-    if ((cuantos >= nA && cuantos >= extra.length) || !ordenG2) break;
+  /** @param {Array<{ perm: Int16Array, palabra: number[] }>} gs */
+  const generaG2 = (gs) => {
     const cad = crearCadena(P, { sinSchreier: true });
-    completarAleatorio(cad, generadores.map((g) => g.perm), rng, todos ? { seguidas: 30, todos } : { seguidas: 30 });
-    if (cad.orden() === ordenG2) break;
+    completarAleatorio(cad, gs.map((g) => g.perm), rng, todos ? { seguidas: 30, todos } : { seguidas: 30 });
+    return cad.orden() === ordenG2;
+  };
+  if (todos) {
+    // (sesión «509 giros…») Con los lazos al azar, solo los más cortos que hagan falta: los 200 lazos
+    // más cortos de la bola y, de los al azar (ordenados por longitud), el primer bloque de 2^k que
+    // completa el grupo. Con todos (277, algunos de cientos de giros) los scrambles mezclados y las
+    // soluciones salían de ~1.000 giros.
+    const deBola = orden.slice(0, 200).map(lazo).filter((g) => g.palabra.length);
+    let k = 1;
+    while (k < extraOrdenados.length && ordenG2 && !generaG2(deBola.concat(extraOrdenados.slice(0, k)))) k *= 2;
+    generadores = deBola.concat(extraOrdenados.slice(0, k)).sort((a, b) => a.palabra.length - b.palabra.length);
+  } else {
+    for (let cuantos = 200; ; cuantos *= 2) {
+      generadores = orden.slice(0, cuantos).map(lazo).filter((g) => g.palabra.length);
+      if (cuantos >= nA || !ordenG2) break;
+      if (generaG2(generadores)) break;
+    }
   }
   // Orden de la base (qué piezas se colocan primero). Al final van las que tienen 3-ciclos puros
   // cortos (wings, centros en X), porque las últimas tablas solo admiten elementos que no mueven
@@ -1702,11 +1738,12 @@ export function vueltasAGeometria(A, S, movs) {
  * Scramble: estado uniforme (espacio pequeño) o movimientos legales al azar.
  * @param {Analisis} A
  * @param {Rng} rng
- * @param {{ pasos?: number }} [opciones]
+ * @param {{ pasos?: number, modo?: 'practico' | 'mezclado' }} [opciones]
  * @returns {number[]}
  */
 export function scrambleBloqueos(A, rng, opciones = {}) {
   const { mod } = A;
+  if (A.info.scramblePractico && opciones.modo !== 'mezclado' && opciones.pasos === undefined) return scramblePractico(A, rng);
   if (A.bfs) {
     const n = A.bfs.tabla.tamano;
     if (n <= 1) return [];
@@ -1738,6 +1775,37 @@ export function scrambleBloqueos(A, rng, opciones = {}) {
     for (const m of w) S = mod.aplicar(S, m);
     if (!mod.pareceResuelto(S) || intento >= 20) return w;
   }
+}
+
+/**
+ * Scramble práctico (sesión «509 giros…», bloque 3): PRACTICO_GIROS giros legales al azar, cada uno
+ * elegido uniformemente entre los legales del estado al que se ha llegado, formando una palabra
+ * reducida (sin cancelaciones ni dos giros seguidos que se junten en uno: se reduce en cada paso y
+ * se sigue hasta que la palabra reducida tiene PRACTICO_GIROS giros). No es un estado aleatorio: lo
+ * dice la interfaz. Determinista con la semilla.
+ * @param {Analisis} A @param {Rng} rng
+ * @returns {number[]}
+ */
+function scramblePractico(A, rng) {
+  const { mod } = A;
+  /** @type {number[]} */
+  let w = [];
+  let S = mod.resuelto;
+  /** @type {number[]} */
+  const legales = [];
+  for (let intento = 0; w.length < PRACTICO_GIROS && intento < 100 * PRACTICO_GIROS; intento++) {
+    legales.length = 0;
+    for (let m = 0; m < mod.nM; m++) if (mod.legal(S, m)) legales.push(m);
+    if (!legales.length) break;
+    const m = legales[Math.floor(rng() * legales.length)];
+    const r = mod.reducirPalabra(w.concat([m]));
+    if (r.length === w.length + 1 && r.slice(0, w.length).every((x, i) => x === w[i])) { w = r; S = mod.aplicar(S, m); continue; }
+    // se juntó o se canceló con lo anterior: se rehace el estado desde la palabra reducida
+    w = r;
+    S = mod.resuelto;
+    for (const x of w) S = mod.aplicar(S, x);
+  }
+  return w;
 }
 
 /**
@@ -1778,7 +1846,7 @@ function scrambleFase2(A, rng) {
   if (!f1) return null;
   let T = X;
   for (const m of f1) T = mod.aplicar(T, m);
-  const f2 = A.mink.resolverS(T, 20, rng);
+  const f2 = A.mink.resolverS(T, INTENTOS_MEZCLADO, rng);
   if (!f2) return null;
   const sol = mod.reducirPalabra(f1.concat(f2));
   // comprobación giro a giro: la solución resuelve X, así que su inversa, desde el resuelto, lleva a
@@ -2316,12 +2384,12 @@ export function puzzleConBloqueos(puzzle, definicion, opcionesAnalisis = {}) {
     return res;
   }
 
-  /** @param {Rng} rng */
-  function generarScramble(rng) {
+  /** @param {Rng} rng @param {{ modo?: 'practico' | 'mezclado' }} [opciones] */
+  function generarScramble(rng, opciones = {}) {
     if (sinBloques) return puzzle.generarScramble(rng);
     inicializar();
     if (!A.ok) return [];
-    return conNotacion(scrambleBloqueos(A, rng).map((m) => mod.movs[m]));
+    return conNotacion(scrambleBloqueos(A, rng, opciones.modo ? { modo: opciones.modo } : {}).map((m) => mod.movs[m]));
   }
 
   /** @param {string} fam */

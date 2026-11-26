@@ -1020,6 +1020,42 @@ test('app: 4x4 y 5x5 vendados (selector, bloque tocando piezas, scramble, resolv
   ctx.w.close();
 });
 
+// Sesión «509 giros…», bloque 3: en el 5x5 de 16 barras (mezclar necesita 409.600 pasos) el scramble por
+// defecto es práctico (100 giros al azar), con un aviso; un botón pide el de estado mezclado.
+const BARRAS_5X5_APP = 'B.B12.B32.DB-B11.B21.B31.DB3-B13.B23.B33.DB1-BL.BL1.BL3.DBL-BR.BR1.BR3.DBR-DF.F.F12.F32-DF1.F11.F21.F31-DF3.F13.F23.F33-DFL.FL.FL1.FL3-DFR.FR.FR1.FR3-DL.L.L12.L32-DL1.L11.L21.L31-DL3.L13.L23.L33-DR.R.R12.R32-DR1.R13.R23.R33-DR3.R11.R21.R31';
+test('app: configuración muy restringida: scramble práctico con aviso y scramble mezclado a petición', { timeout: 900000 }, async (t) => {
+  const ctx = await abrir(t, { url: 'https://localhost/#/bandaged?puzzle=5x5&bloqueos=' + BARRAS_5X5_APP, esperarHerramienta: false });
+  if (!ctx) return;
+  const { w, doc, hasta, errores } = ctx;
+  const aviso = () => doc.getElementById('aviso-scramble');
+  const listo = () => doc.getElementById('scramble').textContent.length > 0 && !doc.getElementById('scramble').classList.contains('generando');
+  await hasta(() => listo() && aviso() && !aviso().hidden, 600000);
+  assert.match(aviso().textContent, /Configuración muy restringida: scramble práctico de giros al azar, no de estado aleatorio/);
+  assert.match(doc.getElementById('longitud').textContent, /^100 movimientos/);
+  const boton = doc.getElementById('modo-scramble');
+  assert.match(boton.textContent, /estado mezclado.*\d+ giros/);
+  const scr1 = doc.getElementById('scramble').textContent;
+  boton.click();
+  await hasta(() => listo() && doc.getElementById('scramble').textContent !== scr1, 120000);
+  assert.ok(parseInt(doc.getElementById('longitud').textContent, 10) > 100, 'el mezclado es largo');
+  assert.match(aviso().textContent, /estado mezclado/);
+  assert.match(boton.textContent, /práctico/);
+  // se carga y se resuelve
+  doc.getElementById('cargar').click();
+  doc.getElementById('resolver').click();
+  await hasta(() => !doc.getElementById('solucion').hidden || doc.querySelector('.mensaje.error'), 120000);
+  assert.equal(doc.querySelector('.mensaje.error'), null, doc.getElementById('mensajes').textContent);
+  doc.getElementById('r-fin').click();
+  assert.equal(w.cuboSolver.resuelto(), true);
+  // volver al práctico
+  const scr2 = doc.getElementById('scramble').textContent;
+  boton.click();
+  await hasta(() => listo() && doc.getElementById('scramble').textContent !== scr2, 120000);
+  assert.match(doc.getElementById('longitud').textContent, /^100 movimientos/);
+  assert.deepEqual(errores, []);
+  w.close();
+});
+
 test('app: enlaces con puzzle= (4x4 y 5x5) y enlaces antiguos sin puzzle (3x3)', { timeout: 600000 }, async (t) => {
   const casos = [
     ['https://localhost/#/bandaged?puzzle=4x4&bloqueos=UF2.UFR', 'vendado-4x4', 1],
