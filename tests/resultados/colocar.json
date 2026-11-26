@@ -1,0 +1,81 @@
+{
+  "WCA 3x3": {
+    "casos": 200,
+    "toquesMedia": 51.9,
+    "toquesMin": 45,
+    "toquesMax": 59,
+    "identidadesElegidas": 0
+  },
+  "casos": 1000,
+  "fecha": "2026-11-26T19:10:06.084Z",
+  "WCA 4x4": {
+    "casos": 200,
+    "toquesMedia": 120.7,
+    "toquesMin": 114,
+    "toquesMax": 128,
+    "identidadesElegidas": 0
+  },
+  "WCA 5x5": {
+    "casos": 200,
+    "toquesMedia": 195.6,
+    "toquesMin": 184,
+    "toquesMax": 208,
+    "identidadesElegidas": 0
+  },
+  "vendado 3x3 pareja": {
+    "casos": 200,
+    "toquesMedia": 49,
+    "toquesMin": 41,
+    "toquesMax": 56,
+    "identidadesElegidas": 0
+  },
+  "vendado 3x3 varios": {
+    "casos": 200,
+    "toquesMedia": 44.2,
+    "toquesMin": 35,
+    "toquesMax": 52,
+    "identidadesElegidas": 0
+  },
+  "vendado 3x3 2x2x2": {
+    "casos": 200,
+    "toquesMedia": 43.8,
+    "toquesMin": 36,
+    "toquesMax": 51,
+    "identidadesElegidas": 0
+  },
+  "vendado 4x4 varios": {
+    "casos": 200,
+    "toquesMedia": 108.5,
+    "toquesMin": 102,
+    "toquesMax": 117,
+    "identidadesElegidas": 97
+  },
+  "vendado 4x4 centros": {
+    "casos": 200,
+    "toquesMedia": 115.9,
+    "toquesMin": 106,
+    "toquesMax": 122,
+    "identidadesElegidas": 98
+  },
+  "vendado 5x5 varios": {
+    "casos": 200,
+    "toquesMedia": 180.9,
+    "toquesMin": 172,
+    "toquesMax": 189,
+    "identidadesElegidas": 140
+  },
+  "vendado 5x5 opuestos": {
+    "casos": 200,
+    "toquesMedia": 196.4,
+    "toquesMin": 188,
+    "toquesMax": 206,
+    "identidadesElegidas": 147
+  },
+  "vendado 5x5 16 barras": {
+    "casos": 200,
+    "toquesMedia": 93.4,
+    "toquesMin": 79,
+    "toquesMax": 104,
+    "identidadesElegidas": 144
+  }
+}

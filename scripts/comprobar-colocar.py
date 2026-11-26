@@ -160,20 +160,21 @@ async def comprobar(b, puzzle, dispositivo, opts, tema, modo, errores, fallos, r
     if modo == '3d':
         lienzo = pg.locator('#colocar-3d canvas')
         caja = await lienzo.bounding_box()
-        pos = {'x': caja['width'] / 2, 'y': caja['height'] / 2}
+        pos = {'x': caja['width'] * 0.47, 'y': caja['height'] * 0.38}
         if tactil: await lienzo.tap(position=pos)
         else: await lienzo.click(position=pos)
         await pg.wait_for_timeout(250)
         sel = await pg.evaluate("() => window.cuboSolver.colocar().seleccion()")
         if not sel or sel.get('tipo') != 'hueco': fallos.append(f'{clave}: el toque en el 3D no elige un hueco ({sel})')
         # dejarlo como estaba: si se colocó una pieza, Quitar; si solo se eligió el hueco, otro toque lo deselecciona
-        colocada = await pg.evaluate("() => { const ed = window.cuboSolver.colocar(); const s = ed.seleccion(); return !!(s && s.tipo === 'hueco' && ed.sesion.colocada(s.h)); }")
+        colocada = await pg.evaluate("() => { const ed = window.cuboSolver.colocar(); const s = ed.seleccion(); const b = document.getElementById('colocar-quitar'); return !!(s && s.tipo === 'hueco' && ed.sesion.colocada(s.h) && b && !b.disabled && ed.sesion.puedeDeshacer()); }")
         if colocada:
-            await pulsar(pg, '#colocar-quitar', tactil)
+            await pulsar(pg, '#colocar-deshacer', tactil)
         if tactil: await lienzo.tap(position=pos)
         else: await lienzo.click(position=pos)
         await pg.wait_for_timeout(250)
-        if await pg.evaluate("() => window.cuboSolver.colocar().seleccion()"): fallos.append(f'{clave}: otro toque en el mismo hueco no lo deselecciona')
+        tras = await pg.evaluate("() => window.cuboSolver.colocar().seleccion()")
+        if tras: fallos.append(f'{clave}: otro toque en el mismo hueco no lo deselecciona (antes {sel}, después {tras}, deshecho {colocada})')
     async def capturar(fase):
         if fase == 'medio' or capturas_todas:
             await pg.screenshot(path=f'{OUT}/editor-piezas-{puzzle}-{dispositivo}-{tema}-{modo}-{fase}.jpg', quality=70, type='jpeg')

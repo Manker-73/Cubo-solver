@@ -435,7 +435,8 @@ html.colocando, html.colocando body { overflow: hidden; }
 .colocar .vista svg polygon.pegatina { cursor: pointer; }
 .colocar-panel {
   display: flex; flex-direction: column; gap: 8px; padding: 8px 16px; overflow: hidden; min-height: 0;
-  max-height: 48vh; border-top: 1px solid var(--linea); background: var(--superficie);
+  /* altura FIJA: si cambiara con lo elegido, el puzzle se encogería y «saltaría» bajo el dedo */
+  height: 46vh; height: 46dvh; border-top: 1px solid var(--linea); background: var(--superficie);
 }
 /* solo la bandeja se desplaza: lo elegido y sus botones (Girar, Quitar…) siempre a la vista */
 .colocar-bandeja { overflow-y: auto; min-height: 0; flex: 1 1 auto; overscroll-behavior: contain; }
@@ -466,7 +467,7 @@ html.colocando, html.colocando body { overflow: hidden; }
 @media (min-width: 900px) {
   .colocar-cuerpo { grid-template-rows: none; grid-template-columns: minmax(0, 1fr) minmax(320px, 420px); }
   .colocar-vistas { padding: 16px; }
-  .colocar-panel { max-height: none; border-top: 0; border-left: 1px solid var(--linea); padding: 16px; }
+  .colocar-panel { height: auto; border-top: 0; border-left: 1px solid var(--linea); padding: 16px; }
 }
 @media (max-width: 420px) {
   .colocar-cab { padding: 6px 12px; }

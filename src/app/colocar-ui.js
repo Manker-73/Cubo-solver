@@ -141,8 +141,8 @@ export function abrirColocar(doc, op) {
       accion(() => { S.colocar(h, g); sel = { tipo: 'hueco', h }; });
       return;
     }
-    // volver a tocar el hueco vacío elegido lo deja de elegir
-    if (sel && sel.tipo === 'hueco' && sel.h === h && !S.colocada(h)) { sel = null; aviso = null; pintar(); return; }
+    // volver a tocar el hueco elegido lo deja de elegir
+    if (sel && sel.tipo === 'hueco' && sel.h === h) { sel = null; aviso = null; pintar(); return; }
     sel = { tipo: 'hueco', h };
     if (!S.colocada(h)) {
       const c = S.candidatos(h);
@@ -348,7 +348,9 @@ export function abrirColocar(doc, op) {
     const n = S.disposiciones(h);
     boton('colocar-girar', 'Girar', n > 1, girar, enBloque ? 'Otra orientación del bloque que pasa por este hueco' : 'Otra orientación de la pieza');
     if (enBloque) boton('colocar-siguiente', 'Siguiente posición', S.posicionesBloque(c.bloque) > 1, siguiente, 'Otra posición en la que cabe el bloque entero');
-    boton('colocar-quitar', enBloque ? 'Quitar bloque' : 'Quitar', true, quitar, 'Devolverlo a la bandeja');
+    // una pieza fija sin alternativa (centro del 3x3) volvería sola a su sitio: no se quita
+    const fijaSola = !enBloque && M.tipos[pz.tipo].fija && n <= 1;
+    boton('colocar-quitar', enBloque ? 'Quitar bloque' : 'Quitar', !fijaSola, quitar, fijaSola ? 'Esta pieza solo puede ir aquí' : 'Devolverlo a la bandeja');
     cont.appendChild(fila);
   }
 
