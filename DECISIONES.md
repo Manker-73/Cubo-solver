@@ -790,3 +790,32 @@ Simulaciones de cuboides sobre el 4x4 (`bloquesSinCortes`): **2x4x4** (sin los c
 **Causa raíz**: «Nuevo scramble» no tocaba el editor. Con un scramble cargado, «Resolver» resolvía otra vez el estado del scramble ANTERIOR, aunque el panel mostrase uno nuevo; la solución vieja además seguía a la vista. No es propio de los vendados (pasa en todos los puzzles), pero en el 5x5 de 16 barras, donde cada solución tiene cientos de giros, «siempre la misma longitud» salta a la vista.
 
 **Corrección** (`seguirScrambleEnEditor` en `main.js`): al llegar un scramble nuevo, si el editor tiene el scramble cargado antes sin tocar (se compara su huella), pasa al nuevo y se quita la solución vieja; si el usuario lo ha editado, se le deja y sale un aviso: «pulsa “Cargar scramble actual” si quieres resolver el scramble». Test: `app: tras un scramble nuevo, Resolver no resuelve el estado del scramble anterior` (fallaba antes: «el editor sigue con el estado del scramble anterior»). En Chromium, sin pulsar «Cargar»: 4 scrambles → 4 estados en el editor y 4 soluciones distintas.
+
+**Una corrección del informe anterior**: dije que en Node los scrambles salían de ~550 giros y las soluciones de ~466. Esas cifras eran de dddb725; el commit siguiente (4c4aa6e: lazos al azar con paseos cada vez más largos) alargó los generadores de Minkwitz y, con el código que quedó publicado (7bb398d), salen **1.106 de media (410–7.137) y 809 (328–1.293)** (200 casos, semilla 11, medidos ahora). El máximo de 7.137 es la vuelta al paseo largo cuando la solución rápida no sale. No lo medí después del último cambio, y debía haberlo hecho.
+
+## Bloque 2: el mismo scramble con la misma semilla en cualquier máquina
+**Auditoría** (lo que llegaba a los scrambles del caso grande y dependía de la máquina):
+- el análisis usaba `opciones.rng` o, en el Worker, `Math.random` (sin semilla): grupo de la fase 2, lazos al azar, generadores y tablas de Minkwitz;
+- las tablas de Minkwitz se llenaban durante `msMax` ms (3 s): una máquina más lenta las llena menos y da otras palabras;
+- los lazos al azar paraban a los 20 s; el buscador de geometría de `scrambleFase2` y de los lazos, a los 2 s y 1 s;
+- `resolverS` elegía los prefijos con el rng interno de las tablas (gastado según lo que se hubiera resuelto antes).
+
+**Cambios** (solo en las configuraciones cuyo BFS no cabe; las demás no se tocan):
+- semilla fija para todo el análisis de esas configuraciones (`SEMILLA_GRANDES`);
+- Minkwitz con **presupuesto en pasos** (`{ productos: 100.000, mejoras: 60.000 }`) en vez de milisegundos: en una máquina lenta tarda más, pero da las mismas tablas (en Node ~3 s, en un móvil con la CPU ×4 más lenta, ~4 veces más);
+- buscador con límite de nodos (2 millones) y sin límite de tiempo; lazos sin límite de tiempo (40 vueltas como mucho);
+- `resolverS(S, intentos, rng)` con el rng del scramble.
+- `fijarRelojBloqueos(f)` (solo para tests) cambia el reloj del módulo.
+
+**Test**: dos «máquinas» con semilla de análisis distinta (7 y 4242), `msMinkwitz` 3.000 y 150, y la segunda con el reloj 25 veces más rápido: los mismos scrambles mezclados y prácticos byte a byte (fallaba antes del cambio). El solver sigue teniendo límite de tiempo (no hace falta que sea determinista y en una máquina lenta debe cortar igual).
+
+## Bloque 3: scramble práctico y scramble mezclado
+- **Cuándo**: si mezclar necesita más de 10.000 pasos de paseo perezoso (`info.pasosMezcla`: 409.600 en las configuraciones que no caben; con el BFS completo, max(80, 4·d²) ≤ 2.304 en todas las probadas) **y** el scramble mezclado mide más de 200 giros (`info.longitudMezclado`, media de 3 con semilla fija, calculada al analizar; en el 5x5 de 16 barras, 687). Si el mezclado ya es corto, es mejor y no hace falta el práctico. Con el código actual pasa en el 5x5 de 16 barras y en el 2x4x4 (su mezclado mide ~300 de media, aunque hay de 83).
+- **Práctico (por defecto)**: 100 giros legales al azar, cada uno elegido uniformemente entre los legales del estado al que se llega, y la palabra se reduce en cada paso hasta tener exactamente 100 (sin cancelaciones ni giros seguidos que se junten). Aviso en el panel: «Configuración muy restringida: scramble práctico de giros al azar, no de estado aleatorio. Mezclar de verdad necesita unos 409.600 pasos de un paseo al azar.»
+- **Mezclado (a petición)**: botón «Scramble de estado mezclado (unos 687 giros)», que dice la longitud antes de pedirlo; con él activo, cada «Nuevo scramble» es mezclado (no sale de las precargas, que son prácticas) y el botón pasa a «Volver al scramble práctico (100 giros)».
+- **Generadores de Minkwitz**: con los lazos al azar solo entran los más cortos que hacen falta (primer bloque de 2^k, por longitud, que completa el grupo). Bajó la media del mezclado de ~1.000 a ~900; probé también más prefijos (200 en vez de 20) y más rondas de mejora (400.000): ninguno cambió la longitud.
+
+**Calidad de la mezcla del práctico** (distancia de la forma al resuelto frente a la distribución exacta de las 80.452.680 geometrías; `herr/c/bfs3.c`): 2.000 scrambles prácticos: **distancia media 9,99 frente a 14,49 exacta, TV 0,567**; el 61 % está a distancia ≤ 10, frente al 10,5 % de las geometrías; el más lejano, a 21 (el diámetro es 31). 300 mezclados: media 14,58, TV 0,109 (con 300 muestras, del orden del ruido). Es decir: el práctico deja la forma claramente más cerca de la resuelta que un estado al azar; sirve para practicar, no para competir, y así lo dice la interfaz.
+
+## Bloque 4: CI
+- Fuera `.github/workflows/suite-bloqueos.yml` y la rama `suite/bloqueos` (los usé para lanzar la suite de bloqueos sin permisos de `workflow_dispatch`, después de ejecutarla una última vez con este código). La suite completa se lanza a mano desde «Tests (rápido)» con el nivel `completo` (ver ESTADO.md).

@@ -352,6 +352,71 @@ async def comprobar_geometrias(b, errores, fallos, resumen):
         resumen[clave] = {'msAnalisis': ms_analisis, 'analisis': analisis, **filas}
         await ctx.close()
 
+# Sesión «509 giros, determinismo y scramble práctico» (python3 scripts/comprobar-bloqueos.py practico):
+# el 5x5 de 16 barras en escritorio y en móvil con la CPU ×4 más lenta (Emulation.setCPUThrottlingRate):
+# scramble práctico con su aviso (10 seguidos, tiempo de generación en el Worker), cambiar al mezclado
+# (3), cargarlo, resolverlo y reproducirlo; volver al práctico. Sin errores de consola.
+# Capturas en docs/capturas/bandaged-practico-*.jpg.
+async def comprobar_practico(b, errores, fallos, resumen):
+    import time
+    for cfg, opts in CONFIGS:
+        clave = f'practico/{cfg}'
+        ctx = await b.new_context(**opts)
+        pg = await ctx.new_page()
+        pg.on('pageerror', lambda e, c=clave: errores.append(f'{c}: {e}'))
+        pg.on('console', lambda m, c=clave: errores.append(f'{c}: {m.text}') if m.type == 'error' else None)
+        if cfg == 'movil':
+            cdp = await ctx.new_cdp_session(pg)
+            await cdp.send('Emulation.setCPUThrottlingRate', {'rate': 4})
+        t0 = time.time()
+        await pg.goto(URL + '?puzzle=5x5&bloqueos=' + BARRAS_5X5)
+        await pg.wait_for_function("!document.getElementById('aviso-scramble').hidden", timeout=900000)
+        ms_analisis = round((time.time() - t0) * 1000)
+        aviso = await pg.inner_text('#aviso-scramble-texto')
+        if 'Configuración muy restringida: scramble práctico de giros al azar, no de estado aleatorio' not in aviso: fallos.append(f'{clave}: aviso {aviso!r}')
+        await pg.locator('#panel-scramble').screenshot(path=f'{OUT}/bandaged-practico-{cfg}-practico.jpg', quality=70, type='jpeg')
+        async def siguiente(antes):
+            await pg.click('#nuevo')
+            await pg.wait_for_function("(a) => { const s = document.getElementById('scramble'); return !s.classList.contains('generando') && s.textContent !== a; }", arg=antes, timeout=600000)
+            return {'longitud': await pg.inner_text('#longitud'), 'ms': await pg.evaluate('window.cuboSolver.estado().msScramble')}
+        practicos = []
+        for _ in range(10):
+            practicos.append(await siguiente(await pg.inner_text('#scramble')))
+            if not practicos[-1]['longitud'].startswith('100 '): fallos.append(f'{clave}: práctico de {practicos[-1]["longitud"]}')
+        boton = await pg.inner_text('#modo-scramble')
+        antes = await pg.inner_text('#scramble')
+        t1 = time.time()
+        await pg.click('#modo-scramble')
+        await pg.wait_for_function("(a) => { const s = document.getElementById('scramble'); return !s.classList.contains('generando') && s.textContent !== a; }", arg=antes, timeout=600000)
+        mezclados = [{'longitud': await pg.inner_text('#longitud'), 'ms': await pg.evaluate('window.cuboSolver.estado().msScramble'), 'msClic': round((time.time() - t1) * 1000)}]
+        for _ in range(2): mezclados.append(await siguiente(await pg.inner_text('#scramble')))
+        await pg.locator('#panel-scramble').screenshot(path=f'{OUT}/bandaged-practico-{cfg}-mezclado.jpg', quality=70, type='jpeg')
+        # (las soluciones del mezclado tienen cientos de giros: un paso y se salta al final)
+        await pg.click('#cargar')
+        await pg.click('#resolver')
+        await pg.wait_for_function("!document.getElementById('solucion').hidden || document.querySelector('#mensajes .mensaje.error')", timeout=600000)
+        err = await pg.evaluate("document.querySelector('#mensajes .mensaje.error') ? document.getElementById('mensajes').textContent : null")
+        if err: fallos.append(f'{clave}: {err}')
+        d = {'resumen': await pg.inner_text('#sol-resumen')}
+        await pg.click('#r-adelante')
+        await pg.wait_for_timeout(1500)
+        await pg.click('#r-fin')
+        try:
+            await pg.wait_for_function("document.getElementById('paso').textContent.includes('Resuelto')", timeout=60000)
+        except Exception:
+            fallos.append(f"{clave}: tras ir al final, paso = {await pg.inner_text('#paso')!r}, mensajes = {await pg.inner_text('#mensajes')!r}")
+        if not await pg.evaluate('window.cuboSolver.resuelto()'): fallos.append(f'{clave}: no queda resuelto')
+        await pg.locator('#panel-resolver').screenshot(path=f'{OUT}/bandaged-practico-{cfg}-resuelto.jpg', quality=70, type='jpeg')
+        antes = await pg.inner_text('#scramble')
+        await pg.click('#modo-scramble')
+        await pg.wait_for_function("(a) => { const s = document.getElementById('scramble'); return !s.classList.contains('generando') && s.textContent !== a; }", arg=antes, timeout=600000)
+        vuelta = await pg.inner_text('#longitud')
+        if not vuelta.startswith('100 '): fallos.append(f'{clave}: al volver, {vuelta}')
+        info = await pg.evaluate(INFO)
+        if info['scroll']: fallos.append(f'{clave}: scroll horizontal')
+        resumen[clave] = {'msAnalisis': ms_analisis, 'aviso': aviso, 'boton': boton, 'practicos': practicos, 'mezclados': mezclados, 'solucion': d and d['resumen'], 'vuelta': vuelta}
+        await ctx.close()
+
 async def main():
     os.makedirs(OUT, exist_ok=True)
     errores, fallos, resumen = [], [], {}
@@ -359,6 +424,8 @@ async def main():
     async with async_playwright() as p:
         b = await p.chromium.launch(executable_path=os.environ.get('CHROME', '/usr/bin/google-chrome'),
                                     args=['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'])
+        if parte == 'practico':
+            await comprobar_practico(b, errores, fallos, resumen)
         if parte == 'geometrias':
             await comprobar_geometrias(b, errores, fallos, resumen)
         if parte in ('todo', 'nxn'):
