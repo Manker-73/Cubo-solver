@@ -251,6 +251,8 @@ const aprenderPyraminx = crearAprenderPyraminx({ geo, modelo, analizar, puntas, 
 
 export default definirPuzzle({
   id: 'pyraminx',
+  // colocar piezas (noche 14): las puntas y los centros giran en su sitio; las aristas se mueven
+  colocarPiezas: { generadores: ['U', 'L', 'R', 'B', 'u', 'l', 'r', 'b'], nombreTipo: (p) => (p.length === 2 ? ['Aristas', 'arista'] : ['Puntas y centros', 'pieza']) },
   nombre: 'Pyraminx',
   capacidades: { scramble: true, validar: true, resolver: true, editar: true },
   descripcion: 'Solución óptima en movimientos U, L, R, B, más las puntas al final.',

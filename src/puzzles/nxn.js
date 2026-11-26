@@ -6,6 +6,7 @@
 // con la numeración de pegatinas de Kociemba (U1..U9 R1..R9 F1.. D1.. L1.. B1..).
 
 import { definirPuzzle } from '../core/puzzle.js';
+import { colocarNxN } from './nxn-colocar.js';
 import { aplicarPerm, componer, identidad } from '../core/perm.js';
 import { svgDePegatinas } from '../core/render.js';
 import { modelo3DPegatinas, CAMARA_CUBO } from '../core/modelo3d.js';
@@ -294,6 +295,7 @@ export function crearNxN(N, extra = {}) {
     giro3D: b.giro3D,
     tipoScramble: 'movimientos aleatorios',
     longitudScramble: LONGITUD_WCA[N],
+    colocarPiezas: colocarNxN(N),
   }, extra));
 }
 

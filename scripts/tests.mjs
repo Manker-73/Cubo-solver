@@ -31,6 +31,7 @@ const AREAS = {
   megaminx: { ficheros: ['megaminx', 'megaminx-pochmann'], patron: 'Megaminx' },
   fto: { ficheros: ['fto'], patron: 'FTO' },
   vendado: { ficheros: ['bloqueos'], patron: 'vendado|bloqueos' },
+  colocar: { ficheros: ['colocar'], patron: 'colocar|Colocar' },
   aprender: { ficheros: ['aprender', 'oll-numeros'], patron: 'aprender' },
   '3d': { ficheros: ['vista3d'], patron: '3D' },
   app: { ficheros: ['app', 'diseno'], patron: null },

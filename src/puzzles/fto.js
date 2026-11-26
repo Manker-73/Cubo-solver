@@ -239,6 +239,8 @@ const EJE = { U: 'U-D', D: 'U-D', F: 'F-B', B: 'F-B', R: 'R-BL', BL: 'R-BL', L: 
 
 export default definirPuzzle({
   id: 'fto',
+  // colocar piezas (noche 14): esquinas (4 pegatinas), aristas y triángulos (dos órbitas)
+  colocarPiezas: { generadores: ['U', 'F', 'R', 'L', 'B', 'BR', 'BL', 'D'], nombreTipo: (p) => (p.length === 1 ? ['Triángulos', 'triángulo'] : null) },
   nombre: 'FTO',
   capacidades: { scramble: true, validar: true, resolver: true, editar: true },
   descripcion: 'Solución en tres fases (U, F, R, L, B, D, BR, BL): la cara D, luego reducir a R, L, B, D y al final esquinas y aristas.',

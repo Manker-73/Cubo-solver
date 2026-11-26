@@ -463,7 +463,8 @@ export function crearCuboConIdentidad(colores, N) {
     nombresFase: colores.nombresFase,
     // Pintar un estado a mano no se puede: con colores no se sabe qué centro es cuál
     pegatinasEditables: () => [],
-    avisoPintar: `En el ${N}x${N} vendado no se puede pintar un estado: hay centros del mismo color y, con colores, no se sabe cuál es cuál (y los bloques dependen de ello). Mezcla con «Nuevo scramble» o «Cargar scramble».`,
+    avisoPintar: `En el ${N}x${N} vendado no se puede pintar un estado: hay centros del mismo color y, con colores, no se sabe cuál es cuál (y los bloques dependen de ello). Para introducir el estado de tu cubo, usa «Colocar piezas» (la app elige qué centro es cuál); o mezcla con «Nuevo scramble» o «Cargar scramble».`,
+    colocarPiezas: colores.colocarPiezas,
     soporteBloqueos: sop,
     ejemplosBloqueos: EJEMPLOS_NXN[N] || [],
   });

@@ -56,12 +56,22 @@ export interface Validacion {
   resultado?: 'valido' | 'imposible' | 'sin-comprobar';
   /** Avisos (con 'sin-comprobar'). */
   avisos?: string[];
+  /**
+   * (Noche 14, con `elegirIguales`.) El estado con las identidades de las piezas iguales que lo hacen
+   * alcanzable (4x4/5x5 vendados: qué centro blanco está en cada sitio). Solo si es distinto del dado.
+   */
+  estado?: EstadoPegatinas;
 }
 
 /** Opciones de `validar`: giros que llevan del resuelto al estado (un scramble de la app sin tocar). */
 export interface OpcionesValidar {
   secuencia?: Movimiento[];
   msMax?: number;
+  /**
+   * (Noche 14: colocar piezas.) El usuario no distingue las piezas iguales: la app puede elegir su
+   * identidad. Válido si alguna asignación lo hace alcanzable; `Validacion.estado` la lleva.
+   */
+  elegirIguales?: boolean;
 }
 
 /** Tramo de una solución (barra de fases). `grupo` = clase de color `f-<grupo>`. */
@@ -363,6 +373,8 @@ export interface DefinicionPuzzle<E> {
   // estado aleatorio y bloqueos
   estadoAleatorio?(rng: Rng): E;
   soporteBloqueos?: SoporteBloqueos<E>;
+  /** (Noche 14) Introducir el estado colocando piezas (src/core/colocar.js). */
+  colocarPiezas?: ColocarPiezas;
   solucionSinBloqueos?(estado: E): { movimientos: Movimiento[]; optima: boolean } | null;
   ejemplosBloqueos?: EjemploBloqueos[];
 }
@@ -384,6 +396,118 @@ export interface Puzzle<E> extends DefinicionPuzzle<E> {
   pegatinasEditables(estado?: E): number[];
   pintar(estado: E, i: number, color: number): E;
   clonar(estado: E): E;
+}
+
+// ---------------------------------------------------------------------------
+// Colocar piezas (noche 14; src/core/colocar.js, ARQUITECTURA.md «Colocar piezas»)
+// ---------------------------------------------------------------------------
+
+/** Lo que un puzzle da para colocar piezas. */
+export interface ColocarPiezas {
+  /** Giros que generan el grupo (sus órbitas dicen dónde puede ir cada pieza y cómo). */
+  generadores: Movimiento[];
+  /** Nombre (plural, singular) del tipo de una pieza por sus pegatinas en el resuelto; null = el genérico. */
+  nombreTipo?(pegatinas: number[]): [string, string] | null;
+}
+
+export interface PiezaColocar {
+  id: number;
+  tipo: number;
+  /** Pegatinas de la pieza en el resuelto (su tupla, en un orden fijo). */
+  pegatinas: number[];
+  /** Valor del estado de cada pegatina (color o identidad). */
+  valores: number[];
+  /** Color (paleta) de cada pegatina. */
+  colores: number[];
+  /** Grupo de la bandeja (−1 si está en un bloque). */
+  grupo: number;
+  /** Bloque al que pertenece (−1 si es suelta). */
+  bloque: number;
+  /** «esquina blanco-verde-rojo». */
+  nombre: string;
+}
+
+export interface TipoColocar {
+  id: number;
+  nombre: string;
+  singular: string;
+  piezas: number[];
+  /** Piezas que no cambian de sitio (solo giran en él, o ni eso). */
+  fija: boolean;
+}
+
+/** Piezas sueltas que se ven igual (mismo tipo y colores): una entrada de la bandeja. */
+export interface GrupoColocar {
+  id: number;
+  tipo: number;
+  piezas: number[];
+  colores: number[];
+  nombre: string;
+}
+
+export interface BloqueColocar {
+  id: number;
+  nombre: string;
+  piezas: number[];
+  /** Colocaciones rígidas posibles: tupla de cada pieza y su hueco. */
+  colocaciones: Array<{ tuplas: number[][]; huecos: number[] }>;
+}
+
+export interface ModeloColocar {
+  /** Pegatinas del estado. */
+  n: number;
+  piezas: PiezaColocar[];
+  tipos: TipoColocar[];
+  grupos: GrupoColocar[];
+  bloques: BloqueColocar[];
+  /** Hueco (= pieza de casa) de cada pegatina. */
+  huecoDePegatina: Int16Array;
+  opciones(pieza: number, hueco: number): number[][];
+  pegatinasHueco(hueco: number): number[];
+  tipoHueco(hueco: number): number;
+  resuelto: EstadoPegatinas;
+}
+
+export interface ColocadaEnHueco {
+  pieza: number;
+  /** Posiciones de las pegatinas de la pieza (en el orden de su tupla). */
+  tupla: number[];
+  /** Bloque (o −1). */
+  bloque: number;
+}
+
+export interface CandidatoHueco {
+  grupo: number;
+  disposiciones: number;
+  restantes: number;
+}
+
+export interface SesionColocar {
+  modelo: ModeloColocar;
+  colocada(hueco: number): ColocadaEnHueco | null;
+  candidatos(hueco: number): CandidatoHueco[];
+  restantes(grupo: number): number;
+  colocar(hueco: number, grupo: number): void;
+  disposiciones(hueco: number): number;
+  girar(hueco: number): boolean;
+  colocarBloque(bloque: number, hueco: number): void;
+  girarBloque(bloque: number): boolean;
+  siguientePosicion(bloque: number): boolean;
+  posicionesBloque(bloque: number): number;
+  colocacionBloque(bloque: number): number;
+  ponerColocacionBloque(bloque: number, colocacion: number): void;
+  quitar(hueco: number): boolean;
+  deshacer(): boolean;
+  puedeDeshacer(): boolean;
+  vaciar(): void;
+  autoRellenar(): number[];
+  faltan(): { piezas: number; bloques: number };
+  completo(): boolean;
+  /** Estado del puzzle (−1 en los huecos vacíos). */
+  estado(): EstadoPegatinas;
+  /** Colores para dibujar (−1 vacío). */
+  colores(): number[];
+  bloqueEnPosicion(): Int16Array;
 }
 
 // ---------------------------------------------------------------------------

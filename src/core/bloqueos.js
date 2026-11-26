@@ -2283,6 +2283,85 @@ export function puzzleConBloqueos(puzzle, definicion, opcionesAnalisis = {}) {
     return e.length === estado.length && e.every((x, i) => x === estado[i]);
   }
 
+  /** `donde` del estado tal como está (sin normalizar). @param {EstadoPegatinas} estado */
+  const id0 = (estado) => { const r = identificar(estado); return r.errores ? null : r.donde; };
+
+  /**
+   * Noche 14: piezas iguales elegidas por la app. El usuario coloca los centros por su color; la
+   * identidad de cada centro suelto (cuál de los cuatro blancos está en cada sitio) la elige esto.
+   *
+   * x = el estado llevado a la geometría resuelta (x[p] = posición del punto p, ya transportado por
+   * el prefijo y el camino del árbol). Reetiquetar los centros iguales sueltos con σ (permutación de
+   * esos puntos que conserva la clase: tipo + color) da x' = σ·x (x'[p] = x[σ[p]]). La base de la
+   * cadena empieza por todos los demás puntos (prefijo), así que cribar por esos niveles da lo mismo
+   * para x y x' y queda un resto r con x' ∈ G2 ⇔ σ·r ∈ Gc (los niveles siguientes: lo que solo mueve
+   * centros sueltos). Para cada órbita O de Gc hace falta σ(O) = r⁻¹(O) conservando las clases (si
+   * no hay ninguna, ninguna asignación sirve), y la paridad sobre O se ajusta cambiando dos centros
+   * iguales de O. Se prueban las combinaciones de paridades (2^k, k = órbitas con dos centros
+   * iguales) con la pertenencia exacta. Devuelve el estado reetiquetado o null.
+   * @param {Int16Array} x @param {Int16Array | null} donde
+   * @returns {EstadoPegatinas | null}
+   */
+  function elegirIguales(x, donde) {
+    if (!donde) return null;
+    // (solo se llama tras comprobar A.ok en analizar)
+    const g2 = /** @type {{ cadena: ReturnType<typeof crearCadena>, prefijo?: number, libres?: number[] }} */ (/** @type {Analisis} */ (A).g2);
+    if (g2.prefijo === undefined || !g2.libres || !g2.libres.length) return null;
+    const P = x.length;
+    const niv = g2.cadena.niveles;
+    // resto tras los niveles del prefijo
+    let r = x;
+    for (let k = 0; k < g2.prefijo && k < niv.length; k++) {
+      const t = niv[k].inv.get(r[niv[k].punto]);
+      if (!t) return null;
+      r = permProducto(r, t);
+    }
+    const libre = new Uint8Array(P);
+    for (const p of g2.libres) libre[p] = 1;
+    for (let p = 0; p < P; p++) if (!libre[p] && r[p] !== p) return null;
+    // clase (tipo + color) de cada punto libre y órbitas de Gc
+    const clase = new Int16Array(P).fill(-1);
+    (sop.iguales || []).forEach((cl, c) => cl.forEach((k) => sop.piezas[k].puntos.forEach((p) => { clase[p] = c; })));
+    const padre = new Int16Array(P); for (let i = 0; i < P; i++) padre[i] = i;
+    /** @param {number} a @returns {number} */
+    const raiz = (a) => { while (padre[a] !== a) { padre[a] = padre[padre[a]]; a = padre[a]; } return a; };
+    const gensGc = niv.length > g2.prefijo ? niv[g2.prefijo].gens : [];
+    for (const g of gensGc) for (const p of g2.libres) { const a = raiz(p), b = raiz(g[p]); if (a !== b) padre[a] = b; }
+    /** @type {Map<number, number[]>} */
+    const orbitas = new Map();
+    for (const p of g2.libres) { const o = raiz(p); if (!orbitas.has(o)) orbitas.set(o, []); /** @type {number[]} */ (orbitas.get(o)).push(p); }
+    const ri = permInversa(r);
+    // σ: O -> r⁻¹(O) conservando la clase
+    const sigma = new Int16Array(P); for (let i = 0; i < P; i++) sigma[i] = i;
+    /** @type {Array<[number, number]>} */
+    const cambios = []; // por órbita, dos puntos de la misma clase (para cambiar la paridad)
+    for (const O of orbitas.values()) {
+      /** @type {Map<number, number[]>} */
+      const destinos = new Map();
+      for (const p of O) { const q = ri[p]; const c = clase[q]; if (!destinos.has(c)) destinos.set(c, []); /** @type {number[]} */ (destinos.get(c)).push(q); }
+      /** @type {Map<number, number>} */
+      const vistos = new Map();
+      for (const p of O) {
+        const l = destinos.get(clase[p]);
+        if (!l || !l.length) return null; // los colores de O no caben: ninguna asignación sirve
+        sigma[p] = /** @type {number} */ (l.pop());
+        if (vistos.has(clase[p])) { if (cambios.length < 16 && !cambios.some(([a]) => raiz(a) === raiz(p))) cambios.push([/** @type {number} */ (vistos.get(clase[p])), p]); } else vistos.set(clase[p], p);
+      }
+    }
+    const xp = new Int16Array(P);
+    for (let m = 0; m < 1 << cambios.length; m++) {
+      const s = sigma.slice();
+      cambios.forEach(([a, b], i) => { if (m & (1 << i)) { const t = s[a]; s[a] = s[b]; s[b] = t; } });
+      for (let p = 0; p < P; p++) xp[p] = x[s[p]];
+      if (g2.cadena.contiene(xp)) {
+        const d2 = new Int16Array(P);
+        for (let p = 0; p < P; p++) d2[p] = donde[s[p]];
+        return /** @type {EstadoPegatinas} */ (sop.estadoDesde(d2));
+      }
+    }
+    return null;
+  }
+
   /**
    * Validación con los bloques. Tres resultados (sesión «validador con muchas geometrías»):
    *  - 'valido': demostrado (hay una forma de llegar con giros legales: está en el grupo);
@@ -2296,8 +2375,10 @@ export function puzzleConBloqueos(puzzle, definicion, opcionesAnalisis = {}) {
    * no se ha podido comprobar pero el estado se puede normalizar, también S y r (para intentar
    * resolver). `opciones.secuencia`: giros que llevan del resuelto al estado (un scramble de la app).
    * @param {EstadoPegatinas} estado
-   * @param {{ secuencia?: Movimiento[], msMax?: number }} [opciones]
-   * @returns {{ valido: boolean, resultado: 'valido' | 'imposible' | 'sin-comprobar', errores: string[], avisos?: string[], S?: Int16Array, r?: number, porSecuencia?: boolean }}
+   * `opciones.elegirIguales` (noche 14): las piezas iguales sueltas se pueden reetiquetar; si así es
+   * alcanzable, es válido y `estado` lleva las identidades elegidas.
+   * @param {{ secuencia?: Movimiento[], msMax?: number, elegirIguales?: boolean }} [opciones]
+   * @returns {{ valido: boolean, resultado: 'valido' | 'imposible' | 'sin-comprobar', errores: string[], avisos?: string[], S?: Int16Array, r?: number, porSecuencia?: boolean, estado?: EstadoPegatinas }}
    */
   function analizar(estado, opciones = {}) {
     inicializar();
@@ -2345,6 +2426,15 @@ export function puzzleConBloqueos(puzzle, definicion, opcionesAnalisis = {}) {
     const x = new Int16Array(d.length);
     for (let p = 0; p < x.length; p++) x[p] = inv[d[p]];
     if (A.g2.cadena.contiene(x)) return { valido: true, resultado: 'valido', errores: [], S, r: n.r };
+    // Noche 14 (colocar piezas): el usuario no distingue las piezas iguales (centros del mismo
+    // color). Se busca la asignación de identidades que hace el estado alcanzable (ver elegirIguales).
+    if (opciones.elegirIguales && mod.hayIguales) {
+      const e = elegirIguales(x, /** @type {Int16Array} */ (id0(estado)));
+      if (e) {
+        const n2 = normalizar(e);
+        if (!n2.errores) return { valido: true, resultado: 'valido', errores: [], S: A.mod.SDesdeDonde(n2.donde), r: n2.r, estado: e };
+      }
+    }
     // fuera del grupo encontrado: imposible solo si ese grupo es el entero
     const grupoExacto = A.info.geometriasExacto ? !!A.info.estadosExacto : !!A.info.grupoFase2Exacto;
     if (grupoExacto) return imposible(['Con estos bloques no se puede llegar a este estado: las piezas no pueden quedar así sin romper ningún bloque.']);
@@ -2514,7 +2604,7 @@ export function puzzleConBloqueos(puzzle, definicion, opcionesAnalisis = {}) {
     avisoInicializacion: 'Analizando los bloques y generando las tablas…',
     validar: (e, opciones = {}) => {
       const a = analizar(e, opciones);
-      return { valido: a.valido, errores: a.errores, resultado: a.resultado, ...(a.avisos ? { avisos: a.avisos } : {}) };
+      return { valido: a.valido, errores: a.errores, resultado: a.resultado, ...(a.avisos ? { avisos: a.avisos } : {}), ...(a.estado ? { estado: a.estado } : {}) };
     },
     resolver,
     aprender: undefined,

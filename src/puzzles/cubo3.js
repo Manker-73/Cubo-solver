@@ -8,6 +8,7 @@ import { reetiquetar, cierreGrupo } from '../core/simetria.js';
 import { aplicarPerm, componer } from '../core/perm.js';
 import { barajar, entero, rngSeguro } from '../core/rng.js';
 import { baseNxN } from './nxn.js';
+import { colocarNxN } from './nxn-colocar.js';
 import {
   piezasCubo, NOMBRES_ESQUINAS, NOMBRES_ARISTAS, comprobarConteo, erroresDePiezas, nombreColor,
 } from './cubo-comun.js';
@@ -162,6 +163,7 @@ function generarScramble(rng = rngSeguro(), opciones = {}) {
 
 export default definirPuzzle({
   id: '3x3',
+  colocarPiezas: colocarNxN(3),
   nombre: '3x3',
   capacidades: { scramble: true, validar: true, resolver: true, editar: true },
   descripcion: 'Algoritmo de dos fases de Kociemba (soluciones de ~20 movimientos).',

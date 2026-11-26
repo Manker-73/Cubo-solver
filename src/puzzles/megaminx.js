@@ -231,6 +231,8 @@ function notaScramble(movs) {
 // ---------- Puzzle ----------
 export default definirPuzzle({
   id: 'megaminx',
+  // colocar piezas (noche 14): con los giros de las 12 caras los centros quedan fijos
+  colocarPiezas: { generadores: CARAS.slice() },
   nombre: 'Megaminx',
   capacidades: { scramble: true, validar: true, resolver: true, editar: true },
   tipoScramble: 'movimientos aleatorios (Pochmann)',

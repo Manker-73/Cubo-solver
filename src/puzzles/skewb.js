@@ -232,6 +232,8 @@ const aprenderSkewb = crearAprenderSkewb({ geo, modelo, analizar, centros, esqA,
 
 export default definirPuzzle({
   id: 'skewb',
+  // colocar piezas (noche 14): con los giros WCA una esquina queda fija; hay dos órbitas de esquinas
+  colocarPiezas: { generadores: ['U', 'L', 'R', 'B'], nombreTipo: (p) => (p.length === 1 ? ['Centros', 'centro'] : null) },
   nombre: 'Skewb',
   capacidades: { scramble: true, validar: true, resolver: true, editar: true },
   descripcion: 'Solución óptima en notación WCA (R, U, L, B); la esquina URF queda fija.',

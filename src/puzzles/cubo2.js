@@ -7,6 +7,7 @@ import { crearModeloPiezas, crearBuscador } from '../core/piezas.js';
 import { reetiquetar } from '../core/simetria.js';
 import { barajar, entero, rngSeguro } from '../core/rng.js';
 import { baseNxN } from './nxn.js';
+import { colocarNxN } from './nxn-colocar.js';
 import {
   piezasCubo, rotacionesColorCubo, NOMBRES_ESQUINAS, comprobarConteo, erroresDePiezas,
 } from './cubo-comun.js';
@@ -125,6 +126,7 @@ function generarScramble(rng = rngSeguro()) {
 
 export default definirPuzzle({
   id: '2x2',
+  colocarPiezas: colocarNxN(2),
   nombre: '2x2',
   capacidades: { scramble: true, validar: true, resolver: true, editar: true },
   descripcion: 'Solución óptima en movimientos U, R, F (la esquina DBL queda fija).',

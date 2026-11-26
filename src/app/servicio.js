@@ -76,7 +76,7 @@ export function atender(msg) {
       if (!p.capacidades.validar) throw new Error(`${p.nombre} no tiene validador`);
       // capacidades.validar => validar existe (lo comprueba definirPuzzle al cargar; el tipo no lo sabe)
       const v = /** @type {Required<Puzzle<unknown>>['validar']} */ (p.validar)(msg.estado, msg.opciones || {});
-      return { valido: v.valido, errores: v.errores, resultado: v.resultado || (v.valido ? 'valido' : 'imposible'), ...(v.avisos ? { avisos: v.avisos } : {}) };
+      return { valido: v.valido, errores: v.errores, resultado: v.resultado || (v.valido ? 'valido' : 'imposible'), ...(v.avisos ? { avisos: v.avisos } : {}), ...(v.estado ? { estado: v.estado } : {}) };
     }
     case 'resolver': {
       if (!p.capacidades.resolver) throw new Error(`${p.nombre} no tiene solucionador`);
