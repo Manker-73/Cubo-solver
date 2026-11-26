@@ -1,5 +1,25 @@
 # Estado del proyecto (sesión «orden de Bandaged Cubes» tras la noche 13 — 24/11/2026)
 
+> Progreso de la sesión «longitud del scramble práctico» (26/11/2026): longitud WCA por defecto (40 en 4x4, 60 en 5x5) ✔ · selector 30 · WCA · 100 · mezclado con URL y navegador ✔ · calidad por longitud medida con la distribución exacta (5x5 de 16 barras y 2x4x4) y mostrada junto al selector ✔ · determinismo de cada longitud ✔ · configuraciones sin práctico sin cambios ✔ · tests del selector y la URL ✔ · `test:humo` ✔ · tests de la app 25/25 ✔ · Action `test:rapido` ✔ · Chromium escritorio y móvil (CPU ×4) cambiando de longitud y resolviendo con cada una, sin errores ✔ · docs ✔ · artifact ✔.
+
+## Sesión: longitud del scramble práctico
+
+- Por defecto, la longitud del scramble WCA del tamaño (60 en el 5x5, 40 en el 4x4). Selector `30 · 60 (WCA) · 100 · Mezclado (unos N)` con la calidad de la elegida al lado; la elección va en la URL (`&scramble=…`) y se recuerda en el navegador.
+- **Calidad (200 scrambles por longitud, frente a la distribución exacta de las geometrías)**:
+
+| Configuración | Longitud | Mezcla de la forma | Distancia media (exacta) | % a distancia ≤ 10 (exacta) |
+| :--- | :--- | :--- | :--- | :--- |
+| 5x5 de 16 barras | 30 | 24 % | 8,03 (14,49) | 86,0 % (10,5 %) |
+| 5x5 de 16 barras | 60 (WCA) | 36 % | 9,38 (14,49) | 69,5 % (10,5 %) |
+| 5x5 de 16 barras | 100 | 46 % | 10,21 (14,49) | 58,0 % (10,5 %) |
+| 5x5 de 16 barras | mezclado (~922) | 90 % | 14,46 (14,49) | 12,5 % (10,5 %) |
+| 2x4x4 | 30 | 86 % | 7,81 (8,08) | 100 % (100 %) |
+| 2x4x4 | 40 (WCA) | 90 % | 7,90 (8,08) | 100 % (100 %) |
+| 2x4x4 | 100 | 93 % | 7,97 (8,08) | 100 % (100 %) |
+| 2x4x4 | mezclado (~171) | 96 % | 8,04 (8,08) | 100 % (100 %) |
+
+  Mezcla = 1 − TV de la distribución de la distancia (ruido ~0,05–0,1 con 200 muestras). El 2x4x4 tiene 807.003 geometrías y diámetro 11.
+
 > Progreso de la sesión «509 giros, determinismo y scramble práctico» (26/11/2026): causa de los 509 (Resolver resolvía el estado del scramble anterior) ✔ y test ✔ · scrambles deterministas por semilla en cualquier máquina ✔ y test ✔ · scramble práctico de 100 giros con aviso + mezclado a petición ✔ y tests ✔ · calidad del práctico medida con la distribución exacta ✔ · benchmark de 200 en los dos modos ✔ · configuraciones de antes idénticas ✔ · `npm run tipos` ✔ · `test:humo` ✔ · Action `test:rapido` ✔ · suite completa de `tests/bloqueos.test.mjs` en GitHub ✔ (45815805833, con este código: 200 scrambles y 200 soluciones por configuración grande y modo) · Chromium escritorio y móvil sin errores ✔ · workflow de la suite retirado ✔ (la rama `suite/bloqueos` hay que borrarla a mano en GitHub: el proxy no deja) · docs ✔ · artifact ✔.
 
 ## Sesión: 509 giros, determinismo y scramble práctico (5x5 de 16 barras)

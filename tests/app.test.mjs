@@ -1037,7 +1037,7 @@ test('app: configuración muy restringida: selector de longitud del práctico (3
   const opciones = [...doc.querySelectorAll('#longitud-practico .opcion-longitud')].map((b) => b.textContent);
   assert.equal(opciones.length, 4);
   assert.deepEqual(opciones.slice(0, 3), ['30', '60 (WCA)', '100']);
-  assert.match(opciones[3], /^Mezclado \(unos [\d.]+\)$/);
+  assert.equal(opciones[3], 'Mezclado (unos 922)', 'la longitud anunciada es la media medida (200 scrambles)');
   assert.equal(marcada().dataset.valor, '30');
   assert.match(doc.getElementById('calidad-practico').textContent, /^Mezcla de la forma: 24 %/);
   assert.match(w.location.hash, /&scramble=30$/);

@@ -819,3 +819,24 @@ Simulaciones de cuboides sobre el 4x4 (`bloquesSinCortes`): **2x4x4** (sin los c
 
 ## Bloque 4: CI
 - Fuera `.github/workflows/suite-bloqueos.yml`. La rama remota `suite/bloqueos` no se pudo borrar desde la sesión (el proxy corta el `git push --delete`): hay que borrarla a mano en GitHub (Branches). para lanzar la suite de bloqueos sin permisos de `workflow_dispatch`, después de ejecutarla una última vez con este código: ejecución 45815805833, ✔). La suite completa se lanza a mano desde «Tests (rápido)» con el nivel `completo` (ver ESTADO.md).
+
+# Sesión «longitud del scramble práctico» (26/11/2026)
+
+- **Longitud por defecto = la del scramble WCA del tamaño**: la de la app (`LONGITUD_WCA` de nxn.js, comprobado generando scrambles): **40 en el 4x4 y 60 en el 5x5** (25 en el 3x3, donde el práctico no sale en ninguna configuración probada). `puzzleConBloqueos` la toma del puzzle base (`longitudScramble`), así que vale igual en la interfaz, el Worker y los tests. El umbral para usar el práctico no cambia (mezclar > 10.000 pasos y mezclado > 200 giros).
+- **Selector** (solo con el práctico): `30 · 60 (WCA) · 100 · Mezclado (unos N)`; en el 4x4, `30 · 40 (WCA) · 100 · …`. Junto a él, la calidad de la elegida: «Mezcla de la forma: 36 % (distancia media de la forma al resuelto 9,38, frente a 14,49 en un estado al azar)». La elección va en la URL (`&scramble=30|40|60|100|mezclado`) y se recuerda en el navegador (`localStorage['cubo-solver:scramble-practico']`); prioridad: URL, navegador, WCA. Una longitud que la configuración no ofrece (60 en un 4x4) cuenta como la WCA. Las configuraciones sin práctico no muestran nada ni llevan `scramble=` en la URL aunque haya una elección guardada (test).
+- **Longitud anunciada del mezclado**: la media de 3 del análisis (que decide si se usa el práctico, y no la cambio para no mover ese umbral) se quedaba corta: 687 frente a 922 de media con 200 en el 5x5. El selector anuncia la media medida (`longitudMedia` en la tabla de calidad: 922 y 171) y, si la configuración no está medida, la estimación del análisis.
+- **Determinismo**: `generarScramble(rng, { giros })` solo depende de la semilla (paseo sobre los giros legales); el test de las dos «máquinas» comprueba 30, la WCA, 100 y el mezclado.
+- **Calidad por longitud** (200 scrambles por longitud, semilla 77; distancia de la forma al resuelto frente a la distribución EXACTA: BFS completo en C, `herr/c/bfs5.c`; el 2x4x4 tiene **807.003 geometrías, diámetro 11**). «Mezcla» = 1 − TV entre las dos distribuciones de distancia; con 200 muestras la TV tiene un ruido de ~0,05–0,1, por eso el mezclado no llega al 100 %. Los valores se guardan en `src/core/calidad-practico.js` (solo de estas dos configuraciones; las demás no muestran la calidad).
+
+| Configuración | Longitud | Mezcla de la forma | Distancia media (exacta) | % de formas a distancia ≤ 10 (exacta) |
+| :--- | :--- | :--- | :--- | :--- |
+| 5x5 de 16 barras | 30 | 24 % | 8,03 (14,49) | 86,0 % (10,5 %) |
+| 5x5 de 16 barras | **60 (WCA)** | **36 %** | 9,38 (14,49) | 69,5 % (10,5 %) |
+| 5x5 de 16 barras | 100 | 46 % | 10,21 (14,49) | 58,0 % (10,5 %) |
+| 5x5 de 16 barras | mezclado (~922 giros) | 90 % | 14,46 (14,49) | 12,5 % (10,5 %) |
+| 2x4x4 (4x4) | 30 | 86 % | 7,81 (8,08) | 100 % (100 %) |
+| 2x4x4 (4x4) | **40 (WCA)** | **90 %** | 7,90 (8,08) | 100 % (100 %) |
+| 2x4x4 (4x4) | 100 | 93 % | 7,97 (8,08) | 100 % (100 %) |
+| 2x4x4 (4x4) | mezclado (~171 giros) | 96 % | 8,04 (8,08) | 100 % (100 %) |
+
+  En el 2x4x4 el «% a distancia ≤ 10» no distingue nada (el diámetro es 11): la forma mezcla casi del todo ya con 30 giros. En el 5x5 de 16 barras, ni 100 giros se acercan (46 %); el de 100 de la sesión anterior dio 43 % con 2.000 muestras y otra semilla (la diferencia es ruido).

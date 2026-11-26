@@ -535,9 +535,13 @@ function pintarAvisoScramble() {
   caja.hidden = false;
   const fmt = (n) => Number(n).toLocaleString('es-ES');
   const actual = eleccionEfectiva(p);
+  // longitud anunciada del mezclado: la media medida con 200 (tabla de calidad) o, si no está, la
+  // estimación del análisis (media de 3, que puede quedarse corta: 687 frente a 922 en el 5x5)
+  const cm = a.calidadPractico && a.calidadPractico.mezclado;
+  const lonMezclado = cm && cm.longitudMedia ? cm.longitudMedia : a.longitudMezclado;
   const mezclado = actual === 'mezclado';
   $('aviso-scramble-texto').textContent = mezclado
-    ? `Scramble de estado mezclado: la inversa de una solución comprobada de un estado bien mezclado (${fmt(a.pasosMezcla)} pasos de un paseo al azar). Es largo: unos ${fmt(a.longitudMezclado)} giros.`
+    ? `Scramble de estado mezclado: la inversa de una solución comprobada de un estado bien mezclado (${fmt(a.pasosMezcla)} pasos de un paseo al azar). Es largo: unos ${fmt(lonMezclado)} giros.`
     : `Configuración muy restringida: scramble práctico de giros al azar, no de estado aleatorio. Mezclar de verdad necesita unos ${fmt(a.pasosMezcla)} pasos de un paseo al azar.`;
   // selector: 30 · WCA (por defecto) · 100 · Mezclado
   const sel = $('longitud-practico');
@@ -550,7 +554,7 @@ function pintarAvisoScramble() {
     b.dataset.valor = o.valor;
     b.setAttribute('role', 'radio');
     b.setAttribute('aria-checked', String(o.n === actual));
-    b.textContent = o.n === 'mezclado' ? `Mezclado (unos ${fmt(a.longitudMezclado)})` : o.n === a.girosPractico ? `${o.n} (WCA)` : String(o.n);
+    b.textContent = o.n === 'mezclado' ? `Mezclado (unos ${fmt(lonMezclado)})` : o.n === a.girosPractico ? `${o.n} (WCA)` : String(o.n);
     b.title = o.n === 'mezclado' ? 'Inversa de una solución comprobada de un estado bien mezclado' : `${o.n} giros legales al azar`;
     b.addEventListener('click', () => {
       if (o.n === actual) return;

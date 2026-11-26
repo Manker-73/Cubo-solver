@@ -552,7 +552,7 @@ export interface InfoBloqueos {
    * Calidad medida de cada longitud (sesión «longitud del práctico»): distancia de la forma al
    * resuelto frente a la distribución exacta; mezcla = 1 − TV, en %. Solo de las configuraciones medidas.
    */
-  calidadPractico?: Record<string, { mezcla: number; distanciaMedia: number; distanciaExacta: number; hasta10: number; hasta10Exacta: number; muestras: number }>;
+  calidadPractico?: Record<string, { mezcla: number; distanciaMedia: number; distanciaExacta: number; hasta10: number; hasta10Exacta: number; muestras: number; longitudMedia?: number }>;
   longitudMezclado?: number;
   msLongitudMezclado?: number;
   /** Cómo se hacen los scrambles: 'bfs' (estado uniforme), 'paseo' (paseo fijo) o 'fase2' (estado aleatorio de la fase 2 + paseo). */
