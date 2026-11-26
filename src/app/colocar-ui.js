@@ -138,6 +138,8 @@ export function abrirColocar(doc, op) {
       accion(() => { S.colocar(h, g); sel = { tipo: 'hueco', h }; });
       return;
     }
+    // volver a tocar el hueco vacío elegido lo deja de elegir
+    if (sel && sel.tipo === 'hueco' && sel.h === h && !S.colocada(h)) { sel = null; aviso = null; pintar(); return; }
     sel = { tipo: 'hueco', h };
     if (!S.colocada(h)) {
       const c = S.candidatos(h);
@@ -171,9 +173,11 @@ export function abrirColocar(doc, op) {
       const h = M.bloques[b].colocaciones[S.colocacionBloque(b)].huecos[0];
       sel = { tipo: 'hueco', h };
       aviso = null;
-    } else if (sel && sel.tipo === 'hueco' && !S.colocada(sel.h)) {
+    } else if (sel && sel.tipo === 'hueco' && !S.colocada(sel.h) && M.bloques[b].colocaciones.some((c, ci) => c.huecos.includes(/** @type {{ h: number }} */ (sel).h) && S.posicionesBloque(b) > 0 && ci >= 0)) {
+      // hay un hueco vacío elegido: el bloque va ahí si cabe; si no, queda elegido para tocar otro
       const h = sel.h;
-      accion(() => S.colocarBloque(b, h));
+      try { accion(() => { S.colocarBloque(b, h); sel = { tipo: 'hueco', h }; }); } catch { /* accion ya lo dice */ }
+      if (S.colocacionBloque(b) < 0) { sel = { tipo: 'bloque', b }; tipoAviso = 'error'; pintar(); }
       return;
     } else {
       sel = sel && sel.tipo === 'bloque' && sel.b === b ? null : { tipo: 'bloque', b };
@@ -361,7 +365,8 @@ export function abrirColocar(doc, op) {
       cont.appendChild(s);
       return l;
     };
-    if (M.bloques.length) {
+    // (con todos los bloques colocados la sección se oculta: se eligen tocándolos en el puzzle)
+    if (M.bloques.some((b) => S.colocacionBloque(b.id) < 0)) {
       const l = seccion(`Bloques (${M.bloques.filter((b) => S.colocacionBloque(b.id) < 0).length} por colocar)`);
       for (const bq of M.bloques) {
         const puesto = S.colocacionBloque(bq.id) >= 0;
@@ -379,7 +384,7 @@ export function abrirColocar(doc, op) {
       const gs = M.grupos.filter((g) => g.tipo === t.id);
       if (!gs.length) continue;
       const quedan = gs.reduce((a, g) => a + S.restantes(g.id), 0);
-      if (!quedan && t.fija) continue;
+      if (!quedan) continue;
       const l = seccion(`${t.nombre} (${quedan} por colocar)`);
       for (const g of gs) {
         const r = S.restantes(g.id);

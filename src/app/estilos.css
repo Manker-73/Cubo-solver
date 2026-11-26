@@ -429,13 +429,16 @@ html.colocando, html.colocando body { overflow: hidden; }
 .colocar-vistas { min-height: 0; display: flex; padding: 8px 16px 0; }
 .colocar-vistas .vista { flex: 1 1 auto; min-height: 0; height: 100%; width: 100%; }
 .colocar-vistas .vista[hidden] { display: none; }
-.colocar-vistas .colocar-2d svg { width: 100%; height: 100%; max-height: 100%; }
+.colocar-vistas .vista.colocar-2d { padding: 6px; }
+.colocar-vistas .colocar-2d svg { width: 100%; height: 100%; max-width: none; max-height: 100%; }
 .colocar-vistas .vista-3d { height: 100%; }
 .colocar .vista svg polygon.pegatina { cursor: pointer; }
 .colocar-panel {
-  display: flex; flex-direction: column; gap: 8px; padding: 8px 16px; overflow-y: auto; min-height: 0;
-  max-height: 46vh; border-top: 1px solid var(--linea); background: var(--superficie);
+  display: flex; flex-direction: column; gap: 8px; padding: 8px 16px; overflow: hidden; min-height: 0;
+  max-height: 48vh; border-top: 1px solid var(--linea); background: var(--superficie);
 }
+/* solo la bandeja se desplaza: lo elegido y sus botones (Girar, Quitar…) siempre a la vista */
+.colocar-bandeja { overflow-y: auto; min-height: 0; flex: 1 1 auto; overscroll-behavior: contain; }
 .colocar-ayuda { margin: 0; font-size: 0.9rem; color: var(--tinta); }
 .colocar-mensaje { display: flex; flex-direction: column; gap: 2px; }
 .colocar-mensaje[hidden] { display: none; }
