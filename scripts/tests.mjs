@@ -75,7 +75,9 @@ if (nivel === 'completo') {
     env: { NIVEL: 'humo', CASOS: process.env.CASOS || '100' },
     // noche 11: diseño (rutas y contraste), navegación entre secciones, tema, enlaces antiguos y recorrido completo
     patrones: ['^humo:', '^registro:', '^interfaz:', '^diseño:', '^app: sin Worker, construye', '^app: con Web Worker',
-      '^app: navegación', '^app: tema', '^app: bloqueos compartidos por URL', '^app: recorrido completo'],
+      '^app: navegación', '^app: tema', '^app: bloqueos compartidos por URL', '^app: recorrido completo',
+      // noche 14: colocar piezas en pantalla completa (WCA y Bandaged, 3x3 y 4x4)
+      '^app: colocar piezas'],
   }) || errTipos;
 } else if (nivel === 'solo') {
   const areas = resto.map((a) => ALIAS[a] || ALIAS[a.toLowerCase()] || a.toLowerCase());

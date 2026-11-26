@@ -1324,3 +1324,129 @@ test('app: recorrido completo (scramble → resolver → reproducir) en WCA Puzz
   assert.deepEqual(errores, []);
   w.close();
 });
+
+// ===========================================================================
+// Noche 14: «Colocar piezas» en pantalla completa. Se introduce el estado de un scramble de la app
+// pulsando la interfaz como un usuario (tocar un hueco de la red 2D, elegir la pieza en la lista,
+// Girar; elegir un bloque en la bandeja y tocar un hueco, Girar / Siguiente posición), se aplica, se
+// sale de la pantalla completa, se resuelve y se reproduce hasta el final.
+// ===========================================================================
+import { EJEMPLOS_NXN } from '../src/puzzles/nxn-identidad.js';
+
+/** Colores de un estado (de colores o de identidades) según el modelo del editor. */
+function coloresSegunModelo(M, e) {
+  const color = new Map();
+  for (const pz of M.piezas) pz.valores.forEach((v, j) => color.set(v, pz.colores[j]));
+  return e.map((v) => (v < 0 ? -1 : color.get(v)));
+}
+
+/** Introduce `objetivo` en el editor abierto pulsando sus botones y la red 2D. Devuelve los toques. */
+async function colocarPulsando(ctx, objetivo) {
+  const { w, doc, hasta } = ctx;
+  const ed = w.cuboSolver.colocar();
+  const M = ed.modelo, S = ed.sesion;
+  const raiz = doc.getElementById('colocar');
+  const quiero = coloresSegunModelo(M, objetivo);
+  let toques = 0;
+  // (las pegatinas son polígonos SVG: en jsdom no tienen click(), se manda el evento)
+  const pulsar = (el) => { assert.ok(el, 'falta un botón'); el.dispatchEvent(new w.MouseEvent('click', { bubbles: true })); toques++; };
+  const pegatina = (i) => raiz.querySelector(`#colocar-2d [data-i="${i}"]`);
+  // bloques
+  for (const bq of M.bloques) {
+    const ci = bq.colocaciones.findIndex((c) => c.tuplas.every((t, j) => t.every((i, k) => objetivo[i] === M.piezas[bq.piezas[j]].valores[k])));
+    assert.ok(ci >= 0);
+    pulsar(raiz.querySelector(`#colocar-bandeja [data-bloque="${bq.id}"]`));
+    pulsar(pegatina(M.pegatinasHueco(bq.colocaciones[ci].huecos[0])[0]));
+    for (let v = 0; S.colocacionBloque(bq.id) !== ci && v < 30; v++) pulsar(raiz.querySelector('#colocar-girar'));
+    for (let v = 0; S.colocacionBloque(bq.id) !== ci && v < 200; v++) pulsar(raiz.querySelector('#colocar-siguiente'));
+    assert.equal(S.colocacionBloque(bq.id), ci, `bloque ${bq.nombre}`);
+  }
+  // piezas sueltas
+  for (let h = 0; h < M.piezas.length; h++) {
+    const peg = M.pegatinasHueco(h);
+    const ver = () => { const c = S.colores(); return peg.map((i) => c[i]).join(); };
+    const bien = peg.map((i) => quiero[i]).join();
+    const c = S.colocada(h);
+    if (c && (c.bloque >= 0 || ver() === bien)) continue;
+    pulsar(pegatina(peg[0]));
+    if (!S.colocada(h)) {
+      const clave = peg.map((i) => quiero[i]).sort((a, b) => a - b).join();
+      const b = [...raiz.querySelectorAll('#colocar-contexto .pieza-boton')].find((x) => M.grupos[+x.dataset.grupo].colores.slice().sort((a, b2) => a - b2).join() === clave);
+      pulsar(b);
+    }
+    for (let v = 0; ver() !== bien && v < 12; v++) pulsar(raiz.querySelector('#colocar-girar'));
+    assert.equal(ver(), bien, `hueco ${h}`);
+  }
+  assert.match(doc.getElementById('colocar-faltan').textContent, /Todo colocado/);
+  await hasta(() => doc.getElementById('colocar-mensaje').dataset.resultado, 120000);
+  return { toques, M };
+}
+
+async function probarColocar(ctx, nombre, { objetivo }) {
+  const { w, doc, hasta } = ctx;
+  const boton = doc.getElementById('colocar-piezas');
+  assert.equal(boton.hidden, false, `${nombre}: no está el botón «Colocar piezas»`);
+  boton.click();
+  assert.ok(doc.getElementById('colocar'), `${nombre}: no se abre el editor`);
+  assert.ok(doc.documentElement.classList.contains('colocando'), `${nombre}: no ocupa la pantalla`);
+  assert.equal(doc.getElementById('colocar').getAttribute('role'), 'dialog');
+  // empieza vacío (salvo las piezas fijas): huecos en gris y bandeja con lo que hay que colocar
+  assert.match(doc.getElementById('colocar-faltan').textContent, /^Faltan /);
+  assert.ok(doc.querySelectorAll('#colocar-bandeja .pieza-boton').length > 0);
+  const { toques, M } = await colocarPulsando(ctx, objetivo);
+  assert.equal(doc.getElementById('colocar-mensaje').dataset.resultado, 'valido', `${nombre}: ${doc.getElementById('colocar-mensaje').textContent}`);
+  assert.equal(doc.getElementById('colocar-aplicar').disabled, false);
+  doc.getElementById('colocar-aplicar').click();
+  assert.equal(doc.getElementById('colocar'), null, `${nombre}: el editor sigue abierto`);
+  assert.ok(!doc.documentElement.classList.contains('colocando'));
+  // el editor de la app tiene ese estado (los mismos colores) y se resuelve
+  assert.deepEqual(coloresSegunModelo(M, w.cuboSolver.editor()), coloresSegunModelo(M, objetivo), `${nombre}: el estado aplicado no es el colocado`);
+  doc.getElementById('resolver').click();
+  await hasta(() => !doc.getElementById('solucion').hidden || doc.querySelector('#mensajes .mensaje.error'), 120000);
+  assert.equal(doc.querySelector('#mensajes .mensaje.error'), null, `${nombre}: ${doc.getElementById('mensajes').textContent}`);
+  await reproducirHastaElFinal(ctx, nombre);
+  return toques;
+}
+
+/** Estado del scramble actual (Cargar, leer, Resetear). */
+async function estadoDelScramble(ctx) {
+  const { w, doc, hasta } = ctx;
+  await hasta(() => !doc.getElementById('cargar').disabled && !doc.getElementById('scramble').classList.contains('generando'), 120000);
+  doc.getElementById('cargar').click();
+  const e = w.cuboSolver.editor();
+  doc.getElementById('resetear').click();
+  return e;
+}
+
+test('app: colocar piezas en pantalla completa (WCA 3x3 y 4x4, Bandaged 3x3 y 4x4): colocar, aplicar, salir, resolver y reproducir', { timeout: 900000 }, async (t) => {
+  const ctx = await abrir(t, { url: 'https://localhost/#/wca/3x3' });
+  if (!ctx) return;
+  const { w, doc, hasta, errores } = ctx;
+  const toques = {};
+  // WCA 3x3
+  toques['WCA 3x3'] = await probarColocar(ctx, 'WCA 3x3', { objetivo: await estadoDelScramble(ctx) });
+  // Cancelar no cambia nada
+  const antes = JSON.stringify(w.cuboSolver.editor());
+  doc.getElementById('colocar-piezas').click();
+  doc.getElementById('colocar-cancelar').click();
+  assert.equal(doc.getElementById('colocar'), null);
+  assert.equal(JSON.stringify(w.cuboSolver.editor()), antes);
+  // WCA 4x4
+  w.location.hash = '#/wca/4x4';
+  await hasta(() => w.cuboSolver.estado().puzzle === '4x4');
+  toques['WCA 4x4'] = await probarColocar(ctx, 'WCA 4x4', { objetivo: await estadoDelScramble(ctx) });
+  // Bandaged 3x3 con una pareja
+  w.location.hash = '#/bandaged?bloqueos=UFR.UF';
+  await hasta(() => w.cuboSolver.estado().seccion === 'bandaged' && w.cuboSolver.estado().bloqueos === 1, 60000);
+  await hasta(() => /geometrías/.test(doc.getElementById('bloq-analisis').textContent), 120000);
+  toques['Bandaged 3x3'] = await probarColocar(ctx, 'Bandaged 3x3 (pareja)', { objetivo: await estadoDelScramble(ctx) });
+  // Bandaged 4x4 con varios bloques (centros iguales: la app elige cuál es cuál)
+  const def = EJEMPLOS_NXN[4].find((x) => x.id === 'varios').bloques;
+  w.location.hash = '#/bandaged?puzzle=4x4&bloqueos=' + encodeURIComponent(def.map((b) => b.join('.')).join('-'));
+  await hasta(() => w.cuboSolver.estado().puzzle === 'vendado-4x4' && w.cuboSolver.estado().bloqueos === def.length, 60000);
+  await hasta(() => /geometrías/.test(doc.getElementById('bloq-analisis').textContent), 300000);
+  toques['Bandaged 4x4'] = await probarColocar(ctx, 'Bandaged 4x4 (varios)', { objetivo: await estadoDelScramble(ctx) });
+  console.log('  [toques en la app]', JSON.stringify(toques));
+  assert.deepEqual(errores, []);
+  w.close();
+});

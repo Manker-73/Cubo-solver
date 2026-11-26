@@ -407,3 +407,67 @@ main:focus { outline: none; }
 .bloq-mas summary::before, .leyenda summary::before { content: ""; width: 7px; height: 7px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(-45deg); transition: transform 0.15s; flex: none; margin-right: 4px; }
 .bloq-mas[open] summary::before, .leyenda[open] summary::before { transform: rotate(45deg); }
 select { color-scheme: inherit; }
+
+/* ---------- Colocar piezas (noche 14): editor en pantalla completa ----------
+   Móvil: cabecera, puzzle, y abajo (zona del pulgar) panel con la bandeja y la barra de acciones.
+   Escritorio (≥ 900 px): puzzle a la izquierda, panel a la derecha. */
+html.colocando, html.colocando body { overflow: hidden; }
+.colocar {
+  position: fixed; inset: 0; z-index: 100; background: var(--fondo); color: var(--tinta);
+  display: grid; grid-template-rows: auto minmax(0, 1fr) auto; overflow: hidden;
+}
+.colocar:fullscreen { width: 100%; height: 100%; }
+.colocar-cab {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 8px 16px;
+  border-bottom: 1px solid var(--linea); background: var(--superficie);
+}
+.colocar-cab h2 { font: 800 1.1rem var(--f-display); margin: 0; flex: 1 1 auto; min-width: 0; }
+.colocar-cab h2:focus { outline: none; }
+.colocar-cab h2:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
+.colocar-faltan { font: 500 0.85rem var(--f-mono); color: var(--tenue); }
+.colocar-cuerpo { display: grid; grid-template-rows: minmax(160px, 1fr) minmax(0, auto); min-height: 0; overflow: hidden; }
+.colocar-vistas { min-height: 0; display: flex; padding: 8px 16px 0; }
+.colocar-vistas .vista { flex: 1 1 auto; min-height: 0; height: 100%; width: 100%; }
+.colocar-vistas .vista[hidden] { display: none; }
+.colocar-vistas .colocar-2d svg { width: 100%; height: 100%; max-height: 100%; }
+.colocar-vistas .vista-3d { height: 100%; }
+.colocar .vista svg polygon.pegatina { cursor: pointer; }
+.colocar-panel {
+  display: flex; flex-direction: column; gap: 8px; padding: 8px 16px; overflow-y: auto; min-height: 0;
+  max-height: 46vh; border-top: 1px solid var(--linea); background: var(--superficie);
+}
+.colocar-ayuda { margin: 0; font-size: 0.9rem; color: var(--tinta); }
+.colocar-mensaje { display: flex; flex-direction: column; gap: 2px; }
+.colocar-mensaje[hidden] { display: none; }
+.colocar-mensaje p { margin: 0; }
+.colocar-mensaje p.ok { color: var(--ok); }
+.colocar-mensaje p.error { color: var(--error); }
+.colocar-candidatos, .colocar-botones, .bandeja-lista { display: flex; flex-wrap: wrap; gap: 8px; }
+.bandeja-seccion h3 { font: 600 0.78rem var(--f-texto); text-transform: uppercase; letter-spacing: 0.04em; color: var(--tenue); margin: 6px 0 6px; }
+.pieza-boton {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 44px; min-width: 44px; padding: 0 10px;
+  border-radius: var(--radio); border: 1px solid var(--linea); background: var(--fondo); color: var(--tinta);
+  font: 500 0.85rem var(--f-texto); cursor: pointer;
+}
+.pieza-boton:hover { border-color: var(--tenue); }
+.pieza-boton[aria-pressed="true"] { border-color: var(--acento); box-shadow: 0 0 0 2px var(--acento); }
+.pieza-boton.puesta { opacity: 0.7; }
+.pieza-boton small { color: var(--tenue); font-family: var(--f-mono); }
+.muestra-pieza { display: inline-flex; gap: 2px; }
+.muestra-pieza i { width: 16px; height: 16px; border-radius: 3px; border: 1px solid rgba(0, 0, 0, 0.45); display: inline-block; }
+.colocar-pie {
+  display: flex; gap: 8px; padding: 8px 16px calc(8px + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--linea); background: var(--superficie);
+}
+.colocar-pie .principal { margin-left: auto; }
+@media (min-width: 900px) {
+  .colocar-cuerpo { grid-template-rows: none; grid-template-columns: minmax(0, 1fr) minmax(320px, 420px); }
+  .colocar-vistas { padding: 16px; }
+  .colocar-panel { max-height: none; border-top: 0; border-left: 1px solid var(--linea); padding: 16px; }
+}
+@media (max-width: 420px) {
+  .colocar-cab { padding: 6px 12px; }
+  .colocar-panel, .colocar-pie { padding-left: 12px; padding-right: 12px; }
+  .colocar-vistas { padding: 6px 12px 0; }
+  .colocar-pie .boton { padding: 0 12px; }
+}

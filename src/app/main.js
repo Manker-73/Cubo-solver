@@ -11,6 +11,7 @@ import { puzzleConBloqueos, claveBloqueos } from '../core/bloqueos.js';
 import { crearPanelBloqueos, bloqueosDeURL, leerBloqueosGuardados, textoDeBloqueos } from './bloqueos-ui.js';
 import { SECCIONES, INTRO_SECCION, seccion as datosSeccion, leerRuta, hashDe } from './secciones.js';
 import { crearTema } from './tema.js';
+import { abrirColocar, puedeColocar } from './colocar-ui.js';
 
 /* global __CODIGO_WORKER__ */
 const CODIGO_WORKER = typeof __CODIGO_WORKER__ !== 'undefined' ? __CODIGO_WORKER__ : null;
@@ -249,6 +250,56 @@ function puedeResolver(p) {
   return p.capacidades.resolver && p.capacidades.editar;
 }
 
+// ---------- Colocar piezas (noche 14) ----------
+// Editor en pantalla completa para introducir el estado de un puzzle físico colocando bloques y
+// piezas (src/app/colocar-ui.js; la lógica, en src/core/colocar.js). El estado se valida en el
+// Worker con el validador de siempre (en los vendados con centros iguales, eligiendo las
+// identidades: opción elegirIguales) y, al aplicar, pasa al editor como cualquier otro.
+let editorColocar = null;
+function pintarBotonColocar() {
+  const b = $('colocar-piezas');
+  if (!b) return;
+  const p = st.p;
+  const ok = !!p && puedeResolver(p) && puedeColocar(baseDe(p) || p) && !panelBloqueos.editando();
+  b.hidden = !ok;
+  b.disabled = !ok || ocupado();
+}
+function abrirEditorColocar() {
+  const p = st.p;
+  const base = baseDe(p) || p;
+  if (!puedeColocar(base) || editorColocar) return;
+  repSol.cancelar();
+  const bloques = p.bloqueos && p.piezasDeBloques ? p.piezasDeBloques().map((b) => ({ nombre: b.piezas.join('+'), pegatinas: b.pegatinas })) : [];
+  const rotaciones = bloques.length && base.soporteBloqueos ? base.soporteBloqueos.rotaciones : [];
+  const sel = st.sel;
+  editorColocar = abrirColocar(document, {
+    puzzle: p,
+    base,
+    bloques,
+    rotaciones,
+    webgl: st.webgl,
+    modo: st.modo.edicion,
+    alCambiarModo: (m) => { st.modo.edicion = m; guardarModos(); },
+    validar: (estado) => motor.pedir('validar', p.id, datosDe(p, { estado, opciones: { elegirIguales: true } }), { prioridad: 'alta' }),
+    alAplicar: (estado, v) => {
+      editorColocar = null;
+      if (st.p !== p || st.sel !== sel) return;
+      recordar();
+      quitarSolucion();
+      st.seleccion = null;
+      st.editor = p.clonar(estado);
+      st.secuenciaEditor = null;
+      st.editorCargado = null;
+      limpiarMensajes();
+      if (v.resultado === 'sin-comprobar') mensaje('aviso', 'Estado introducido sin comprobar del todo: puedes intentar resolverlo.');
+      else mensaje('ok', 'Estado introducido y válido: pulsa «Resolver».');
+      pintarEditor();
+      $('resolver').focus({ preventScroll: true });
+    },
+    alCerrar: () => { editorColocar = null; },
+  });
+}
+
 // ---------- Selector ----------
 function pintarSelector() {
   const nav = $('selector');
@@ -298,6 +349,7 @@ function pintarSelector() {
 async function seleccionar(id) {
   const p = puzzleActivo(id);
   if (!p) return;
+  if (editorColocar) editorColocar.cerrar();
   // Los dos paneles cambian a la vez y al momento; lo que esté en marcha para el
   // puzzle anterior sigue en el Worker, pero su respuesta ya no se mostrará.
   pararReproduccion();
@@ -764,6 +816,7 @@ function estadoMostrado() {
 
 function pintarEditor() {
   const p = st.p;
+  pintarBotonColocar();
   if (panelBloqueos.editando()) {
     // editando los bloques: el editor enseña el cubo resuelto con los bloques del borrador
     $('panel-resolver').dataset.puzzle = p.id;
@@ -1303,6 +1356,7 @@ function aplicarRuta({ navegacion = false } = {}) {
   $('herramienta').dataset.seccion = herramienta ? r.seccion : '';
   if (herramienta) ordenarPaneles(r.seccion);
   if (!herramienta) {
+    if (editorColocar) editorColocar.cerrar();
     // fuera de las herramientas: nada se anima en segundo plano
     repSol.cancelar();
     repScr.cancelar();
@@ -1381,6 +1435,7 @@ function iniciar() {
     pintarEditor();
   });
   $('resolver').addEventListener('click', resolver);
+  $('colocar-piezas').addEventListener('click', abrirEditorColocar);
 
   $('sel-metodo').addEventListener('change', cambiarMetodo);
   try { st.metodos = JSON.parse(localStorage.getItem('cubo-solver:metodos') || '{}') || {}; } catch { /* */ }
@@ -1418,6 +1473,8 @@ function iniciar() {
     // (para las comprobaciones en Chromium: muestra un scramble concreto como si lo hubiera generado
     // la app; sesión «validador con muchas geometrías», el scramble del fallo)
     mostrarScramble: (movs) => mostrarScramble(st.p, movs),
+    // editor «Colocar piezas» abierto (o null): sus acciones, las mismas que los botones (noche 14)
+    colocar: () => editorColocar,
   };
   $('copiar').addEventListener('click', (e) => copiar(st.p.formatear(st.scramble), e.currentTarget));
   $('copiar-sol').addEventListener('click', (e) => st.sol && copiar(st.p.formatear(st.sol.movimientos), e.currentTarget));
