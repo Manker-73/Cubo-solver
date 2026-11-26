@@ -116,6 +116,48 @@ test('app: sin Worker, construye, carga y resuelve un scramble en cada puzzle co
   w.close();
 });
 
+// Sesión «509 giros» (26/11/2026): tras «Nuevo scramble», «Resolver» seguía resolviendo el estado
+// cargado ANTES (el editor no cambiaba): cuatro scrambles distintos daban la misma solución.
+test('app: tras un scramble nuevo, Resolver no resuelve el estado del scramble anterior', async (t) => {
+  const ctx = await abrir(t);
+  if (!ctx) return;
+  const { w, doc, hasta, errores } = ctx;
+  const listo = () => doc.getElementById('scramble').textContent.length > 0 && !doc.getElementById('scramble').classList.contains('generando');
+  const resolver = async () => {
+    doc.getElementById('resolver').click();
+    await hasta(() => (!doc.getElementById('solucion').hidden && !doc.getElementById('resolver').disabled) || doc.querySelector('.mensaje.error'));
+    assert.equal(doc.querySelector('.mensaje.error'), null);
+    return doc.getElementById('movs').textContent;
+  };
+  doc.getElementById('cargar').click();
+  const e1 = JSON.stringify(Array.from(w.cuboSolver.editor()));
+  const s1 = await resolver();
+  // scramble nuevo SIN pulsar «Cargar»: el editor (sin tocar desde que se cargó) pasa al scramble nuevo
+  const scr1 = doc.getElementById('scramble').textContent;
+  doc.getElementById('nuevo').click();
+  await hasta(() => listo() && doc.getElementById('scramble').textContent !== scr1);
+  assert.notEqual(JSON.stringify(Array.from(w.cuboSolver.editor())), e1, 'el editor sigue con el estado del scramble anterior');
+  assert.equal(doc.getElementById('solucion').hidden, true, 'la solución del scramble anterior sigue a la vista');
+  const s2 = await resolver();
+  assert.notEqual(s2, s1, 'misma solución que el scramble anterior');
+  doc.getElementById('r-fin').click();
+  assert.equal(w.cuboSolver.resuelto(), true);
+  // si el usuario ha editado el estado, no se le borra: se le avisa de que no es el scramble actual
+  doc.getElementById('resetear').click();
+  const scr2 = doc.getElementById('scramble').textContent;
+  doc.getElementById('cargar').click();
+  // pintar una pegatina (editar el estado)
+  doc.querySelectorAll('#paleta .color')[1].click();
+  doc.querySelector('#vista-editor .pegatina').dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
+  const editado = JSON.stringify(Array.from(w.cuboSolver.editor()));
+  doc.getElementById('nuevo').click();
+  await hasta(() => listo() && doc.getElementById('scramble').textContent !== scr2);
+  assert.equal(JSON.stringify(Array.from(w.cuboSolver.editor())), editado, 'se ha perdido el estado editado');
+  assert.match(doc.getElementById('mensajes').textContent, /Cargar scramble actual/);
+  assert.deepEqual(errores, []);
+  w.close();
+});
+
 test('app: sin WebGL (jsdom), todo en 2D; el reproductor del scramble recorre los movimientos', async (t) => {
   const ctx = await abrir(t);
   if (!ctx) return;

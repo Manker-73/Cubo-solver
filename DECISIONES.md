@@ -775,3 +775,18 @@ Simulaciones de cuboides sobre el 4x4 (`bloquesSinCortes`): **2x4x4** (sin los c
 - Estimar el número de geometrías y la mezcla con paseos de 25.600 pasos (sesgados hacia la resuelta: ver arriba).
 - La búsqueda voraz pura: caminos 3 veces más largos.
 - Contar R enumerándolo (con barras de clases grandes, como el 2x4x4, eran 48 s; con el producto de órbitas, 0,15 s).
+
+# Sesión «509 giros, determinismo y scramble práctico» (26/11/2026)
+
+## Bloque 1: los 509 giros
+**Síntoma** (GitHub Pages, Chromium de escritorio, 5x5 de 16 barras): cuatro scrambles distintos (783, 575, 793 y 972 giros) daban siempre una solución de 509 giros.
+
+**Investigación** (desde aquí no se llega a github.io por el proxy; lo reproduje con el `dist/` del mismo commit que publica Pages, en Chromium con Playwright, `herr/inv509*.py`):
+- *Unicidad de estados*: 20 scrambles (semilla 11) → 20 estados distintos (md5 del estado). En Chromium, 5 scrambles con «Cargar» cada vez → 5 estados distintos en el editor y 5 soluciones distintas (552, 472, 791, 782 y 673 giros). El generador no repetía estados.
+- *Estado objetivo*: lo mismo pero pulsando «Cargar» solo la primera vez (Nuevo scramble → Resolver directamente): **el estado del editor tenía la misma huella las cuatro veces** (746d25d8) y las soluciones salieron de 286, 286, 288 y 285 giros con los mismos 12 primeros giros (dos idénticas byte a byte; las otras cambian unos pocos giros porque Minkwitz prueba prefijos al azar). Era el patrón de los 509: el solver resolvía bien, pero un estado residual, el del scramble cargado antes.
+- *Las soluciones*: todas comprobadas giro a giro (legales, dejan el resuelto). No había ningún fallo en el solver.
+- *Trazado del solver* con scrambles legales cortos desde el resuelto (Node): 1 giro (`L2`) → 1 giro, estrategia A (IDA*); 3 (`Lw' R' L'`) → 3, A; 5 (`2F' B F2 Bw2 2B2`) → 3, A; 10 → 162, estrategia B (geometría 5 + Minkwitz 157). Las cuatro geometrías están en la tabla; ninguna pasa por un plan de respaldo.
+
+**Causa raíz**: «Nuevo scramble» no tocaba el editor. Con un scramble cargado, «Resolver» resolvía otra vez el estado del scramble ANTERIOR, aunque el panel mostrase uno nuevo; la solución vieja además seguía a la vista. No es propio de los vendados (pasa en todos los puzzles), pero en el 5x5 de 16 barras, donde cada solución tiene cientos de giros, «siempre la misma longitud» salta a la vista.
+
+**Corrección** (`seguirScrambleEnEditor` en `main.js`): al llegar un scramble nuevo, si el editor tiene el scramble cargado antes sin tocar (se compara su huella), pasa al nuevo y se quita la solución vieja; si el usuario lo ha editado, se le deja y sale un aviso: «pulsa “Cargar scramble actual” si quieres resolver el scramble». Test: `app: tras un scramble nuevo, Resolver no resuelve el estado del scramble anterior` (fallaba antes: «el editor sigue con el estado del scramble anterior»). En Chromium, sin pulsar «Cargar»: 4 scrambles → 4 estados en el editor y 4 soluciones distintas.

@@ -23,6 +23,8 @@ const st = {
   estadoScramble: null,
   /** Scramble con el que se cargó el editor (se manda al validar; el Worker comprueba que coincide). */
   secuenciaEditor: null,
+  /** Scramble cargado en el editor y su huella (para saber si se ha tocado; ver seguirScrambleEnEditor). */
+  editorCargado: null,
   editor: null,
   color: 0,       // índice en paleta + herramientas
   ultimoColor: 0, // último color de la paleta elegido (lo usan las herramientas con usaColor)
@@ -464,6 +466,43 @@ function mostrarScramble(p, movimientos) {
   const nota = $('nota-scramble');
   nota.textContent = p.notaScramble ? p.notaScramble(st.scramble) : '';
   nota.hidden = !p.notaScramble;
+  seguirScrambleEnEditor(p);
+}
+
+/** Huella de un estado para compararlos (arrays, typed arrays u objetos). */
+const huellaEstado = (e) => JSON.stringify(ArrayBuffer.isView(e) || Array.isArray(e) ? Array.from(/** @type {ArrayLike<unknown>} */ (e)) : e);
+
+/**
+ * Sesión «509 giros» (26/11/2026). Antes, con un scramble cargado en el editor, «Nuevo scramble» no
+ * tocaba el editor y «Resolver» volvía a resolver el estado del scramble ANTERIOR (cuatro scrambles
+ * distintos daban la misma solución de 509 giros). Ahora, si el editor tiene un scramble cargado sin
+ * tocar, pasa al nuevo (y se quita la solución vieja); si el usuario lo ha editado, se le deja y se
+ * le avisa de que no es el scramble actual.
+ */
+function seguirScrambleEnEditor(p) {
+  const c = st.editorCargado;
+  if (!c || c.clave !== claveP(p) || !st.estadoScramble || ocupado()) return;
+  if (c.scramble === st.scramble) return;
+  const actual = st.sol ? st.sol.base : st.editor;
+  if (actual && huellaEstado(actual) === c.huella) {
+    quitarSolucion();
+    st.seleccion = null;
+    cargarScrambleEnEditor(p);
+    limpiarMensajes();
+    pintarEditor();
+  } else {
+    limpiarMensajes();
+    mensaje('aviso', 'El editor tiene un estado que has cambiado, no el scramble nuevo: pulsa «Cargar scramble actual» si quieres resolver el scramble.');
+    st.editorCargado = null;
+  }
+}
+
+/** Pone el scramble actual en el editor y anota de dónde sale. */
+function cargarScrambleEnEditor(p) {
+  st.editor = st.estadoScramble ? p.clonar(st.estadoScramble) : p.estadoResuelto();
+  // de dónde sale el estado (para el validador de los vendados: alcanzable por construcción)
+  st.secuenciaEditor = st.estadoScramble && p.bloqueos ? st.scramble.slice() : null;
+  st.editorCargado = st.estadoScramble ? { clave: claveP(p), scramble: st.scramble, huella: huellaEstado(st.editor) } : null;
 }
 
 async function nuevoScramble() {
@@ -1207,9 +1246,7 @@ function iniciar() {
     recordar();
     quitarSolucion();
     st.seleccion = null;
-    st.editor = st.estadoScramble ? st.p.clonar(st.estadoScramble) : st.p.estadoResuelto();
-    // de dónde sale el estado (para el validador de los vendados: alcanzable por construcción)
-    st.secuenciaEditor = st.estadoScramble && st.p.bloqueos ? st.scramble.slice() : null;
+    cargarScrambleEnEditor(st.p);
     limpiarMensajes();
     pintarEditor();
   });
