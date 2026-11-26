@@ -315,7 +315,7 @@ export interface DefinicionPuzzle<E> {
   /** true si está resuelto (en cualquier orientación). */
   estaResuelto(estado: E): boolean;
   /** opciones.modo (vendados con mezcla extrema): 'practico' (por defecto) o 'mezclado'. */
-  generarScramble(rng: Rng, opciones?: { modo?: 'practico' | 'mezclado' }): Movimiento[];
+  generarScramble(rng: Rng, opciones?: { modo?: 'practico' | 'mezclado'; giros?: number }): Movimiento[];
   invertirMovimiento(mov: Movimiento): Movimiento;
   infoMovimiento(mov: Movimiento): InfoMovimiento;
   /** SVG (texto); las pegatinas editables llevan class="pegatina" data-i="i". */
@@ -545,6 +545,14 @@ export interface InfoBloqueos {
    */
   pasosMezcla?: number;
   scramblePractico?: boolean;
+  /** Longitud por defecto del práctico (la WCA del tamaño) y las que ofrece la interfaz. */
+  girosPractico?: number;
+  longitudesPractico?: number[];
+  /**
+   * Calidad medida de cada longitud (sesión «longitud del práctico»): distancia de la forma al
+   * resuelto frente a la distribución exacta; mezcla = 1 − TV, en %. Solo de las configuraciones medidas.
+   */
+  calidadPractico?: Record<string, { mezcla: number; distanciaMedia: number; distanciaExacta: number; hasta10: number; hasta10Exacta: number; muestras: number }>;
   longitudMezclado?: number;
   msLongitudMezclado?: number;
   /** Cómo se hacen los scrambles: 'bfs' (estado uniforme), 'paseo' (paseo fijo) o 'fase2' (estado aleatorio de la fase 2 + paseo). */
@@ -588,7 +596,7 @@ interface PeticionPuzzle {
 export type Peticion =
   | { op: 'ping' }
   | (PeticionPuzzle & { op: 'inicializar' })
-  | (PeticionPuzzle & { op: 'scramble'; opciones?: { modo?: 'practico' | 'mezclado' } })
+  | (PeticionPuzzle & { op: 'scramble'; opciones?: { modo?: 'practico' | 'mezclado'; giros?: number } })
   | (PeticionPuzzle & { op: 'validar'; estado: unknown; opciones?: OpcionesValidar })
   | (PeticionPuzzle & { op: 'resolver'; estado: unknown; opciones?: OpcionesResolver })
   | (PeticionPuzzle & { op: 'aprender'; estado: unknown; opciones?: { metodo?: string } });

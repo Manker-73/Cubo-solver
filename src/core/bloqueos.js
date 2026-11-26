@@ -30,6 +30,7 @@ import { crearCadena, permProducto, permInversa, completarAleatorio } from './sc
 import { crearTablaEstados } from './tabla-estados.js';
 import { crearTablasMinkwitz } from './minkwitz.js';
 import { rngConSemilla } from './rng.js';
+import { CALIDAD_PRACTICO } from './calidad-practico.js';
 
 /**
  * Tipos de los contratos (soporte, definición, análisis, puzzle vendado) en ./tipos.d.ts;
@@ -50,7 +51,9 @@ import { rngConSemilla } from './rng.js';
  *   buscador?: BuscadorGeometria | null }} Analisis  análisis de una configuración válida
  * @typedef {ReturnType<typeof crearBuscadorGeometria>} BuscadorGeometria
  * @typedef {{ movs: number[], optima?: boolean, metodo: string, ms?: number, fase1?: number, fase2?: number }} SolucionEstrategia
- * @typedef {{ rng?: Rng, limiteGeometrias?: number, limiteEstados?: number, msMinkwitz?: number }} OpcionesAnalisis
+ * @typedef {{ rng?: Rng, limiteGeometrias?: number, limiteEstados?: number, msMinkwitz?: number,
+ *   girosPractico?: number, tamano?: number }} OpcionesAnalisis  girosPractico: longitud por defecto del
+ *   scramble práctico (la WCA del tamaño); tamano: N (para la tabla de calidad del práctico)
  */
 
 /** Pasos del paseo de cada lazo al azar (configuraciones que no caben; ver lazosAlAzar). */
@@ -64,6 +67,15 @@ export const PASOS_GEOMETRIA_GRANDE = 409600;
 /** Bloque 3 (sesión «509 giros…»): umbral de pasos de mezcla para el scramble práctico, y sus giros. */
 export const UMBRAL_PRACTICO = 10000;
 export const PRACTICO_GIROS = 100;
+/**
+ * Sesión «longitud del scramble práctico» (26/11/2026): la longitud por defecto del práctico es la
+ * del scramble WCA de ese tamaño (opciones.girosPractico: 40 en el 4x4, 60 en el 5x5, 25 en el 3x3)
+ * y se puede pedir otra (opciones.giros: 30, 100…). El umbral para usar el práctico sigue siendo que
+ * el mezclado pase de UMBRAL_LONGITUD_MEZCLADO giros.
+ */
+export const UMBRAL_LONGITUD_MEZCLADO = 200;
+/** Longitudes que ofrece la interfaz además de la WCA. */
+export const LONGITUDES_PRACTICO = [30, 100];
 /** Semilla fija del análisis de las configuraciones que no caben (ver crearAnalisisBloqueos). */
 const SEMILLA_GRANDES = 20261126;
 /** Presupuesto de las tablas de Minkwitz en esas configuraciones: en pasos, no en milisegundos. */
@@ -1089,7 +1101,13 @@ export function crearAnalisisBloqueos(soporte, definicion, opciones = {}) {
     info.longitudMezclado = Math.round(lon.reduce((a, b) => a + b, 0) / lon.length);
     info.msLongitudMezclado = Math.round(ahora() - tm);
     // si el mezclado ya es corto (el 2x4x4: ~100 giros), no hace falta el práctico: es peor y no más corto
-    info.scramblePractico = info.longitudMezclado > 2 * PRACTICO_GIROS;
+    info.scramblePractico = info.longitudMezclado > UMBRAL_LONGITUD_MEZCLADO;
+    if (info.scramblePractico) {
+      info.girosPractico = opciones.girosPractico ?? 25;
+      info.longitudesPractico = [...new Set([LONGITUDES_PRACTICO[0], info.girosPractico, ...LONGITUDES_PRACTICO.slice(1)])].sort((a, b) => a - b);
+      const cal = opciones.tamano ? CALIDAD_PRACTICO[`${opciones.tamano}:${claveBloqueos(definicion)}`] : undefined;
+      if (cal) info.calidadPractico = cal;
+    }
   }
   info.msTotal = Math.round(ahora() - t0);
   return res;
@@ -1738,12 +1756,12 @@ export function vueltasAGeometria(A, S, movs) {
  * Scramble: estado uniforme (espacio pequeño) o movimientos legales al azar.
  * @param {Analisis} A
  * @param {Rng} rng
- * @param {{ pasos?: number, modo?: 'practico' | 'mezclado' }} [opciones]
+ * @param {{ pasos?: number, modo?: 'practico' | 'mezclado', giros?: number }} [opciones]
  * @returns {number[]}
  */
 export function scrambleBloqueos(A, rng, opciones = {}) {
   const { mod } = A;
-  if (A.info.scramblePractico && opciones.modo !== 'mezclado' && opciones.pasos === undefined) return scramblePractico(A, rng);
+  if (A.info.scramblePractico && opciones.modo !== 'mezclado' && opciones.pasos === undefined) return scramblePractico(A, rng, opciones.giros ?? A.info.girosPractico ?? PRACTICO_GIROS);
   if (A.bfs) {
     const n = A.bfs.tabla.tamano;
     if (n <= 1) return [];
@@ -1783,17 +1801,17 @@ export function scrambleBloqueos(A, rng, opciones = {}) {
  * reducida (sin cancelaciones ni dos giros seguidos que se junten en uno: se reduce en cada paso y
  * se sigue hasta que la palabra reducida tiene PRACTICO_GIROS giros). No es un estado aleatorio: lo
  * dice la interfaz. Determinista con la semilla.
- * @param {Analisis} A @param {Rng} rng
+ * @param {Analisis} A @param {Rng} rng @param {number} [giros]
  * @returns {number[]}
  */
-function scramblePractico(A, rng) {
+function scramblePractico(A, rng, giros = PRACTICO_GIROS) {
   const { mod } = A;
   /** @type {number[]} */
   let w = [];
   let S = mod.resuelto;
   /** @type {number[]} */
   const legales = [];
-  for (let intento = 0; w.length < PRACTICO_GIROS && intento < 100 * PRACTICO_GIROS; intento++) {
+  for (let intento = 0; w.length < giros && intento < 100 * giros; intento++) {
     legales.length = 0;
     for (let m = 0; m < mod.nM; m++) if (mod.legal(S, m)) legales.push(m);
     if (!legales.length) break;
@@ -2237,7 +2255,11 @@ export function puzzleConBloqueos(puzzle, definicion, opcionesAnalisis = {}) {
       A.info.msTablas = Math.round(ahora() - t0);
       return { ms: (r && r.ms) || ahora() - t0 };
     }
-    A = crearAnalisisBloqueos(sop, definicion, opcionesAnalisis);
+    // longitud del práctico por defecto = la del scramble WCA del tamaño (40 en el 4x4, 60 en el
+    // 5x5; 25 en el 3x3) y el tamaño para la tabla de calidad (sesión «longitud del práctico»)
+    const wca = /** @type {{ longitudScramble?: number }} */ (puzzle).longitudScramble;
+    const N = /** @type {{ N?: number }} */ (sop).N ?? 3;
+    A = crearAnalisisBloqueos(sop, definicion, { girosPractico: wca ?? 25, tamano: N, ...opcionesAnalisis });
     msBase.tablas = ahora() - t0;
     A.info.msTablas = Math.round(msBase.tablas);
     return { ms: msBase.tablas };
@@ -2384,12 +2406,16 @@ export function puzzleConBloqueos(puzzle, definicion, opcionesAnalisis = {}) {
     return res;
   }
 
-  /** @param {Rng} rng @param {{ modo?: 'practico' | 'mezclado' }} [opciones] */
+  /** @param {Rng} rng @param {{ modo?: 'practico' | 'mezclado', giros?: number }} [opciones] */
   function generarScramble(rng, opciones = {}) {
     if (sinBloques) return puzzle.generarScramble(rng);
     inicializar();
     if (!A.ok) return [];
-    return conNotacion(scrambleBloqueos(A, rng, opciones.modo ? { modo: opciones.modo } : {}).map((m) => mod.movs[m]));
+    /** @type {{ modo?: 'practico' | 'mezclado', giros?: number }} */
+    const o = {};
+    if (opciones.modo) o.modo = opciones.modo;
+    if (opciones.giros) o.giros = opciones.giros;
+    return conNotacion(scrambleBloqueos(A, rng, o).map((m) => mod.movs[m]));
   }
 
   /** @param {string} fam */

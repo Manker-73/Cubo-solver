@@ -27,7 +27,14 @@ const st = {
   editorCargado: null,
   /** Análisis del vendado actual (del Worker) y clave del puzzle con el scramble mezclado pedido. */
   analisisBloqueos: null,
-  modoMezclado: null,
+  /**
+   * Longitud del scramble práctico elegida (sesión «longitud del práctico»): '30', '40', '60', '100'
+   * o 'mezclado' (como en la URL), o null = la de por defecto (la WCA del tamaño). Se recuerda en el
+   * navegador (localStorage) y va en la URL.
+   */
+  /** Opciones (JSON) con las que se generó el scramble a la vista ('null' = el de siempre). */
+  opcionesScrambleMostrado: 'null',
+  eleccionScramble: (() => { try { const v = localStorage.getItem('cubo-solver:scramble-practico'); return v && /^(\d+|mezclado)$/.test(v) ? v : null; } catch { return null; } })(),
   editor: null,
   color: 0,       // índice en paleta + herramientas
   ultimoColor: 0, // último color de la paleta elegido (lo usan las herramientas con usaColor)
@@ -377,6 +384,10 @@ async function generarTablas(p) {
       panelBloqueos.fijarAnalisis({ ...r.analisis, msTablas: r.analisis && r.analisis.msTablas != null ? r.analisis.msTablas : ms });
       st.analisisBloqueos = r.analisis ? { clave: k, ...r.analisis } : null;
       pintarAvisoScramble();
+      // la URL lleva la longitud solo si esta configuración usa el práctico
+      if (st.seccion === 'bandaged') reemplazarURL(hashVendado());
+      // si se eligió otra longitud que la de por defecto, el scramble a la vista (de las precargas) no vale
+      if (st.p === p && st.scramble.length && JSON.stringify(opcionesScramble(p)) !== st.opcionesScrambleMostrado) nuevoScramble();
     }
     if (st.p === p) aviso.textContent = `Tablas de ${p.nombre} generadas en ${ms} ms ${motor.modo() === 'worker' ? 'en un Web Worker (la página no se bloquea)' : 'en el hilo principal'}.`;
   } finally {
@@ -484,7 +495,32 @@ function mostrarScramble(p, movimientos) {
 /** ¿Se ha pedido el scramble de estado mezclado (y esta configuración tiene los dos modos)? */
 /** Análisis del vendado p (si ya ha llegado y es de esta configuración). */
 const analisisDe = (p) => (p && p.bloqueos && st.analisisBloqueos && st.analisisBloqueos.clave === claveP(p) ? st.analisisBloqueos : null);
-const mezcladoPedido = (p) => { const a = analisisDe(p); return !!(a && a.scramblePractico && st.modoMezclado === claveP(p)); };
+/**
+ * Opciones del scramble según la elección (null = el de siempre, de las precargas). Una longitud que
+ * esta configuración no ofrece (p. ej. 60 en un 4x4) cuenta como la de por defecto.
+ * @returns {{ modo: 'mezclado' } | { giros: number } | null}
+ */
+function opcionesScramble(p) {
+  const a = analisisDe(p);
+  if (!a || !a.scramblePractico || !st.eleccionScramble) return null;
+  if (st.eleccionScramble === 'mezclado') return { modo: 'mezclado' };
+  const n = Number(st.eleccionScramble);
+  if (n === a.girosPractico || !(a.longitudesPractico || []).includes(n)) return null;
+  return { giros: n };
+}
+/** Elección efectiva: 'mezclado' o la longitud (número). */
+function eleccionEfectiva(p) {
+  const a = analisisDe(p);
+  const o = opcionesScramble(p);
+  if (!o) return a ? a.girosPractico : null;
+  return 'modo' in o ? 'mezclado' : o.giros;
+}
+const mezcladoPedido = (p) => eleccionEfectiva(p) === 'mezclado';
+/** Cambia la elección (y la guarda en el navegador si se pide). */
+function fijarEleccionScramble(valor, { guardar = true } = {}) {
+  st.eleccionScramble = valor;
+  if (guardar) { try { localStorage.setItem('cubo-solver:scramble-practico', valor); } catch { /* */ } }
+}
 
 /**
  * Aviso del scramble práctico (bloque 3 de la sesión «509 giros…»): en las configuraciones donde
@@ -498,11 +534,36 @@ function pintarAvisoScramble() {
   if (!a || !a.scramblePractico || !st.scramble.length) { caja.hidden = true; return; }
   caja.hidden = false;
   const fmt = (n) => Number(n).toLocaleString('es-ES');
-  const mezclado = mezcladoPedido(p);
+  const actual = eleccionEfectiva(p);
+  const mezclado = actual === 'mezclado';
   $('aviso-scramble-texto').textContent = mezclado
     ? `Scramble de estado mezclado: la inversa de una solución comprobada de un estado bien mezclado (${fmt(a.pasosMezcla)} pasos de un paseo al azar). Es largo: unos ${fmt(a.longitudMezclado)} giros.`
     : `Configuración muy restringida: scramble práctico de giros al azar, no de estado aleatorio. Mezclar de verdad necesita unos ${fmt(a.pasosMezcla)} pasos de un paseo al azar.`;
-  $('modo-scramble').textContent = mezclado ? 'Volver al scramble práctico (100 giros)' : `Scramble de estado mezclado (unos ${fmt(a.longitudMezclado)} giros)`;
+  // selector: 30 · WCA (por defecto) · 100 · Mezclado
+  const sel = $('longitud-practico');
+  sel.innerHTML = '';
+  const opciones = [...(a.longitudesPractico || [a.girosPractico]).map((n) => ({ valor: String(n), n })), { valor: 'mezclado', n: 'mezclado' }];
+  for (const o of opciones) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'opcion-longitud';
+    b.dataset.valor = o.valor;
+    b.setAttribute('role', 'radio');
+    b.setAttribute('aria-checked', String(o.n === actual));
+    b.textContent = o.n === 'mezclado' ? `Mezclado (unos ${fmt(a.longitudMezclado)})` : o.n === a.girosPractico ? `${o.n} (WCA)` : String(o.n);
+    b.title = o.n === 'mezclado' ? 'Inversa de una solución comprobada de un estado bien mezclado' : `${o.n} giros legales al azar`;
+    b.addEventListener('click', () => {
+      if (o.n === actual) return;
+      fijarEleccionScramble(o.valor);
+      reemplazarURL(hashVendado());
+      nuevoScramble();
+    });
+    sel.appendChild(b);
+  }
+  const c = a.calidadPractico && a.calidadPractico[String(actual)];
+  const calidad = $('calidad-practico');
+  calidad.hidden = !c;
+  if (c) calidad.textContent = `Mezcla de la forma: ${c.mezcla} % (distancia media de la forma al resuelto ${fmt(c.distanciaMedia)}, frente a ${fmt(c.distanciaExacta)} en un estado al azar)`;
 }
 
 /** Huella de un estado para compararlos (arrays, typed arrays u objetos). */
@@ -546,18 +607,20 @@ async function nuevoScramble() {
   const gen = ++st.gen;
   // Scramble de estado mezclado pedido a mano (vendados con mezcla extrema: bloque 3 de la sesión
   // «509 giros…»): no sale de las precargas (que son prácticas), se pide aparte
-  if (mezcladoPedido(p)) {
+  const opcionesPedidas = opcionesScramble(p);
+  if (opcionesPedidas) {
     mostrarGenerando(p);
     let r;
-    try { r = await motor.pedir('scramble', p.id, datosDe(p, { opciones: { modo: 'mezclado' } }), { prioridad: 'alta' }); } catch (err) {
+    try { r = await motor.pedir('scramble', p.id, datosDe(p, { opciones: opcionesPedidas }), { prioridad: 'alta' }); } catch (err) {
       if (gen === st.gen) mensaje('error', `No se pudo generar el scramble: ${err.message}`);
       return;
     }
     msGeneracion.set(r.movimientos, r.ms);
-    if (gen === st.gen && st.p === p) mostrarScramble(p, r.movimientos);
+    if (gen === st.gen && st.p === p) { mostrarScramble(p, r.movimientos); st.opcionesScrambleMostrado = JSON.stringify(opcionesPedidas); }
     return;
   }
   const listo = st.precargados.get(claveP(p));
+  st.opcionesScrambleMostrado = 'null';
   if (listo) {
     st.precargados.delete(claveP(p));
     mostrarScramble(p, listo);
@@ -1141,7 +1204,18 @@ function reemplazarURL(hash) {
   try { history.replaceState(history.state, '', base + hash); } catch { /* p. ej. about:blank */ }
 }
 /** Hash de Bandaged Cubes con los bloques aplicados (para que recargar o compartir la URL los conserve). */
-const hashVendado = () => hashDe({ seccion: 'bandaged', consulta: [st.vendado === '3x3' ? '' : `puzzle=${st.vendado}`, st.bloqueos.length ? 'bloqueos=' + encodeURIComponent(textoDeBloqueos(st.bloqueos)) : ''].filter(Boolean).join('&') });
+const hashVendado = () => hashDe({ seccion: 'bandaged', consulta: [st.vendado === '3x3' ? '' : `puzzle=${st.vendado}`, st.bloqueos.length ? 'bloqueos=' + encodeURIComponent(textoDeBloqueos(st.bloqueos)) : '', parametroScramble()].filter(Boolean).join('&') });
+/**
+ * `scramble=<30|40|60|100|mezclado>` en la URL: solo si se ha elegido una longitud y la configuración
+ * actual usa el scramble práctico (o aún no se sabe porque el análisis no ha llegado). Las demás
+ * configuraciones no lo llevan.
+ */
+function parametroScramble() {
+  if (!st.eleccionScramble) return '';
+  const a = st.p && st.p.bloqueos ? analisisDe(st.p) : null;
+  if (a && !a.scramblePractico) return '';
+  return 'scramble=' + st.eleccionScramble;
+}
 
 /** Portada: una tarjeta por sección de SECCIONES (las disponibles son enlaces; las bloqueadas, no). */
 function pintarPortada() {
@@ -1256,6 +1330,9 @@ function aplicarRuta({ navegacion = false } = {}) {
       // (las firmas del Bandaged Cube Explorer son solo del 3x3)
       const deURL = bloqueosDeURL({ hash: '#' + r.consulta, search: '' }, st.vendado);
       if (deURL) { st.bloqueos = deURL; st.bloqueosPor[st.vendado] = deURL; }
+      // longitud del scramble práctico pedida en la URL (sesión «longitud del práctico»)
+      const sc = new URLSearchParams(r.consulta).get('scramble');
+      if (sc && /^(\d+|mezclado)$/.test(sc)) fijarEleccionScramble(sc, { guardar: true });
     }
     reemplazarURL(hashVendado());
     const clave = (p) => (p && p.claveBloqueos) || '';
@@ -1300,11 +1377,7 @@ function iniciar() {
     pintarEditor();
   });
   $('resolver').addEventListener('click', resolver);
-  $('modo-scramble').addEventListener('click', () => {
-    if (!st.p) return;
-    st.modoMezclado = mezcladoPedido(st.p) ? null : claveP(st.p);
-    nuevoScramble();
-  });
+
   $('sel-metodo').addEventListener('change', cambiarMetodo);
   try { st.metodos = JSON.parse(localStorage.getItem('cubo-solver:metodos') || '{}') || {}; } catch { /* */ }
   $('r-inicio').addEventListener('click', () => repSol.irA(0));

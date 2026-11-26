@@ -1023,37 +1023,71 @@ test('app: 4x4 y 5x5 vendados (selector, bloque tocando piezas, scramble, resolv
 // Sesión «509 giros…», bloque 3: en el 5x5 de 16 barras (mezclar necesita 409.600 pasos) el scramble por
 // defecto es práctico (100 giros al azar), con un aviso; un botón pide el de estado mezclado.
 const BARRAS_5X5_APP = 'B.B12.B32.DB-B11.B21.B31.DB3-B13.B23.B33.DB1-BL.BL1.BL3.DBL-BR.BR1.BR3.DBR-DF.F.F12.F32-DF1.F11.F21.F31-DF3.F13.F23.F33-DFL.FL.FL1.FL3-DFR.FR.FR1.FR3-DL.L.L12.L32-DL1.L11.L21.L31-DL3.L13.L23.L33-DR.R.R12.R32-DR1.R13.R23.R33-DR3.R11.R21.R31';
-test('app: configuración muy restringida: scramble práctico con aviso y scramble mezclado a petición', { timeout: 900000 }, async (t) => {
-  const ctx = await abrir(t, { url: 'https://localhost/#/bandaged?puzzle=5x5&bloqueos=' + BARRAS_5X5_APP, esperarHerramienta: false });
+test('app: configuración muy restringida: selector de longitud del práctico (30 · 60 WCA · 100 · mezclado), con la URL y el navegador', { timeout: 900000 }, async (t) => {
+  // la URL pide 30: es lo que sale al llegar el análisis
+  const ctx = await abrir(t, { url: 'https://localhost/#/bandaged?puzzle=5x5&bloqueos=' + BARRAS_5X5_APP + '&scramble=30', esperarHerramienta: false });
   if (!ctx) return;
   const { w, doc, hasta, errores } = ctx;
   const aviso = () => doc.getElementById('aviso-scramble');
   const listo = () => doc.getElementById('scramble').textContent.length > 0 && !doc.getElementById('scramble').classList.contains('generando');
-  await hasta(() => listo() && aviso() && !aviso().hidden, 600000);
+  const lon = () => parseInt(doc.getElementById('longitud').textContent, 10);
+  const marcada = () => doc.querySelector('#longitud-practico [aria-checked="true"]');
+  await hasta(() => listo() && aviso() && !aviso().hidden && lon() === 30, 600000);
   assert.match(aviso().textContent, /Configuración muy restringida: scramble práctico de giros al azar, no de estado aleatorio/);
-  assert.match(doc.getElementById('longitud').textContent, /^100 movimientos/);
-  const boton = doc.getElementById('modo-scramble');
-  assert.match(boton.textContent, /estado mezclado.*\d+ giros/);
-  const scr1 = doc.getElementById('scramble').textContent;
-  boton.click();
-  await hasta(() => listo() && doc.getElementById('scramble').textContent !== scr1, 120000);
-  assert.ok(parseInt(doc.getElementById('longitud').textContent, 10) > 100, 'el mezclado es largo');
-  assert.match(aviso().textContent, /estado mezclado/);
-  assert.match(boton.textContent, /práctico/);
-  // se carga y se resuelve
+  const opciones = [...doc.querySelectorAll('#longitud-practico .opcion-longitud')].map((b) => b.textContent);
+  assert.equal(opciones.length, 4);
+  assert.deepEqual(opciones.slice(0, 3), ['30', '60 (WCA)', '100']);
+  assert.match(opciones[3], /^Mezclado \(unos [\d.]+\)$/);
+  assert.equal(marcada().dataset.valor, '30');
+  assert.match(doc.getElementById('calidad-practico').textContent, /^Mezcla de la forma: 24 %/);
+  assert.match(w.location.hash, /&scramble=30$/);
+  // elegir cada una: longitud, URL, navegador y calidad
+  const elegir = async (valor, comprobar) => {
+    const antes = doc.getElementById('scramble').textContent;
+    doc.querySelector(`#longitud-practico [data-valor="${valor}"]`).click();
+    await hasta(() => listo() && doc.getElementById('scramble').textContent !== antes, 120000);
+    assert.equal(marcada().dataset.valor, valor);
+    assert.match(w.location.hash, new RegExp(`&scramble=${valor}$`));
+    assert.equal(w.localStorage.getItem('cubo-solver:scramble-practico'), valor);
+    comprobar();
+  };
+  await elegir('100', () => { assert.equal(lon(), 100); assert.match(doc.getElementById('calidad-practico').textContent, /^Mezcla de la forma: 46 %/); });
+  await elegir('mezclado', () => { assert.ok(lon() > 100); assert.match(aviso().textContent, /estado mezclado/); assert.match(doc.getElementById('calidad-practico').textContent, /^Mezcla de la forma: 90 %/); });
+  // el mezclado se carga y se resuelve
   doc.getElementById('cargar').click();
   doc.getElementById('resolver').click();
   await hasta(() => !doc.getElementById('solucion').hidden || doc.querySelector('.mensaje.error'), 120000);
   assert.equal(doc.querySelector('.mensaje.error'), null, doc.getElementById('mensajes').textContent);
   doc.getElementById('r-fin').click();
   assert.equal(w.cuboSolver.resuelto(), true);
-  // volver al práctico
-  const scr2 = doc.getElementById('scramble').textContent;
-  boton.click();
-  await hasta(() => listo() && doc.getElementById('scramble').textContent !== scr2, 120000);
-  assert.match(doc.getElementById('longitud').textContent, /^100 movimientos/);
+  await elegir('60', () => { assert.equal(lon(), 60); assert.match(aviso().textContent, /no de estado aleatorio/); assert.match(doc.getElementById('calidad-practico').textContent, /^Mezcla de la forma: 36 %/); });
+  // «Nuevo scramble» sigue con la longitud elegida
+  const antes = doc.getElementById('scramble').textContent;
+  doc.getElementById('nuevo').click();
+  await hasta(() => listo() && doc.getElementById('scramble').textContent !== antes, 120000);
+  assert.equal(lon(), 60);
   assert.deepEqual(errores, []);
   w.close();
+});
+
+test('app: la longitud recordada en el navegador se usa sin URL, y no toca las configuraciones sin práctico', { timeout: 900000 }, async (t) => {
+  // recordada: 100; la URL no dice nada
+  const ctx = await abrir(t, { url: 'https://localhost/#/bandaged?puzzle=5x5&bloqueos=' + BARRAS_5X5_APP, esperarHerramienta: false, beforeParse: (win) => win.localStorage.setItem('cubo-solver:scramble-practico', '100') });
+  if (!ctx) return;
+  const { w, doc, hasta, errores } = ctx;
+  const listo = () => doc.getElementById('scramble').textContent.length > 0 && !doc.getElementById('scramble').classList.contains('generando');
+  await hasta(() => listo() && !doc.getElementById('aviso-scramble').hidden && parseInt(doc.getElementById('longitud').textContent, 10) === 100, 600000);
+  assert.match(w.location.hash, /&scramble=100$/);
+  assert.deepEqual(errores, []);
+  w.close();
+  // una configuración que cabe (bloque de ejemplo del 5x5): ni aviso, ni selector, ni scramble= en la URL
+  const ctx2 = await abrir(t, { url: 'https://localhost/#/bandaged?puzzle=5x5&bloqueos=D.U.n%C3%BAcleo', esperarHerramienta: false, beforeParse: (win) => win.localStorage.setItem('cubo-solver:scramble-practico', '30') });
+  await ctx2.hasta(() => ctx2.doc.getElementById('scramble').textContent.length > 0 && !ctx2.doc.getElementById('scramble').classList.contains('generando') && /generadas/.test(ctx2.doc.getElementById('aviso-tablas').textContent), 600000);
+  assert.equal(ctx2.doc.getElementById('aviso-scramble').hidden, true);
+  assert.doesNotMatch(ctx2.w.location.hash, /scramble=/);
+  assert.notEqual(parseInt(ctx2.doc.getElementById('longitud').textContent, 10), 30);
+  assert.deepEqual(ctx2.errores, []);
+  ctx2.w.close();
 });
 
 test('app: enlaces con puzzle= (4x4 y 5x5) y enlaces antiguos sin puzzle (3x3)', { timeout: 600000 }, async (t) => {

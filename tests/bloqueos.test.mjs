@@ -773,7 +773,7 @@ for (const cfg of CONFIGS_GRANDES) for (const modo of ['practico', 'mezclado']) 
 // ===========================================================================
 import * as moduloBloqueos from '../src/core/bloqueos.js';
 
-test('bloqueos grandes: con la misma semilla, el mismo scramble (mezclado y práctico) en dos «máquinas» distintas', { timeout: 900000 }, () => {
+test('bloqueos grandes: con la misma semilla, el mismo scramble (mezclado y práctico de cada longitud) en dos «máquinas» distintas', { timeout: 900000 }, () => {
   const cfg = CONFIGS_GRANDES[0];
   /** Una «máquina»: semilla del análisis, presupuesto de tiempo de Minkwitz y reloj distintos. */
   const maquina = ({ rngAnalisis, msMinkwitz, relojRapido }) => {
@@ -783,7 +783,8 @@ test('bloqueos grandes: con la misma semilla, el mismo scramble (mezclado y prá
       p.inicializar();
       return {
         mezclados: [0, 1, 2].map((i) => p.generarScramble(rngConSemilla(500 + i), { modo: 'mezclado' }).join(' ')),
-        practicos: [0, 1, 2].map((i) => p.generarScramble(rngConSemilla(900 + i)).join(' ')),
+        // cada longitud del selector: 30, la WCA (por defecto) y 100
+        practicos: [undefined, 30, 100].flatMap((giros) => [0, 1, 2].map((i) => p.generarScramble(rngConSemilla(900 + i), giros ? { giros } : {}).join(' '))),
       };
     } finally { moduloBloqueos.fijarRelojBloqueos?.(null); }
   };
@@ -794,7 +795,7 @@ test('bloqueos grandes: con la misma semilla, el mismo scramble (mezclado y prá
 });
 
 // Bloque 3: modo práctico (~100 giros al azar) por defecto cuando mezclar necesita más de 10.000 pasos
-test('bloqueos grandes: scramble práctico por defecto (100 giros, palabra reducida) y mezclado a petición (si el mezclado es largo)', { timeout: 900000 }, () => {
+test('bloqueos grandes: scramble práctico por defecto (longitud WCA, palabra reducida), 30 y 100 a petición, y mezclado (si el mezclado es largo)', { timeout: 900000 }, () => {
   for (const cfg of CONFIGS_GRANDES) {
     const p = puzzleGrande(cfg);
     const info = p.analisis();
@@ -803,10 +804,16 @@ test('bloqueos grandes: scramble práctico por defecto (100 giros, palabra reduc
     assert.equal(!!info.scramblePractico, info.longitudMezclado > 200, `${cfg.nombre}: mezclado de ${info.longitudMezclado} giros`);
     if (!info.scramblePractico) { aplicarComprobando(p, p.estadoResuelto(), p.generarScramble(rngConSemilla(30)), 'por defecto'); continue; }
     assert.ok(info.longitudMezclado > 200, 'longitud esperada del scramble mezclado');
+    // longitud por defecto = la del scramble WCA del tamaño (sesión «longitud del práctico»)
+    const wca = cfg.N === 5 ? 60 : 40;
+    assert.equal(info.girosPractico, wca);
+    assert.deepEqual(info.longitudesPractico, [30, wca, 100]);
+    for (const k of ['30', String(wca), '100', 'mezclado']) assert.ok(info.calidadPractico && info.calidadPractico[k], `${cfg.nombre}: falta la calidad de ${k}`);
     const rng = rngConSemilla(31);
     for (let i = 0; i < 20; i++) {
-      const s = p.generarScramble(rng);
-      assert.equal(s.length, 100, `${cfg.nombre}: el práctico tiene ${s.length} giros`);
+      const giros = [undefined, 30, 100][i % 3];
+      const s = p.generarScramble(rng, giros ? { giros } : {});
+      assert.equal(s.length, giros ?? wca, `${cfg.nombre}: el práctico tiene ${s.length} giros`);
       assert.equal(p.buscarRedundancia(s), null, 'palabra reducida');
       const e = aplicarComprobando(p, p.estadoResuelto(), s, `práctico ${i}`);
       assert.equal(p.validar(e, { secuencia: s }).resultado, 'valido');
