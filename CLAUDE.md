@@ -80,4 +80,12 @@ Nadie estará esperando para aprobar permisos durante la sesión. En los primero
 
 ### Antes de empezar
 1. `git status` y `git fetch`. Si hay cambios sin commitear o commits locales sin subir, PARA y explica qué son antes de tocar nada. Si está limpio, `git pull`.
-2. Lee `ESTADO.md`, `DECISIONES.md` y `ARQUITECTURA.md` (al menos las secciones
+2. Lee `ESTADO.md`, `DECISIONES.md` y `ARQUITECTURA.md` (al menos las secciones relacionadas con el objetivo de la noche).
+
+### Al terminar
+1. **Verificación completa**: el «Flujo de verificación» de arriba (tests, tipos con `npm run tipos`, comprobaciones en Chromium si se tocó la UI y build). Si un test falla, arréglalo o explica por qué en el resumen; nunca lo des por bueno.
+2. **Documentación**: `ESTADO.md` (sección de la noche con lo hecho, resultados medidos y pendiente, y la línea de progreso al principio), `DECISIONES.md` (decisiones, fuentes y lo que no funcionó), `ARQUITECTURA.md` y `README.md` si cambian, y este `CLAUDE.md` si cambia la estructura de archivos.
+3. **Commits**: con mensajes en español; los cambios ajenos al objetivo de la noche van en commits aparte. No commitees capturas (`docs/capturas/`) ni ficheros a medias de una ejecución cortada.
+4. **Push y comprobación limpia**: `git push` y espera a la Action «Tests (rápido)» y al despliegue de Pages. Anota el resultado de la Action en `ESTADO.md` (commit aparte) y vuelve a subirlo.
+5. **Artifact**: republica `dist/artifact.html` en el mismo artifact de siempre (misma URL) después de comprobar que el build es el del último commit.
+6. **Resumen final**: lo que pida el prompt de la noche, más el estado de `main` (commits), el resultado de la Action y de Pages, el enlace del artifact, los permisos que no se concedieron y lo que queda pendiente. Si algo no se hizo o no se verificó, dilo claramente.
