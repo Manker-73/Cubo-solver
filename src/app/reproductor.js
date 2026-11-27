@@ -36,7 +36,7 @@ export function crearReproductor(o) {
     if (pendientes > 0 && v) v.terminar(); // el usuario va más rápido que la animación
     pendientes++;
     const r = cola.then(async () => {
-      try { if (g === gen) await tarea(); } finally { pendientes--; }
+      try { if (g === gen) await tarea(g); } finally { pendientes--; }
     });
     cola = r.catch(() => {});
     return r;
@@ -48,11 +48,14 @@ export function crearReproductor(o) {
     if (destino < 0 || destino > o.total()) return Promise.resolve();
     const v = o.vista();
     if (!v) { o.fijar(destino); o.alCambiar(); return Promise.resolve(); }
-    return encolar(async () => {
+    return encolar(async (g) => {
       const k2 = o.leer();
       if (k2 + d < 0 || k2 + d > o.total()) return;
       const ms = pendientes > 1 ? 0 : o.ms();
       await animarTransicion(v, d > 0 ? k2 : k2 - 1, d < 0, ms);
+      // si mientras se animaba el usuario saltó a otro paso (⇥, ⇤, un movimiento de la lista) o se
+      // canceló, el salto manda: este giro ya no cambia el paso (noche 15: antes lo pisaba)
+      if (g !== gen) return;
       o.fijar(k2 + d);
       o.alCambiar();
     });

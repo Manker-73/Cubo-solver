@@ -9,7 +9,7 @@ import { rngConSemilla } from '../src/core/rng.js';
 test('registro: ids únicos y todos los puzzles pedidos', () => {
   const ids = PUZZLES.map((p) => p.id);
   assert.equal(new Set(ids).size, ids.length);
-  for (const id of ['2x2', '3x3', '4x4', '5x5', '6x6', '7x7', 'square1', 'skewb', 'pyraminx', 'megaminx', 'fto']) assert.ok(ids.includes(id), id);
+  for (const id of ['2x2', '3x3', '4x4', '5x5', '6x6', '7x7', 'square1', 'skewb', 'pyraminx', 'megaminx', 'fto', '3x3x1', '3x3x2', '2x2x3']) assert.ok(ids.includes(id), id);
 });
 
 // ---------- Campos de cada puzzle ----------
@@ -38,6 +38,10 @@ const EXTRAS = {
   square1: ['sePuedeCortar', 'tablasMotor'],
   megaminx: ['longitudScramble', 'geo', 'etapas', 'movsCara'],
   fto: ['geo', 'modelo', 'analizar', 'piezasDe', 'pegatinasDe'],
+  // cuboides (noche 15): geometría, grupo, solver, validador y scramble con el estado elegido
+  '3x3x1': ['cuboide'],
+  '3x3x2': ['cuboide'],
+  '2x2x3': ['cuboide'],
 };
 /** Campos de `p` que no son de la interfaz ni están permitidos. */
 const camposDesconocidos = (p, extras = EXTRAS[p.id] || []) => Object.keys(p).filter((k) => !CAMPOS_INTERFAZ.has(k) && !extras.includes(k));

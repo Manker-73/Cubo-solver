@@ -1,0 +1,29 @@
+{
+  "scrambles": 1000,
+  "longitudMedia": 4.46,
+  "longitudMin": 1,
+  "longitudMax": 8,
+  "msPorScramble": 0.37,
+  "casos": 1000,
+  "fecha": "2026-11-27T10:43:23.353Z",
+  "resueltos": "1000/1000 (100.0%)",
+  "longitudMediaSolucion": 4.5,
+  "longitudMaxSolucion": 8,
+  "msMedioSolucion": 2.59,
+  "msMaxSolucion": 195.7,
+  "msInicializacion": 1,
+  "optimas": "1000/1000 (comparadas con el BFS de colores)",
+  "distribucion": [
+    0,
+    23,
+    42,
+    136,
+    285,
+    336,
+    148,
+    25,
+    5
+  ],
+  "scrambleExacto": "1000/1000",
+  "distanciaTV": 0.0146
+}

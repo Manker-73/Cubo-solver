@@ -4,7 +4,7 @@
 // La interfaz y los tests no necesitan ningún otro cambio.
 //
 // `categoria`: sección de la app en la que aparece cada puzzle (ver src/app/secciones.js):
-// 'wca' = WCA Puzzles. Es un dato del registro, no de la interfaz común: los módulos
+// 'wca' = WCA Puzzles, 'cuboids' = Cuboids (noche 15). Es un dato del registro, no de la interfaz común: los módulos
 // de los puzzles no lo conocen. El 3x3 vendado (Bandaged Cubes) es el 3x3 de esta lista
 // envuelto por puzzleConBloqueos; el 4x4 y el 5x5 vendados (noche 13), los de esta lista con el
 // estado de identidades (nxn-identidad.js), en BANDAGED.
@@ -12,6 +12,7 @@
 import cubo2 from './cubo2.js';
 import cubo3 from './cubo3.js';
 import { crearCuboGrande } from './cubo-grande.js';
+import { crearCuboide } from './cuboide.js';
 import pyraminx from './pyraminx.js';
 import skewb from './skewb.js';
 import square1 from './square1.js';
@@ -41,11 +42,21 @@ export const PUZZLES = conCategoria('wca', [
   square1,
   megaminx,
   fto,
-]);
+]).concat(conCategoria('cuboids', [
+  // Cuboids (noche 15): a = ancho (R/L), b = fondo (F/B), c = alto (U/D); las caras cuadradas arriba y abajo.
+  // Un cuboide más (2x2x4, 3x3x4…) es una línea aquí: crearCuboide deduce todo de las medidas.
+  crearCuboide(3, 3, 1, { id: '3x3x1', nombre: '3x3x1 Floppy', costeScramble: 5 }),
+  crearCuboide(3, 3, 2, { id: '3x3x2', nombre: '3x3x2 Domino', costeScramble: 1200 }),
+  crearCuboide(2, 2, 3, { id: '2x2x3', nombre: '2x2x3 Tower', costeScramble: 120 }),
+]));
 
 /** Puzzles anunciados que aún no existen: el selector los muestra bloqueados ("pronto"). */
 /** @type {PuzzlePronto[]} */
-export const PUZZLES_PRONTO = [];
+export const PUZZLES_PRONTO = [
+  { id: '2x2x4', nombre: '2x2x4', categoria: 'cuboids' },
+  { id: '3x3x4', nombre: '3x3x4', categoria: 'cuboids' },
+  { id: '3x3x5', nombre: '3x3x5', categoria: 'cuboids' },
+];
 
 /** @param {string} id @returns {PuzzleRegistrado | undefined} */
 export const obtenerPuzzle = (id) => PUZZLES.find((p) => p.id === id);

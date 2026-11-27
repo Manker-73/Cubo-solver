@@ -1,5 +1,5 @@
 // @ts-check
-// Secciones de la app y navegación por hash (#/, #/wca, #/wca/<id>, #/bandaged).
+// Secciones de la app y navegación por hash (#/, #/wca, #/wca/<id>, #/bandaged, #/cuboids, #/cuboids/<id>).
 //
 // SECCIONES es la única lista: la portada pinta una tarjeta por sección y el router
 // solo deja entrar en las 'disponible'. Añadir una sección o desbloquearla es
@@ -15,15 +15,19 @@ export const SECCIONES = [
   { id: 'wca', nombre: 'WCA Puzzles', descripcion: '2x2–7x7 · Pyraminx · Skewb · Square-1 · Megaminx · FTO', descripcionCorta: '2x2–7x7 · Pyraminx · Skewb · Square-1 · Megaminx · FTO', estado: 'disponible', estilo: 'acento' },
   { id: 'bandaged', nombre: 'Bandaged Cubes', descripcion: '3x3, 4x4 y 5x5 con tus bloques · firmas de la comunidad', descripcionCorta: '3x3–5x5 con tus bloques', estado: 'disponible', estilo: 'suave' },
   { id: 'shape-mods', nombre: 'Shape Mods', descripcion: 'Mirror, Axis, Fisher…', estado: 'bloqueada' },
-  { id: 'cuboids', nombre: 'Cuboids', descripcion: '2x2x3, 3x3x2, 3x3x4…', estado: 'bloqueada' },
+  { id: 'cuboids', nombre: 'Cuboids', descripcion: '3x3x1 Floppy · 3x3x2 Domino · 2x2x3 Tower · más pronto', descripcionCorta: '3x3x1 · 3x3x2 · 2x2x3 · más pronto', estado: 'disponible', estilo: 'suave' },
   { id: 'others', nombre: 'Others', descripcion: 'Clover Cube, Kilominx…', estado: 'bloqueada' },
 ];
 
 /** Textos de cabecera de cada sección con herramienta (en español). @type {Record<string, string>} */
 export const INTRO_SECCION = {
   wca: 'Scrambles oficiales, validador de estados y solucionador de los puzzles de la WCA, con la solución animada en 3D y el modo aprender.',
+  cuboids: 'Cuboides: puzzles con forma de prisma cuyas caras no cuadradas solo giran media vuelta. Scramble de estado aleatorio, validador (pintando o colocando piezas) y solución óptima, en 2D y 3D.',
   bandaged: 'Un 3x3, 4x4 o 5x5 con piezas pegadas entre sí: crea tus bloques tocando el cubo, carga ejemplos (o firmas de la comunidad en el 3x3), y obtén scrambles y soluciones con giros legales.',
 };
+
+/** Secciones de catálogo: un selector con los puzzles del registro de su `categoria` (#/<id>/<puzzle>). */
+export const CATALOGOS = ['wca', 'cuboids'];
 
 /** @param {string} id @returns {Seccion | null} */
 export const seccion = (id) => SECCIONES.find((s) => s.id === id) || null;
@@ -35,6 +39,7 @@ export const disponible = (id) => !!seccion(id) && /** @type {Seccion} */ (secci
  *   #/  (o nada)          -> { seccion: 'portada' }
  *   #/como-funciona       -> { seccion: 'portada', ancla: 'como-funciona' }
  *   #/wca, #/wca/<id>     -> { seccion: 'wca', puzzle: id | null }
+ *   #/cuboids, #/cuboids/<id> -> { seccion: 'cuboids', puzzle: id | null } (noche 15)
  *   #/bandaged[?bloqueos=…|?firma=…] -> { seccion: 'bandaged', consulta }
  *   #/bandaged?puzzle=4x4[&bloqueos=…] -> { seccion: 'bandaged', consulta, puzzle: '4x4' } (noche 13;
  *                         sin puzzle, el 3x3: los enlaces de antes siguen igual)
@@ -60,7 +65,7 @@ export function leerRuta(hash = '', search = '') {
   if (!partes.length) return { seccion: 'portada' };
   if (partes[0] === 'como-funciona' && partes.length === 1) return { seccion: 'portada', ancla: 'como-funciona' };
   if (!disponible(partes[0])) return { seccion: 'portada', redirigir: true };
-  if (partes[0] === 'wca') return { seccion: 'wca', puzzle: partes[1] || null };
+  if (CATALOGOS.includes(partes[0])) return { seccion: partes[0], puzzle: partes[1] || null };
   if (partes[0] === 'bandaged') {
     const puzzle = new URLSearchParams(consulta).get('puzzle');
     if (puzzle) return { seccion: 'bandaged', consulta, puzzle };
@@ -72,7 +77,7 @@ export function leerRuta(hash = '', search = '') {
 /** Hash de una ruta (lo contrario de leerRuta). @param {Ruta} ruta */
 export function hashDe({ seccion: id, puzzle, consulta }) {
   if (!id || id === 'portada') return '#/';
-  if (id === 'wca') return puzzle ? `#/wca/${encodeURIComponent(puzzle)}` : '#/wca';
+  if (CATALOGOS.includes(id)) return puzzle ? `#/${id}/${encodeURIComponent(puzzle)}` : `#/${id}`;
   if (id === 'bandaged') return consulta ? `#/bandaged?${consulta}` : '#/bandaged';
   return `#/${id}`;
 }

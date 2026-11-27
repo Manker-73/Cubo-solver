@@ -1,4 +1,50 @@
-# Estado del proyecto (noche 14 — 26/11/2026)
+# Estado del proyecto (noche 15 — 27/11/2026)
+
+> Progreso de la noche 15 (Cuboids): modelo genérico `crearCuboide(a, b, c)` (geometría, giros legales con 90° solo en capas de sección cuadrada, rotaciones que conservan la forma, piezas y órbitas deducidas) ✔ · notación de csTimer (alias de Jaap) ✔ · colores del cubo con las caras cuadradas arriba y abajo ✔ · grupo y posiciones demostrados (Schreier–Sims) = cifras de Jaap en los tres ✔ · número de Dios por BFS completo: 8, 18 y 14, con la distribución publicada exacta ✔ · validador con orientación libre y un rechazo por restricción ✔ · pintar y «Colocar piezas» en 2D/3D ✔ · solver óptimo (tabla exacta / IDA* con bases de patrones) 1000/1000 óptimas en los tres ✔ · scramble de estado aleatorio exacto y uniforme ✔ · vista 3D animada (`vista3d.test.mjs`) ✔ · sección Cuboids disponible con `#/cuboids` y `#/cuboids/<id>`, tarjeta con «más pronto» y anunciados 2x2x4/3x3x4/3x3x5 ✔ · prueba de humo de la app ✔ · Chromium real (escritorio/móvil, oscuro/claro, 2D/3D) sin errores ✔ · fallo previo del reproductor (⇥ durante una animación) arreglado ✔ · `comprobar-colocar.py` probaba siempre el tema oscuro: arreglado ✔ · modo aprender de un cuboide ✘ (no dio tiempo).
+
+## Noche 15: Cuboids (3x3x1 Floppy, 3x3x2 Domino, 2x2x3 Tower)
+
+Cómo se usa: README.md («Cuboids»). Decisiones, notación, fuentes y lo que no funcionó: DECISIONES.md («Noche 15»). Cómo está hecho: ARQUITECTURA.md («Cuboides»).
+
+### Qué hay
+- `src/puzzles/cuboide.js` (puzzle completo), `cuboide-geo.js`, `cuboide-grupo.js`, `cuboide-solver.js`; tres líneas en el registro (`categoria: 'cuboids'`) y tres anunciados en `PUZZLES_PRONTO`.
+- Interfaz: secciones de catálogo genéricas (`CATALOGOS` en `secciones.js`; único cambio de `main.js`).
+- `tests/cuboides.test.mjs`, cuboides en `colocar.test.mjs`, `vista3d.test.mjs`, `registro.test.mjs`, `diseno.test.mjs`, huellas y el test de la app «Cuboids»; `scripts/comprobar-cuboides.py`, `PUZZLES=cuboids` en `comprobar-colocar.py` y `scripts/bfs-cuboide.mjs`.
+
+### Grupo, posiciones y número de Dios (frente a Jaap's Puzzle Page)
+| | Grupo (giros de búsqueda) | Posiciones | Publicado | Número de Dios (HTM) | Media | Cómo |
+|---|---|---|---|---|---|---|
+| 3x3x1 Floppy | 192 | **192** | 192 | **8** | 4,4271 | BFS completo (test) |
+| 3x3x2 Domino | 8!·8! = 1.625.702.400 (contiene y) | **406.425.600** | 406.425.600 (3.251.404.800 contando la orientación de los centros con dibujo) | **18** (28 posiciones) | 13,2899 | BFS completo en Node (`scripts/bfs-cuboide.mjs`, 4,2 min) |
+| 2x2x3 Tower | 8!·3! = 241.920 | **241.920** | 241.920 | **14** (576 posiciones) | 9,7372 | BFS completo (test) |
+
+Las tres distribuciones de distancias coinciden **exactamente** con las de Jaap (3x3x2: 1, 7, 34, 168, 807, 3.768, 17.250, 77.696, 342.305, 1.472.169, 6.052.497, 22.364.538, 65.693.109, 121.339.537, 127.175.987, 58.226.238, 3.627.117, 32.344, 28). Restricciones demostradas (orden de Schreier–Sims = previsto): 3x3x1, la orientación de cada esquina la decide su hueco, las aristas no salen de su lado y la paridad de las esquinas es igual a la del número de aristas volteadas; 3x3x2 y 2x2x3, solo las orientaciones (esquinas, y aristas del medio en el 2x2x3), ninguna paridad.
+
+### Resultados (`CASOS=1000 tests/cuboides.test.mjs`: 16/16 ✔; Node, un hilo)
+| | Scramble (giros: media, mín–máx) | Solución (media / máx) | Óptimas | Tiempo medio / máx. de solución | Tablas | Scramble exacto · variación total frente a la distribución exacta |
+|---|---|---|---|---|---|---|
+| 3x3x1 | 4,46 (1–8) | 4,50 / 8 | 1000/1000 (BFS de colores independiente) | 2,6 ms / 196 ms | 1 ms | 1000/1000 · 0,015 |
+| 3x3x2 | 13,34 (9–16) | 13,33 / 16 | 1000/1000 (IDA* admisible) | 1,5 ms / 114 ms | 0,97 s | 1000/1000 · 0,047 |
+| 2x2x3 | 9,70 (4–13) | 9,80 / 14 | 1000/1000 (BFS de colores independiente) | 1,4 ms / 83 ms | 0,41 s | 1000/1000 · 0,036 |
+
+(El solver se prueba con el puzzle girado al azar con una de sus 8 rotaciones; además, cada solución mide lo mismo que su scramble, que es la inversa de una solución óptima.)
+- **Colocar piezas** (ida y vuelta con el puzzle girado al azar, 25 casos en rápido): 3x3x1 19,5 toques de media, 3x3x2 30, 2x2x3 23. En la app (jsdom): 19 / 30 / 21.
+- **Chromium real** (`npm run build`; Chrome instalado, WebGL por software):
+  - `python scripts/comprobar-cuboides.py`: 8/8 combinaciones (escritorio 1280 / móvil 390 táctil × oscuro / claro × 3D / 2D): portada → tarjeta Cuboids → cada cuboide → Nuevo scramble → Cargar → Resolver → reproducir (animado en 3D) → ⇥ → «Resuelto»; rutas de siempre; 0 errores de consola, sin scroll horizontal. Resolver tarda 0,2–0,5 s desde el clic (Worker); tablas del 3x3x2 en ~1,5 s en el Worker.
+  - `PUZZLES=cub331,cub332,cub223,wca3,band3 python scripts/comprobar-colocar.py`: 40/40 (las 8 combinaciones de cada uno, ahora con el tema claro de verdad), 0 fallos, 0 errores de consola.
+  - Encontró un **fallo previo del reproductor**: en 3D, pulsar ⇥ mientras se anima un giro dejaba la solución a medias (el giro en curso, al acabar, pisaba el salto; también en el 3x3 de WCA). Arreglado en `reproductor.js` con un test que falla sin el arreglo.
+- **Tests**: `npm run tipos` ✔. `test:rapido` en local (35 min, con Chromium y el BFS a la vez): 271/276; de los 5 fallos, dos eran de esta noche y están arreglados (el test de la etiqueta del scramble contaba también los cuboides como chips de WCA; «piezas para resaltar» no tenía las cifras de los cuboides) y **tres son del Square-1 por los commits `400faca`/`f57aa71` («cambio colores sq01»), que ponen el amarillo como primer color de su paleta**: los tests esperan blanco arriba (`square1.test.mjs` modelo y estados imposibles, `vista3d.test.mjs:240`); no se han tocado. Repetidos `app.test.mjs` y `vista3d.test.mjs` con los arreglos: 60/61 (solo el del Square-1). Action `Tests (rápido)` en GitHub: RESULTADO_ACTION.
+
+### Qué comprobar con los cuboides físicos
+- **Colores**: blanco arriba, amarillo abajo, verde delante, rojo a la derecha (azul detrás, naranja a la izquierda), con las caras cuadradas arriba y abajo. Si el tuyo tiene otro esquema, la app lo rechazará como colores imposibles (no hay selector de esquema).
+- **Sentido de los giros**: `U` = horario mirando la cara de arriba (la fila de arriba de F pasa a tener el color de R). Los lados son medias vueltas (el sentido no importa).
+- **Orientación de referencia**: 3x3x1, la cara de 3x3 hacia arriba; 3x3x2, las caras de 3x3 arriba y abajo; 2x2x3, de pie (2x2 arriba y abajo). Puedes pintarlo o colocarlo sujetado de cualquier forma.
+- **2x2x3**: los scrambles y soluciones nunca mueven la arista del medio de atrás a la izquierda (BL); `L2` y `B2` se aceptan al escribir.
+
+### Pendiente / limitaciones
+- 2x2x4, 3x3x4, 3x3x5 (anunciados): falta que `identificar` admita piezas que se ven iguales (centros de los lados) y que el solver normalice la rotación cuando hay ejes de 4+ capas pares (quitar una capa ya no conserva la métrica). Ver DECISIONES.md.
+- Modo aprender de los cuboides: no hecho.
+- El scramble del 3x3x1 puede ser de 1 giro (2 %): estado aleatorio sin longitud mínima.
 
 > Progreso de la noche 14 (introducir el estado de un cubo físico colocando piezas y bloques): punto de partida documentado ✔ · modo «Colocar piezas» en WCA Puzzles (2x2–7x7, Pyraminx, Skewb, Megaminx, FTO) y Bandaged Cubes (3x3, 4x4, 5x5) ✔ · Square-1 ✘ (sin huecos fijos; sigue su editor de piezas) · pantalla completa (API Fullscreen + capa fija), una mano en el móvil ✔ · bandeja con bloques primero y piezas por tipo ✔ · bloques solo en posiciones que caben (Girar / Siguiente posición) ✔ · piezas sueltas con lista, Girar y colocación automática si no hay alternativa ✔ · deshacer, quitar, contador y validación en vivo con tres resultados ✔ · validación contra el estado conocido (resuelto) reutilizando los validadores ✔ · piezas iguales elegidas por la app (`elegirIguales`, con demostración) ✔ · tests de ida y vuelta, rechazos y piezas iguales ✔ · prueba de humo de la app (WCA y Bandaged, 3x3 y 4x4) ✔ · Chromium real (escritorio/móvil, oscuro/claro, 2D/3D) sin errores ✔ · `npm run tipos` ✔ · suite completa de bloqueos 48/48 ✔ · `test:humo` 43/44 y `test:rapido` 241/244 en local (los fallos, de tiempo y previos: ver «Tests») · Action `test:rapido` y Pages ✔ · bloques idénticos intercambiables ✘ (pendiente).
 

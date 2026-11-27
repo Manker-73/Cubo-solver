@@ -515,7 +515,7 @@ export interface SesionColocar {
 // ---------------------------------------------------------------------------
 
 /** Sección de la app en la que aparece un puzzle del registro. */
-export type Categoria = 'wca';
+export type Categoria = 'wca' | 'cuboids';
 
 export type PuzzleRegistrado = Puzzle<unknown> & { categoria: Categoria };
 

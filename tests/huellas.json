@@ -64,5 +64,23 @@
   "total": "a4681dcc82c01439",
   "giros": { "B": "731ab88cdcb357be", "B'": "4908680400391aeb", "BL": "84718c728e474317", "BL'": "cf6151da601c60f0", "BR": "cb18a1daf3f4c55a", "BR'": "67afb70de848bc14", "D": "ceacab2c6d1275b8", "D'": "93acfd7e8739fed2", "F": "58e2864a2e5cff4b", "F'": "22d738e2620a5ffd", "L": "134390cae76f2cb3", "L'": "1412283fc9e547a5", "R": "9ff7c2c88d5ae01b", "R'": "8a7c1310279d8208", "U": "ee0c6d1d6a5c3b25", "U'": "d12cf3898337474e"
   }
+ },
+ "3x3x1": {
+  "secuencia": [ "B", "R", "F" ],
+  "total": "a4f6b7ce7185ee7e",
+  "giros": { "B": "f798e73b042a63d6", "F": "f0e0dc9b214a3c9e", "L": "0fa2fc88a6041b1a", "R": "caa3f92ba7958d61"
+  }
+ },
+ "3x3x2": {
+  "secuencia": [ "B2", "U'", "B2", "U'", "F2", "R2", "U2", "R2", "U'", "R2", "B2", "U", "R2", "B2", "L2" ],
+  "total": "695a6966d9f9e3ed",
+  "giros": { "B2": "35863d025eff9a7a", "F2": "d63077a5d1126193", "L2": "27129aabe657acad", "R2": "ab53f12b0574b9f5", "U": "bf112325d71290a7", "U'": "2ca0bc304e6b9291", "U2": "6adea90075a2fa9d"
+  }
+ },
+ "2x2x3": {
+  "secuencia": [ "D2", "R2", "D", "F2", "U'", "R2", "U", "F2", "D'", "F2", "R2", "U2", "R2" ],
+  "total": "2fa93f49e8528736",
+  "giros": { "D": "1e901ef776903b4c", "D'": "24d4e0ef8bb03a62", "D2": "a38c010e7ca7bd8e", "F2": "f692796cefbfdaa7", "R2": "330cf728ffd08c64", "U": "e769d223eef908bc", "U'": "2029f2fd7bcd9f85", "U2": "d438c12422f0fa46"
+  }
  }
 }

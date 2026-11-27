@@ -9,7 +9,7 @@ import { crearVista3D, hayWebGL } from './vista3d.js';
 import { crearReproductor } from './reproductor.js';
 import { puzzleConBloqueos, claveBloqueos } from '../core/bloqueos.js';
 import { crearPanelBloqueos, bloqueosDeURL, leerBloqueosGuardados, textoDeBloqueos } from './bloqueos-ui.js';
-import { SECCIONES, INTRO_SECCION, seccion as datosSeccion, leerRuta, hashDe } from './secciones.js';
+import { SECCIONES, INTRO_SECCION, CATALOGOS, seccion as datosSeccion, leerRuta, hashDe } from './secciones.js';
 import { crearTema } from './tema.js';
 import { abrirColocar, puedeColocar } from './colocar-ui.js';
 
@@ -63,7 +63,7 @@ const st = {
   bloqueos: [],      // bloques del puzzle vendado elegido (sección Bandaged Cubes): [[clave de pieza, ...]]
   vendado: '3x3',    // puzzle de Bandaged Cubes (su nombre en la URL: 3x3, 4x4 o 5x5; noche 13)
   bloqueosPor: {},   // bloques aplicados de cada puzzle de Bandaged Cubes (al cambiar de uno a otro)
-  seccion: 'portada', // 'portada', 'wca' o 'bandaged' (ver secciones.js)
+  seccion: 'portada', // 'portada', 'wca', 'cuboids' o 'bandaged' (ver secciones.js)
 };
 
 // ---------- Bloqueos (cubo vendado) ----------
@@ -304,7 +304,7 @@ function abrirEditorColocar() {
 function pintarSelector() {
   const nav = $('selector');
   nav.innerHTML = '';
-  nav.hidden = st.seccion !== 'wca' && st.seccion !== 'bandaged';
+  nav.hidden = !CATALOGOS.includes(st.seccion) && st.seccion !== 'bandaged';
   if (nav.hidden) return;
   if (st.seccion === 'bandaged') {
     // Bandaged Cubes (noche 13): 3x3, 4x4 y 5x5
@@ -325,18 +325,20 @@ function pintarSelector() {
     }
     return;
   }
-  for (const p of PUZZLES.filter((x) => x.categoria === 'wca')) {
+  // secciones de catálogo (WCA Puzzles, Cuboids): los puzzles del registro de su categoría
+  const sec = st.seccion;
+  for (const p of PUZZLES.filter((x) => x.categoria === sec)) {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'chip' + (puedeResolver(p) ? ' con-solver' : '');
     b.setAttribute('aria-pressed', String(!!st.p && st.p.id === p.id));
     b.title = puedeResolver(p) ? 'Scramble, validador y solucionador' : 'Scramble (solucionador próximamente)';
     b.innerHTML = `<span class="punto" aria-hidden="true"></span>${p.nombre}`;
-    b.addEventListener('click', () => { reemplazarURL(hashDe({ seccion: 'wca', puzzle: p.id })); seleccionar(p.id); });
+    b.addEventListener('click', () => { reemplazarURL(hashDe({ seccion: sec, puzzle: p.id })); seleccionar(p.id); });
     nav.appendChild(b);
   }
   // puzzles anunciados: chip bloqueado, no es un botón ni se puede elegir
-  for (const p of PUZZLES_PRONTO.filter((x) => x.categoria === 'wca')) {
+  for (const p of PUZZLES_PRONTO.filter((x) => x.categoria === sec)) {
     const c = document.createElement('span');
     c.className = 'chip-pronto';
     c.dataset.pronto = p.id;
@@ -371,7 +373,7 @@ async function seleccionar(id) {
   st.editor = p.estadoResuelto();
   st.sol = null;
   st.historial = [];
-  if (st.seccion === 'wca') try { localStorage.setItem('cubo-solver:puzzle', id); } catch { /* sin almacenamiento */ }
+  if (CATALOGOS.includes(st.seccion)) try { localStorage.setItem(clavePuzzleGuardado(st.seccion), id); } catch { /* sin almacenamiento */ }
   pintarSelector();
   const activo = puedeResolver(p);
   $('editor').classList.toggle('desactivado', !activo);
@@ -1304,11 +1306,16 @@ function pintarPortada() {
   bloq.appendChild(mas);
 }
 
-/** Puzzle de WCA Puzzles que se abre sin uno en la URL: el último elegido (o el 3x3). */
-function puzzleWCAInicial() {
-  let id = '3x3';
-  try { id = localStorage.getItem('cubo-solver:puzzle') || id; } catch { /* sin almacenamiento */ }
-  return PUZZLES.some((p) => p.id === id && p.categoria === 'wca') ? id : '3x3';
+/** Clave del último puzzle elegido en una sección de catálogo (la de WCA Puzzles, la de siempre). @param {string} seccion */
+const clavePuzzleGuardado = (seccion) => (seccion === 'wca' ? 'cubo-solver:puzzle' : `cubo-solver:puzzle:${seccion}`);
+
+/** Puzzle de una sección de catálogo que se abre sin uno en la URL: el último elegido (o el primero; en WCA, el 3x3). @param {string} seccion */
+function puzzleInicial(seccion) {
+  const lista = PUZZLES.filter((p) => p.categoria === seccion);
+  const porDefecto = seccion === 'wca' ? '3x3' : lista[0].id;
+  let id = porDefecto;
+  try { id = localStorage.getItem(clavePuzzleGuardado(seccion)) || id; } catch { /* sin almacenamiento */ }
+  return lista.some((p) => p.id === id) ? id : porDefecto;
 }
 
 /**
@@ -1349,7 +1356,7 @@ function vigilarResolverFijo() {
 function aplicarRuta({ navegacion = false } = {}) {
   const r = leerRuta(location.hash, location.search);
   if (r.redirigir) reemplazarURL('#/');
-  const herramienta = r.seccion === 'wca' || r.seccion === 'bandaged';
+  const herramienta = CATALOGOS.includes(r.seccion) || r.seccion === 'bandaged';
   $('portada').hidden = herramienta;
   $('herramienta').hidden = !herramienta;
   $('app').dataset.seccion = r.seccion;
@@ -1375,10 +1382,10 @@ function aplicarRuta({ navegacion = false } = {}) {
   $('t-seccion').textContent = datos.nombre;
   $('intro-seccion').textContent = INTRO_SECCION[r.seccion] || '';
   document.title = `${datos.nombre} · Cubo-solver`;
-  if (r.seccion === 'wca') {
-    const valido = r.puzzle && PUZZLES.some((p) => p.id === r.puzzle && p.categoria === 'wca');
-    const id = valido ? r.puzzle : (st.p && !entra ? st.p.id : puzzleWCAInicial());
-    reemplazarURL(hashDe({ seccion: 'wca', puzzle: id }));
+  if (CATALOGOS.includes(r.seccion)) {
+    const valido = r.puzzle && PUZZLES.some((p) => p.id === r.puzzle && p.categoria === r.seccion);
+    const id = valido ? r.puzzle : (st.p && !entra ? st.p.id : puzzleInicial(r.seccion));
+    reemplazarURL(hashDe({ seccion: r.seccion, puzzle: id }));
     if (entra || !st.p || st.p.id !== id) seleccionar(id);
   } else {
     // Bandaged Cubes: el puzzle de la URL (sin él, el 3x3: los enlaces de antes) y la configuración

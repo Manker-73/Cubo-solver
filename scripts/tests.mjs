@@ -30,6 +30,7 @@ const AREAS = {
   square1: { ficheros: ['square1'], patron: 'Square-1' },
   megaminx: { ficheros: ['megaminx', 'megaminx-pochmann'], patron: 'Megaminx' },
   fto: { ficheros: ['fto'], patron: 'FTO' },
+  cuboides: { ficheros: ['cuboides'], patron: 'Cuboids|cuboides|3x3x1|3x3x2|2x2x3' },
   vendado: { ficheros: ['bloqueos'], patron: 'vendado|bloqueos' },
   colocar: { ficheros: ['colocar'], patron: 'colocar|Colocar' },
   aprender: { ficheros: ['aprender', 'oll-numeros'], patron: 'aprender' },
@@ -39,7 +40,7 @@ const AREAS = {
   humo: { ficheros: ['humo'], patron: null },
   registro: { ficheros: ['registro'], patron: 'registro|interfaz' },
 };
-const ALIAS = { 'diseño': 'diseno', tema: 'diseno', sq1: 'square1', 'square-1': 'square1', bloqueos: 'vendado', mega: 'megaminx', pyra: 'pyraminx', vista3d: 'vista3d', '3D': '3d', interfaz: 'registro' };
+const ALIAS = { cuboids: 'cuboides', cuboide: 'cuboides', 'diseño': 'diseno', tema: 'diseno', sq1: 'square1', 'square-1': 'square1', bloqueos: 'vendado', mega: 'megaminx', pyra: 'pyraminx', vista3d: 'vista3d', '3D': '3d', interfaz: 'registro' };
 for (const N of [4, 5, 6, 7]) AREAS[`${N}x${N}`] = { ficheros: ['cubo-grande', 'nxn'], patron: `NxN|${N}x${N}`, tamano: N };
 AREAS.vista3d = AREAS['3d'];
 const COMPARTIDOS = ['humo', 'aprender', 'vista3d', 'registro'];
@@ -77,7 +78,9 @@ if (nivel === 'completo') {
     patrones: ['^humo:', '^registro:', '^interfaz:', '^diseño:', '^app: sin Worker, construye', '^app: con Web Worker',
       '^app: navegación', '^app: tema', '^app: bloqueos compartidos por URL', '^app: recorrido completo',
       // noche 14: colocar piezas en pantalla completa (WCA y Bandaged, 3x3 y 4x4)
-      '^app: colocar piezas'],
+      '^app: colocar piezas',
+      // noche 15: Cuboids (portada, rutas, los tres puzzles y colocar piezas)
+      '^app: Cuboids'],
   }) || errTipos;
 } else if (nivel === 'solo') {
   const areas = resto.map((a) => ALIAS[a] || ALIAS[a.toLowerCase()] || a.toLowerCase());

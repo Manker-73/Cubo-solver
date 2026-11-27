@@ -933,3 +933,143 @@ la app. Se ha hecho solo donde el resultado del test dependía de ello (scramble
   cada clon los descarga. Quitarlos del historial (`git filter-repo --path docs/capturas --invert-paths`, y
   `git push --force` de `main`) dejaría el repositorio en unos 5–8 MB, pero cambia los hashes de todos los
   commits: cualquier copia o clon existente tendría que volver a clonarse.
+
+# Noche 15: Cuboids — 3x3x1, 3x3x2 y 2x2x3 (27/11/2026)
+
+## Modelo: motor de cortes planos, no el NxN
+`crearCuboide(a, b, c)` (`src/puzzles/cuboide*.js`) se construye sobre el motor geométrico (`carasDesdeVertices`,
+planos de corte, `permDeGiro`), no sobre el modelo NxN. El NxN da por hecho un cubo: N capas en los tres ejes,
+todas las capas giran 90° y las caras son N×N; adaptarlo habría sido tocar un modelo que usan seis puzzles. Con
+los cortes planos, un cuboide es una caja (a·s × c·s × b·s) troceada por los planos entre capas y todo lo demás se
+deduce: pegatinas, piezas (cubitos), qué capas existen y cuánto pueden girar (un giro de 90° de una capa de sección
+no cuadrada ni siquiera es una permutación: `permDeGiro` lo rechaza), las rotaciones que conservan la forma y la red
+2D (en cruz, la de `crearGeoPuzzle`). Los giros de capa los calcula `cuboide-geo.js` (no `crearGeoPuzzle`, que solo
+gira semiespacios) para poder tener capas interiores (2U, 2R…) cuando lleguen el 2x2x4 o el 3x3x4.
+- **Medidas**: a = ancho (x, R/L), b = fondo (z, F/B), c = alto (y, U/D). El 3x3x1 es (3, 3, 1), el 3x3x2
+  (3, 3, 2) y el 2x2x3 (2, 2, 3): las caras cuadradas (las de la «dimensión distinta» en vertical) quedan arriba
+  y abajo, como se sujetan y como los describe Jaap.
+- **Comprobado, no supuesto** (`tests/cuboides.test.mjs`): 3x3x1 sin giros de U/D (una sola capa: girarla es girar
+  el puzzle) y lados de 180°; 3x3x2 con U/D de 90° y lados de 180°; 2x2x3 con U, E y D de 90° y lados de 180°.
+  Ningún giro de 90° en una capa de sección no cuadrada; cada media vuelta es una involución y cada cuarto de vuelta
+  tiene orden 4. 8 rotaciones que conservan la forma en los tres (prisma de base cuadrada: y, x2, z2…). Sentido:
+  U horario lleva a la fila de arriba de F los colores de R, como en el cubo.
+
+## Notación: la de csTimer (y la de Jaap como alias)
+Fuentes: el código de csTimer (`src/js/scramble/1x3x3.js`, tipo `133`: letras `R L F B` sin sufijo;
+`megascramble.js`, tipo `233` «Domino/2x3x3»: `U U' U2`, `R2 L2`, `F2 B2`; `2x2x3.js`, tipo `223`: `U D` con
+`2` o `'` y `R2 F2`) y Jaap's Puzzle Page (floppy.htm: `R L F B` son medias vueltas; domino.htm y cube223.htm: `U`,
+`D` cuartos de vuelta con `2` y `'`, y los lados con la letra sola, que en esos puzzles siempre es media vuelta).
+La wiki de speedsolving.com no se pudo leer (403). Hay dos escrituras de los lados de 180°: `R2` (csTimer en
+Domino y Tower) y `R` (Jaap, y csTimer en el Floppy). **Elegida la de csTimer**: es la que sale en el temporizador
+que usa la comunidad (los scrambles que el usuario reconocerá) y es la más explícita (`R2` no se confunde con un
+cuarto de vuelta). Regla general, deducida de la geometría: si el puzzle tiene algún giro de 90°, las medias
+vueltas llevan `2`; si no tiene ninguno (3x3x1), van sin él. Al leer se aceptan los alias (`R` = `R2` en el
+3x3x2, `R2` = `R` en el 3x3x1, `R'`, `R2'`). Capas del medio de 3 capas: M, E, S (WCA); interiores: 2R… (SiGN).
+
+**Colores**: el esquema del cubo de la app (U blanco, D amarillo, F verde, B azul, R rojo, L naranja) con las caras
+cuadradas arriba y abajo. Las pegatinas de cada color son las de su cara (en un cuboide las caras no miden igual: el
+3x3x2 tiene 9 blancas y 6 rojas).
+
+## Métrica y giros de búsqueda
+Cada giro cuenta 1 (`U`, `U2`, `R2`): la métrica de Jaap («face turn metric», HTM). El solver y los scrambles usan
+**giros de búsqueda**: en cada eje todas las capas menos la del medio (n impar: los centros, fijos, son la
+referencia) o menos la del lado negativo (n = 2). Resultado: 3x3x1 `R L F B`, 3x3x2 `U R2 L2 F2 B2`, 2x2x3
+`U D R2 F2`: exactamente los conjuntos de csTimer. **Por qué no cambia la métrica**: las capas de un eje conmutan
+y, con n = 2, `L2 = R2 · x2` y `D = U · y'`: un giro que falta es uno de búsqueda seguido de una rotación del
+puzzle entero, que no cambia la posición. Así, la distancia en el grupo de búsqueda hasta «resuelto girado» es la
+distancia con todos los giros exteriores (lo comprueba el oráculo del test: BFS sobre colores con los 10 giros
+exteriores, también `L2`, `B2` y `D`). **Límite**: con n ≥ 4 par (2x2x4, 3x3x4) quitar una capa sí cambia la
+métrica (la que falta equivale a varias); para esos habrá que buscar con todas las capas y normalizar la rotación.
+Los objetivos del solver son el resuelto y sus rotaciones que están en el grupo: en el 3x3x2, `y = U D'` lo está
+(4 objetivos); en el 3x3x1 y el 2x2x3, ninguna.
+
+## Grupos, posiciones y restricciones (Schreier–Sims), frente a lo publicado
+| | Grupo de búsqueda | Rotaciones dentro | Posiciones distinguibles | Jaap | Restricciones |
+|---|---|---|---|---|---|
+| 3x3x1 | 192 | 1 | **192** | 192 | 1 (paridad de esquinas = paridad de aristas volteadas) |
+| 3x3x2 | 8!·8! = 1.625.702.400 | 4 (y) | **406.425.600** | 406.425.600 (3.251.404.800 con la orientación de los centros visible) | 0 |
+| 2x2x3 | 8!·3! = 241.920 | 1 | **241.920** | 241.920 | 0 |
+
+- **Cómo se demuestra**: rasgos ℤ₂ de un estado (paridad de la permutación de cada órbita de huecos y, en las
+  órbitas en las que una pieza cabe de dos formas en su hueco, la paridad del número de volteadas); las
+  combinaciones que ningún generador cambia son las restricciones (núcleo por eliminación de Gauss). El orden de
+  Schreier–Sims coincide con el **previsto** (∏ órbitas de huecos (k! · formas^k) / 2^restricciones), así que no hay
+  ninguna más. La orientación de cada pieza en cada hueco sale de la órbita de su tupla de pegatinas: en los tres,
+  las esquinas solo caben de una forma en cada hueco (en el 3x3x1 eso hace que una esquina vaya «boca abajo» según
+  el hueco); en el 2x2x3 las aristas del medio tampoco se pueden voltear; en el 3x3x1 las aristas se voltean pero
+  nunca salen de su lado.
+- **3x3x1**: Jaap escribe «24·4! = 384 … /2 = 192»; ese 24 es 2⁴ (4 aristas que se voltean): 2⁴·4!/2 = 192. Con
+  todos los giros y las 8 rotaciones, 1.536 estados de colores = 192 · 8 (ninguna rotación está en el grupo).
+- **3x3x2, la diferencia con 3.251.404.800**: Jaap da las dos cifras. 406.425.600 = 8!·8!/4 son las posiciones con
+  los centros lisos (la app pinta colores: un centro no tiene orientación visible); ×8 cuenta las orientaciones de
+  los dos centros cuando son dibujos (el dominó con puntos). Wikipedia da 406.425.600. No hay error: cuentan cosas
+  distintas. (Casualidad: el grupo de todos los giros exteriores con las rotaciones mide 3.251.404.800 = 8!·8!·2,
+  pero es otra cosa: incluye dar la vuelta al puzzle.)
+- **2x2x3**: Jaap toma una pieza del medio como referencia: 8!·3!. Con todos los giros exteriores el grupo tiene
+  967.680 = 4 · 241.920 (contiene x2, y2, z2) y con las rotaciones, 1.935.360 = 8 · 241.920.
+
+## Número de Dios y solver óptimo
+- **3x3x1 y 2x2x3: BFS completo** (una tabla exacta: 26.880 índices / 192 estados y 241.920 / 241.920; 1 ms y
+  ~55 ms en Node). La distribución coincide **exactamente** con la de Jaap: 3x3x1 1, 4, 10, 24, 53, 64, 31, 4, 1
+  (Dios 8, media 4,4271); 2x2x3 1, 8, 35, 157, 678, 2.527, 7.442, 17.088, 31.568, 44.704, 47.216, 49.792, 29.024,
+  11.104, 576 (Dios 14, media 9,7372). Resolver = IDA* sobre la tabla exacta (no se desvía: solo sigue giros que
+  bajan la distancia).
+- **3x3x2: IDA* con dos bases de patrones** (esquinas + 2 aristas y aristas + 2 esquinas, 2.257.920 entradas cada
+  una, llenas desde los 4 objetivos; ~1,1 s en Node, ~1,5 s en el Worker de Chromium). Heurística = máximo
+  (admisible) y poda de ejes (dos giros seguidos del mismo eje solo en orden creciente de capa; las capas de un eje
+  conmutan): la solución es óptima. Medido con 200 estados: 1,2 ms y ~5.900 nodos por solución. Con 3 piezas
+  (13,5 M entradas) las tablas tardan ~10 s para ahorrar 0,4 ms por solución; con 1 pieza, 133 ms pero 3,8 ms y
+  32.000 nodos por solución: se eligen 2. El BFS completo de las 406.425.600 posiciones no cabe en el navegador (un
+  byte por posición) pero sí en Node: `scripts/bfs-cuboide.mjs` reproduce la distribución de Jaap y el número de
+  Dios, 18 (cifras en ESTADO.md).
+- El tamaño de las tablas lo decide `crearSolverCuboide` solo (tabla exacta si el producto de las coordenadas
+  completas ≤ 30 M; si no, una base por órbita más las piezas de otra que quepan en 3 M), para que un cuboide nuevo
+  sea una línea en el registro (con el límite de n ≥ 4 de arriba).
+- **Coordenadas**: dónde está la pegatina de referencia de cada pieza (variaciones de k de r posiciones). La
+  referencia es la pegatina U/D de la pieza si la tiene (luego F/B, luego R/L): así recorre pocas casillas (8 en
+  las esquinas). Al construir se comprueba que esa posición determina la colocación entera.
+
+## Validador y orientación libre
+Como en el Skewb: se prueban los reetiquetados de colores de las 8 rotaciones que conservan la forma y el estado es
+válido si en uno está en el grupo de búsqueda (pertenencia con la cadena de Schreier–Sims). Si en ninguno, se dan
+los mensajes del reetiquetado con menos errores (primero los de piezas; luego las restricciones). Mensajes: número
+de pegatinas de cada color, pieza que no existe (color repetido u opuesto), repetida o que falta, especular, pieza
+fuera de su órbita («La arista … no puede estar en F: en el 3x3x1 Floppy esa pieza nunca sale de su sitio (R)»),
+orientación («La esquina … en UFR está girada: en esa posición su pegatina blanca tiene que estar en la cara U») y
+paridad («la permutación de las esquinas es impar y hay 0 aristas volteadas…»). El solver vuelve a validar.
+
+## Scramble de estado aleatorio
+Elemento uniforme del grupo (`cadena.aleatorio`, Schreier–Sims), su solución óptima y la inversa. La solución
+puede acabar en una rotación ρ del grupo (3x3x2): entonces el scramble deja ρ⁻¹·s, que es s visto con el puzzle
+girado (mismos colores tras reetiquetar con esa rotación). El test lo comprueba estado a estado («exacto») y
+compara la distancia de los scrambles con la distribución exacta (variación total). Solo se descarta el resuelto
+(distancia 0); en el 3x3x1, un 2 % de los scrambles son de un giro (4 de 192 posiciones), como en cualquier scramble
+de estado aleatorio sin longitud mínima.
+
+## Colocar piezas
+`colocarPiezas.generadores` = un giro de cada capa exterior **y las rotaciones** (`x2`, `y`, `z2`): así las órbitas
+de las tuplas admiten el puzzle sujetado de cualquier forma (sin ellas, en el 3x3x1 una esquina con el blanco arriba
+en un hueco «de boca abajo» no se podría colocar aunque el puzzle solo esté girado). El validador decide la
+orientación.
+
+## Interfaz
+`main.js` tenía «WCA Puzzles» escrito en el selector, la ruta y el puzzle guardado. Se ha generalizado a las
+**secciones de catálogo** (`CATALOGOS = ['wca', 'cuboids']` en `secciones.js`): el selector muestra los puzzles del
+registro con la `categoria` de la sección y sus anunciados (`PUZZLES_PRONTO`: 2x2x4, 3x3x4, 3x3x5); la ruta es
+`#/<sección>/<id>`; el último puzzle elegido se guarda por sección (`cubo-solver:puzzle` en WCA, como siempre;
+`cubo-solver:puzzle:cuboids`). Es el único cambio de `main.js`, y hacía falta porque la sección de catálogo era una
+sola; WCA Puzzles se comporta igual (sus tests no cambian salvo la portada: una tarjeta disponible más y una
+bloqueada menos).
+
+## Lo que no funcionó / encontrado
+- `crearModeloPiezas` (orientación = desplazamiento cíclico) no sirve: en el 3x3x1, R invierte el orden de las
+  pegatinas U, R, D de la arista (no es un desplazamiento). Modelo propio: la posición de la pegatina de referencia.
+- Pegatinas de una pieza ordenadas por el índice de cara (U, R, F, D…): la referencia de una esquina de abajo era su
+  pegatina R, que recorre 24 casillas → coordenadas de 24!/16!. Con U/D primero, 8.
+- Bajar por la tabla exacta eligiendo siempre el primer giro que baja la distancia se puede atascar con la poda de
+  ejes; IDA* sobre la misma tabla hace lo mismo y retrocede si hace falta.
+- `HUELLAS=actualizar` reescribe también las secuencias de los puzzles de antes (Square-1, FTO): se restauraron
+  las guardadas y se añadieron solo las de los cuboides.
+- **`scripts/comprobar-colocar.py` (noche 14) nunca probó el tema claro**: guardaba `light`/`dark` en
+  `cubo-solver:tema`, pero la app solo entiende `claro`/`oscuro` y se quedaba en oscuro (las capturas «light» eran
+  oscuras). Corregido, con una comprobación de `data-theme`; repetido para WCA 3x3 y Bandaged 3x3 (ESTADO.md).

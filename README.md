@@ -6,12 +6,13 @@ Aplicación web en un único HTML, sin servidor.
 **Mezcla. Comprueba. Resuelve. Aprende.** La portada lleva a las secciones (los nombres, en inglés, como en la comunidad):
 - **WCA Puzzles** (`#/wca`, y `#/wca/<puzzle>` para abrir uno: `#/wca/megaminx`): scramble, editor, solucionador, vista 3D y modo aprender de 2x2–7x7, Pyraminx, Skewb, Square-1, Megaminx y FTO (Face-Turning Octahedron, oficial de la WCA desde el 2 de enero de 2027).
 - **Bandaged Cubes** (`#/bandaged`): el 3x3, el 4x4 y el 5x5 vendados con tus bloques, y las firmas de la comunidad (3x3).
-- *Shape Mods*, *Cuboids* y *Others*: próximamente (se ven bloqueadas en la portada).
+- **Cuboids** (`#/cuboids`, y `#/cuboids/<puzzle>`: `#/cuboids/3x3x2`; noche 15): 3x3x1 (Floppy), 3x3x2 (Domino) y 2x2x3 (Tower) con scramble de estado aleatorio, validador (pintando o colocando piezas), solución óptima y vista 3D; 2x2x4, 3x3x4 y 3x3x5, anunciados.
+- *Shape Mods* y *Others*: próximamente (se ven bloqueadas en la portada).
 
 Tema oscuro por defecto; el botón de la cabecera cambia a claro (y lo recuerda en el navegador). Funciona sin conexión: las fuentes van dentro del HTML y no se pide nada a la red.
 
-- **Scrambles**: 2x2 a 7x7, Square-1, Skewb, Pyraminx, Megaminx y FTO (estado aleatorio en 2x2, 3x3, Pyraminx, Skewb, Square-1 y FTO).
-- **Validador y solucionador en todos los puzzles**: 2x2 (óptimo), 3x3 (dos fases de Kociemba), 4x4 (reducción en tres fases de búsqueda, sin paridades OLL ni PLL, ~55 movimientos) y 5x5 a 7x7 (reducción: búsqueda por etapas en los centros, aristas emparejadas con un voraz de macros que no mueven los centros y conmutadores para lo que quede; ~109, ~256 y ~356 movimientos), Pyraminx (óptimo), Skewb (óptimo), Square-1 (dos fases: forma de cubo y permutación, solo con giros posibles) Megaminx (por etapas con búsqueda IDA* y la última capa con macros buscadas automáticamente; ~90 giros de cara de media) y FTO (tres fases con tablas de poda, como el scrambler oficial de TNoodle; ~27 giros de media, cota inferior 21).
+- **Scrambles**: 2x2 a 7x7, Square-1, Skewb, Pyraminx, Megaminx, FTO y los cuboides (estado aleatorio en 2x2, 3x3, Pyraminx, Skewb, Square-1, FTO, 3x3x1, 3x3x2 y 2x2x3).
+- **Validador y solucionador en todos los puzzles**: 2x2 (óptimo), 3x3 (dos fases de Kociemba), 4x4 (reducción en tres fases de búsqueda, sin paridades OLL ni PLL, ~55 movimientos) y 5x5 a 7x7 (reducción: búsqueda por etapas en los centros, aristas emparejadas con un voraz de macros que no mueven los centros y conmutadores para lo que quede; ~109, ~256 y ~356 movimientos), Pyraminx (óptimo), Skewb (óptimo), Square-1 (dos fases: forma de cubo y permutación, solo con giros posibles) Megaminx (por etapas con búsqueda IDA* y la última capa con macros buscadas automáticamente; ~90 giros de cara de media) y FTO (tres fases con tablas de poda, como el scrambler oficial de TNoodle; ~27 giros de media, cota inferior 21). Cuboides: óptimo (3x3x1, 3x3x2 y 2x2x3).
 - **Modo aprender** (2x2, 3x3, 4x4, 5x5, Pyraminx, Skewb y Square-1): además de la solución por ordenador, una solución por un **método humano** explicada paso a paso: 3x3 por capas para principiantes o CFOP; 2x2 por capas o Ortega; 4x4 y 5x5 por reducción (con el 3x3 por capas o CFOP y las paridades); Pyraminx, Skewb y Square-1 por sus métodos de principiantes.
 - **3x3 vendado** (bloqueos definidos por el usuario): pega piezas entre sí (parejas, barras, bloques 1x2x2, 2x2x2…) y el 3x3 se comporta como un cubo vendado real: solo giros que no rompen ningún bloque, scramble y solución adaptados a cada configuración, dos estrategias de solución (búsqueda directa, y geometría y luego permutación) y comparación con la solución sin bloqueos.
 - **4x4 y 5x5 vendados** (noche 13): lo mismo con capas anchas e interiores, piezas iguales (centros del mismo color) contadas una sola vez y, en el 5x5, bloques que unen centros opuestos a través del núcleo. Si el espacio es pequeño, solución óptima; si es grande, la solución es larga (cientos de giros: geometría y luego piezas con tablas de Minkwitz), siempre comprobada giro a giro.
@@ -88,6 +89,16 @@ En **Bandaged Cubes** (`#/bandaged`) eliges el cubo (3x3, 4x4 o 5x5) y, encima d
 - En 3D, las piezas pegadas se dibujan unidas, sin la separación negra.
 - La notación es la de la WCA; también se aceptan M, E, S y las rotaciones x, y, z (las soluciones usan solo giros de cara).
 
+### Cuboids: 3x3x1 (Floppy), 3x3x2 (Domino) y 2x2x3 (Tower) (noche 15)
+- **Cómo se sujetan**: las caras cuadradas arriba y abajo (U blanco, D amarillo), F verde delante, R rojo a la derecha, B azul y L naranja: el esquema del cubo. En el 3x3x1 «arriba» es la cara grande de 3x3; en el 3x3x2, las dos caras de 3x3; en el 2x2x3, las dos de 2x2 (la torre de pie). Puedes pintarlo o colocar las piezas sujetándolo de cualquier forma: la solución sale para como lo tengas.
+- **Notación** (la de csTimer y Jaap's Puzzle Page): las caras que no son cuadradas solo giran media vuelta.
+  - 3x3x1: `R`, `L`, `F`, `B` = media vuelta de ese lado (no hay U ni D: girar la cara grande es girar el puzzle entero). Se acepta también `R2`.
+  - 3x3x2: `U`, `U'`, `U2` (y `D`…) = cuarto o media vuelta de la capa de arriba (abajo) en sentido horario mirándola; `R2`, `L2`, `F2`, `B2` = media vuelta de un lado. Se acepta `R` como `R2`. Los scrambles y las soluciones usan `U` y los lados (como csTimer): `D` es lo mismo que `U` y girar el puzzle.
+  - 2x2x3: `U`, `D` (90° o 180°) y `R2`, `F2` (180°). Con estos cuatro la arista del medio de atrás a la izquierda (BL) no se mueve: es la referencia; `L2` y `B2` se aceptan.
+  - Rotaciones del puzzle entero: `y` (90°) y `x2`, `z2` (solo las que conservan la forma).
+- **Solución óptima** (cada giro cuenta 1: `U2` y `R2` también): 3x3x1 como mucho 8 giros (4,4 de media), 3x3x2 como mucho 18 (13,3), 2x2x3 como mucho 14 (9,7). Tablas en el navegador: instantáneas en el 3x3x1 y el 2x2x3, ~1–1,5 s la primera vez en el 3x3x2.
+- **Estados imposibles**: la app dice qué pieza falla: una esquina girada o una arista volteada (en estos puzzles la orientación de cada pieza la decide su posición; en el 3x3x1, las aristas se voltean pero nunca salen de su lado) o, en el 3x3x1, la paridad (dos esquinas intercambiadas exigen un número impar de aristas volteadas). En el 3x3x2 y el 2x2x3 cualquier permutación es posible.
+
 ### Vista 3D
 - La vista previa del scramble y la reproducción de la solución se ven en **3D**, con los giros animados: arrastra con el ratón o el dedo para girar el puzzle (*Vista inicial* lo devuelve a su sitio). Los botones **2D / 3D** cambian entre el modelo 3D y la red plana.
 - Bajo la vista previa hay un reproductor del scramble: ⇤ lo deja resuelto, ▶ lo aplica movimiento a movimiento (velocidad ×1…×8, pausa, paso atrás). En el Megaminx, al acabar, el puzzle gira entero hasta la orientación de referencia, como indica la nota.
@@ -122,11 +133,12 @@ Tres niveles (tiempos con 2 núcleos), más la comprobación de tipos:
 ```
 npm run tipos         # < 1 s: TypeScript (tsc --noEmit) comprueba los ficheros con // @ts-check contra src/core/tipos.d.ts
 npm run test:humo     # ~3 min: tipos, humo de cada puzzle, registro, diseño (rutas y contraste) y humo de la app (sin Worker, con Worker,
-                      # navegación entre secciones, tema, enlaces antiguos, recorrido completo en WCA y Bandaged y «Colocar piezas»)
+                      # navegación entre secciones, tema, enlaces antiguos, recorrido completo en WCA y Bandaged, «Colocar piezas» y Cuboids)
 npm run test:rapido   # ~8 min 20 s: las mismas comprobaciones que npm test, con menos casos en los tests caros
 npm test              # suite completa (1000 casos por puzzle; 500 en 4x4, 5x5, Megaminx, el modo aprender
                       # y cada configuración vendada; 100 en 6x6 y 7x7); ~1 h
 npm run bench         # benchmark de los solvers (N=200 npm run bench para más casos)
+node --max-old-space-size=4096 scripts/bfs-cuboide.mjs   # BFS completo del 3x3x2 (406 M posiciones, unos minutos): número de Dios y distribución
 ```
 
 - **`test:humo`** es el paso de "Antes de empezar" de cada noche: para cada puzzle del registro, scrambles, validador (rechaza una pegatina pintada de otro color) y solver con 1–3 casos; el 3x3 vendado (un espacio grande y uno pequeño); un caso de cada método del modo aprender; las **huellas de los giros** (`tests/huellas.json`: el estado tras cada giro básico y tras una secuencia fija; es lo que detecta un giro invertido) y la prueba de humo de la app. Si se cambia un giro a propósito: `HUELLAS=actualizar npm run test:humo` y revisar el diff de `tests/huellas.json`.
@@ -137,7 +149,7 @@ npm run bench         # benchmark de los solvers (N=200 npm run bench para más 
   npm run test:solo -- 4x4          # el fichero de cubos grandes solo con el 4x4 (TAMANOS=4)
   ```
 
-  Áreas: `2x2`, `3x3`, `4x4`–`7x7`, `nxn`, `diseno` (o `tema`), `pyraminx`, `skewb`, `square1` (o `sq1`), `megaminx`, `vendado` (o `bloqueos`), `colocar`, `aprender`, `3d`, `app`, `humo`, `registro`. Cada área ejecuta sus ficheros enteros y, en los compartidos (humo, aprender, vista 3D, registro), los tests cuyo nombre la menciona.
+  Áreas: `2x2`, `3x3`, `4x4`–`7x7`, `nxn`, `diseno` (o `tema`), `pyraminx`, `skewb`, `square1` (o `sq1`), `megaminx`, `fto`, `cuboides` (o `cuboids`), `vendado` (o `bloqueos`), `colocar`, `aprender`, `3d`, `app`, `humo`, `registro`. Cada área ejecuta sus ficheros enteros y, en los compartidos (humo, aprender, vista 3D, registro), los tests cuyo nombre la menciona.
 - Variables: `HILOS=n` (hilos de los tests largos), `CASOS_NXN`, `CASOS_MEGA`, `CASOS_BLOQUEOS`, `CASOS_APRENDER` (casos de esos tests), `TAMANOS=4,5` (cubos grandes), `BLOQUEOS=pareja,cab` (configuraciones vendadas).
 - **Ningún test depende de la velocidad de la máquina** (sesión de mantenimiento, 27/11/2026): las esperas de la app cuentan vueltas en las que la app no hace nada (no milisegundos de reloj), los scrambles del 3x3 tienen presupuesto en nodos, los tests de bloqueos no cortan la búsqueda a los 30 s y hay tests con un «reloj de máquina lenta» (`conRelojLento` en `tests/util.mjs`). Ver DECISIONES.md.
 - Los resultados (porcentajes, longitudes, tiempos) de `npm test` se guardan en `tests/resultados/`; los de los niveles con menos casos van a `tests/.resultados-parciales/` (ignorado por git), para no pisar los de la suite completa (`GUARDAR=1` lo fuerza).
@@ -165,6 +177,8 @@ python3 scripts/comprobar-cambios.py         # cambios rápidos de puzzle
 python3 scripts/comprobar-primer-resolver.py # un clic en Resolver nada más cargar
 python3 scripts/comprobar-fto.py             # FTO: tiempos (CPU ×4) y recorrido completo en 4 modos
 python3 scripts/comprobar-colocar.py         # «Colocar piezas» en pantalla completa: WCA y Bandaged 3x3/4x4, escritorio/móvil, oscuro/claro, 2D/3D
+PUZZLES=cuboids python3 scripts/comprobar-colocar.py  # «Colocar piezas» en los tres cuboides, las 8 combinaciones
+python3 scripts/comprobar-cuboides.py        # Cuboids: portada → cada cuboide → scramble → resolver → reproducir (8 combinaciones)
 ```
 
 **Capturas**: los scripts las escriben en `docs/capturas/` (se sobrescriben en cada ejecución). Esa carpeta

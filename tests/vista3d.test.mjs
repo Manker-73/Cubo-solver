@@ -24,6 +24,7 @@ function movimientosDe(p) {
     return r;
   }
   if (p.geo) return Object.keys(p.geo.giros3D);
+  if (p.cuboide) return Object.keys(p.cuboide.G.movimientos); // cuboides (noche 15): capas y rotaciones
   return null; // Square-1: dependen del estado
 }
 
@@ -162,6 +163,28 @@ async function reproducirYComprobar(p, inicial, movs, { reorientar = false } = {
   return fallos;
 }
 
+test('3D: saltar al final (⇥) mientras se anima un giro deja el último paso (no lo pisa el giro en curso)', async () => {
+  let paso = 0, soltar = null;
+  const vista = {
+    mostrar() {},
+    // la animación no acaba hasta que el test la suelta (como un giro de 3D a medias)
+    animar: () => new Promise((r) => { soltar = r; }),
+    terminar() { if (soltar) soltar(); },
+  };
+  const rep = crearReproductor({
+    total: () => 10, leer: () => paso, fijar: (k) => { paso = k; }, estadoEn: () => null,
+    transicion: () => [{ antes: null, partes: [] }], vista: () => vista, puzzle: () => ({ vista3D: () => null }),
+    alCambiar() {}, ms: () => 300, pausa: () => 0, pausa3D: () => 0,
+  });
+  rep.alternar(); // play: empieza el giro del paso 0 al 1
+  await new Promise((r) => setTimeout(r, 0));
+  assert.ok(soltar, 'el giro está en curso');
+  rep.irA(Infinity); // ⇥ (termina la animación en curso)
+  await rep.esperar();
+  assert.equal(paso, 10, 'el salto al final no lo deshace el giro que se estaba animando');
+  assert.equal(rep.reproduciendo, false);
+});
+
 for (const p of PUZZLES) {
   test(`3D ${p.nombre}: reproducción de un scramble y de su solución (adelante y atrás)`, async () => {
     const rng = rngConSemilla(17);
@@ -237,7 +260,7 @@ test('3D: orientación de referencia del estado resuelto (colores por dirección
 });
 
 test('3D: piezas para resaltar (número de piezas y pegatinas de una pieza)', () => {
-  const esperado = { '2x2': 8, '3x3': 26, '4x4': 56, '5x5': 98, '6x6': 152, '7x7': 218, pyraminx: 14, skewb: 14, megaminx: 62, square1: 18, fto: 42 };
+  const esperado = { '2x2': 8, '3x3': 26, '4x4': 56, '5x5': 98, '6x6': 152, '7x7': 218, pyraminx: 14, skewb: 14, megaminx: 62, square1: 18, fto: 42, '3x3x1': 9, '3x3x2': 18, '2x2x3': 12 };
   for (const p of PUZZLES) {
     const v = p.vista3D(p.estadoResuelto());
     const piezas = new Set(v.geometria.pegatinas.map((q) => q.pieza));

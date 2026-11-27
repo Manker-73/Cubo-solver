@@ -534,7 +534,8 @@ test('app: si el Worker no se puede crear o falla, todo sigue en el hilo princip
 });
 
 // ---------- Cambio de puzzle: los dos paneles a la vez; scrambles precargados ----------
-const { PUZZLES: LISTA } = await import('../src/puzzles/index.js');
+// (los puzzles del selector de WCA Puzzles; los de Cuboids tienen su propio test)
+const LISTA = (await import('../src/puzzles/index.js')).PUZZLES.filter((p) => p.categoria === 'wca');
 const porNombre = (n) => LISTA.find((p) => p.nombre === n);
 const ESTADO_ALEATORIO = ['2x2', '3x3', 'pyraminx', 'skewb', 'square1', 'fto'];
 
@@ -1175,11 +1176,13 @@ test('app: navegación entre secciones (portada, WCA Puzzles con #/wca/<id>, Ban
   assert.equal(w.cuboSolver.estado().seccion, 'portada');
   assert.match(doc.querySelector('.heroe h1').textContent, /Mezcla\. Comprueba\. Resuelve\. Aprende\./);
   const tarjetas = [...doc.querySelectorAll('#secciones-disponibles a.tarjeta-seccion')];
-  assert.deepEqual(tarjetas.map((a) => a.getAttribute('href')), ['#/wca', '#/bandaged']);
-  assert.deepEqual(tarjetas.map((a) => a.querySelector('.nombre').textContent), ['WCA Puzzles', 'Bandaged Cubes']);
+  assert.deepEqual(tarjetas.map((a) => a.getAttribute('href')), ['#/wca', '#/bandaged', '#/cuboids']);
+  assert.deepEqual(tarjetas.map((a) => a.querySelector('.nombre').textContent), ['WCA Puzzles', 'Bandaged Cubes', 'Cuboids']);
+  // Cuboids (noche 15): los tres disponibles y «más pronto» para los siguientes
+  assert.match(tarjetas[2].textContent, /3x3x1.*3x3x2.*2x2x3.*más pronto/);
   // Bloqueadas: ni enlaces ni botones ni enfocables; con candado y "Próximamente"
   const bloq = [...doc.querySelectorAll('#secciones-bloqueadas .tarjeta-bloqueada')];
-  assert.deepEqual(bloq.map((x) => x.querySelector('.nombre').textContent), ['Shape Mods', 'Cuboids', 'Others']);
+  assert.deepEqual(bloq.map((x) => x.querySelector('.nombre').textContent), ['Shape Mods', 'Others']);
   for (const x of bloq) {
     assert.equal(x.querySelector('a, button, [tabindex], [href]'), null, 'una sección bloqueada no es un enlace');
     assert.match(x.textContent, /Próximamente/);
@@ -1249,7 +1252,7 @@ test('app: navegación entre secciones (portada, WCA Puzzles con #/wca/<id>, Ban
   await herramientaLista(ctx, 'bandaged', '3x3');
   assert.deepEqual(ordenPaneles(doc), ['panel-bloqueos', 'panel-resolver', 'panel-scramble']);
   // Secciones bloqueadas o desconocidas por URL: vuelven a la portada
-  for (const h of ['#/shape-mods', '#/cuboids', '#/others', '#/shape-mods/mirror', '#/nada', '#algo']) {
+  for (const h of ['#/shape-mods', '#/others', '#/shape-mods/mirror', '#/nada', '#algo']) {
     w.location.hash = '#/wca/3x3';
     await herramientaLista(ctx, 'wca', '3x3');
     w.location.hash = h;
@@ -1488,6 +1491,66 @@ test('app: colocar piezas en pantalla completa (WCA 3x3 y 4x4, Bandaged 3x3 y 4x
   await hasta(() => /geometrías/.test(doc.getElementById('bloq-analisis').textContent), 300000);
   toques['Bandaged 4x4'] = await probarColocar(ctx, 'Bandaged 4x4 (varios)', { objetivo: await estadoDelScramble(ctx) });
   console.log('  [toques en la app]', JSON.stringify(toques));
+  assert.deepEqual(errores, []);
+  w.close();
+});
+
+// ===========================================================================
+// Noche 15: Cuboids. Portada → Cuboids → cada puzzle → scramble → cargar → resolver → reproducir;
+// «Colocar piezas» con los tres; rutas nuevas (#/cuboids, #/cuboids/<id>) y las de siempre.
+// ===========================================================================
+test('app: Cuboids (portada, rutas, 3x3x1 / 3x3x2 / 2x2x3: scramble, cargar, resolver, reproducir y colocar piezas)', { timeout: 900000 }, async (t) => {
+  const ctx = await abrir(t, { url: 'https://localhost/', esperarHerramienta: false });
+  if (!ctx) return;
+  const { w, doc, hasta, errores } = ctx;
+  doc.querySelector('a.tarjeta-seccion[href="#/cuboids"]').click();
+  await herramientaLista(ctx, 'cuboids', '3x3x1');
+  await esperaHash(ctx, /^#\/cuboids\/3x3x1$/);
+  assert.equal(doc.getElementById('t-seccion').textContent, 'Cuboids');
+  assert.equal(doc.getElementById('panel-bloqueos').hidden, true);
+  assert.deepEqual(ordenPaneles(doc), ['panel-scramble', 'panel-resolver']);
+  // selector: los tres y los anunciados bloqueados
+  assert.deepEqual([...doc.querySelectorAll('#selector .chip')].map((c) => c.textContent), ['3x3x1 Floppy', '3x3x2 Domino', '2x2x3 Tower']);
+  assert.ok(doc.querySelectorAll('#selector .chip-pronto').length >= 1);
+  assert.match(doc.getElementById('selector').textContent, /pronto/);
+  const MOVS = { '3x3x1': /^[RLFB]$/, '3x3x2': /^(U['2]?|[RLFB]2)$/, '2x2x3': /^([UD]['2]?|[RF]2)$/ };
+  const toques = {};
+  for (const [id, nombre] of [['3x3x1', '3x3x1 Floppy'], ['3x3x2', '3x3x2 Domino'], ['2x2x3', '2x2x3 Tower']]) {
+    chipDe(doc, nombre).click();
+    await herramientaLista(ctx, 'cuboids', id);
+    assert.equal(w.location.hash, `#/cuboids/${id}`);
+    doc.getElementById('nuevo').click();
+    await herramientaLista(ctx, 'cuboids', id);
+    await hasta(() => !doc.getElementById('cargar').disabled, 120000);
+    const scr = doc.getElementById('scramble').textContent.trim().split(/\s+/);
+    assert.ok(scr.length >= 1 && scr.every((m) => MOVS[id].test(m)), `${id}: ${scr.join(' ')}`);
+    doc.getElementById('cargar').click();
+    doc.getElementById('resolver').click();
+    await hasta(() => !doc.getElementById('solucion').hidden || doc.querySelector('#mensajes .mensaje.error'), 120000);
+    assert.equal(doc.querySelector('#mensajes .mensaje.error'), null, doc.getElementById('mensajes').textContent);
+    await reproducirHastaElFinal(ctx, id);
+    toques[id] = await probarColocar(ctx, `Cuboids ${id}`, { objetivo: await estadoDelScramble(ctx) });
+  }
+  console.log('  [toques en la app]', JSON.stringify(toques));
+  // la URL elige el puzzle; uno que no existe se queda con el actual; el último se recuerda
+  w.location.hash = '#/cuboids/3x3x2';
+  await herramientaLista(ctx, 'cuboids', '3x3x2');
+  w.location.hash = '#/cuboids/nada';
+  await esperaHash(ctx, /^#\/cuboids\/3x3x2$/);
+  w.location.hash = '#/wca/skewb';
+  await herramientaLista(ctx, 'wca', 'skewb');
+  assert.equal(doc.getElementById('t-seccion').textContent, 'WCA Puzzles');
+  assert.ok(!chipDe(doc, '3x3x1 Floppy'), 'los cuboides no salen en WCA Puzzles');
+  w.location.hash = '#/cuboids';
+  await herramientaLista(ctx, 'cuboids', '3x3x2');
+  await esperaHash(ctx, /^#\/cuboids\/3x3x2$/);
+  // un puzzle de otra sección por la ruta de Cuboids no se abre allí
+  w.location.hash = '#/cuboids/3x3';
+  await esperaHash(ctx, /^#\/cuboids\/3x3x2$/);
+  w.location.hash = '#/bandaged';
+  await herramientaLista(ctx, 'bandaged', '3x3');
+  w.location.hash = '#/wca';
+  await herramientaLista(ctx, 'wca', 'skewb');
   assert.deepEqual(errores, []);
   w.close();
 });

@@ -138,6 +138,20 @@ for (const id of ['3x3', '4x4', '5x5']) {
   });
 }
 
+// Cuboids (noche 15): estados de scrambles de estado aleatorio, y además girados al azar (orientación libre)
+for (const id of ['3x3x1', '3x3x2', '2x2x3']) {
+  test(`colocar: ida y vuelta, Cuboids ${id} (también sujetado de cualquier forma)`, { timeout: 600000 }, () => {
+    const p = wca(id);
+    const rots = p.cuboide.G.geo.rotaciones;
+    const estados = (rng) => {
+      const e = p.aplicarSecuencia(p.estadoResuelto(), p.generarScramble(rng));
+      return rots[Math.floor(rng() * rots.length)].map((k) => e[k]);
+    };
+    const r = idaYVuelta(`Cuboids ${id}`, p, p, estados, N_CASOS);
+    assert.ok(r.toquesMedia > 0);
+  });
+}
+
 const VENDADOS = [
   { nombre: 'vendado 3x3 pareja', crear: () => [puzzleConBloqueos(cubo3, EJEMPLOS_BLOQUEOS.find((x) => x.id === 'pareja').bloques), cubo3], n: N_CASOS },
   { nombre: 'vendado 3x3 varios', crear: () => [puzzleConBloqueos(cubo3, EJEMPLOS_BLOQUEOS.find((x) => x.id === 'varios').bloques), cubo3], n: N_CASOS },
@@ -161,6 +175,8 @@ test('colocar: modelo de cada puzzle (tipos, piezas fijas colocadas solas, Squar
     '2x2': { piezas: 8, solas: 1 }, '3x3': { piezas: 26, solas: 6 }, '4x4': { piezas: 56, solas: 0 }, '5x5': { piezas: 98, solas: 6 },
     '6x6': { piezas: 152, solas: 0 }, '7x7': { piezas: 218, solas: 6 }, pyraminx: { piezas: 14, solas: 0 }, skewb: { piezas: 14, solas: 1 },
     megaminx: { piezas: 62, solas: 12 }, fto: { piezas: 42, solas: 0 },
+    // cuboides (noche 15): con las rotaciones como generadores (orientación libre) nada queda solo
+    '3x3x1': { piezas: 9, solas: 0 }, '3x3x2': { piezas: 18, solas: 0 }, '2x2x3': { piezas: 12, solas: 0 },
   };
   for (const p of PUZZLES) {
     if (!esperado[p.id]) { assert.equal(p.colocarPiezas, undefined, `${p.id} no debería ofrecer colocar piezas`); continue; }

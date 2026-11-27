@@ -1,6 +1,7 @@
 # Comprobación en Chromium real de «Colocar piezas» (noche 14; Python + Playwright + Chrome).
 #   npm run build && python scripts/comprobar-colocar.py [rapido]
-# (CHROME=ruta del ejecutable; por defecto el Chrome instalado. PUZZLES=wca3,band3,wca4,band4.)
+# (CHROME=ruta del ejecutable; por defecto el Chrome instalado. PUZZLES=wca3,band3,wca4,band4; PUZZLES=resto;
+#  PUZZLES=cuboids: 3x3x1, 3x3x2 y 2x2x3 en las 8 combinaciones.)
 #
 # Para cada puzzle (WCA 3x3, Bandaged 3x3 con una pareja, WCA 4x4 y Bandaged 4x4 con varios bloques) ×
 # escritorio 1280 / móvil 390 (táctil) × oscuro / claro × 2D / 3D:
@@ -40,7 +41,12 @@ PUZZLES = {
     'megaminx': ('#/wca/megaminx', 'Megaminx'),
     'fto': ('#/wca/fto', 'FTO'),
     'band5': ('#/bandaged?puzzle=5x5&bloqueos=UFR.UF3', 'Bandaged 5x5 (pareja)'),
+    # Cuboids (noche 15): PUZZLES=cuboids, las 8 combinaciones de cada uno
+    'cub331': ('#/cuboids/3x3x1', '3x3x1 Floppy'),
+    'cub332': ('#/cuboids/3x3x2', '3x3x2 Domino'),
+    'cub223': ('#/cuboids/2x2x3', '2x2x3 Tower'),
 }
+CUBOIDS = ['cub331', 'cub332', 'cub223']
 RESTO = ['wca2', 'wca5', 'pyraminx', 'skewb', 'megaminx', 'fto', 'band5']
 
 # Coloca el objetivo: devuelve los pasos que la página tiene que hacer (lo decide el modelo del editor)
@@ -121,7 +127,9 @@ async def comprobar(b, puzzle, dispositivo, opts, tema, modo, errores, fallos, r
     clave = f'{puzzle}/{dispositivo}/{tema}/{modo}'
     url, nombre = PUZZLES[puzzle]
     ctx = await b.new_context(**opts)
-    await ctx.add_init_script(f"""try {{ localStorage.setItem('cubo-solver:tema', '{tema}');
+    # (la app guarda 'claro' / 'oscuro'; hasta la noche 15 aquí se guardaba 'light' / 'dark' y salía siempre oscuro)
+    guardado = 'claro' if tema == 'light' else 'oscuro'
+    await ctx.add_init_script(f"""try {{ localStorage.setItem('cubo-solver:tema', '{guardado}');
       localStorage.setItem('cubo-solver:modo3d', JSON.stringify({{ previa: '{modo}', edicion: '{modo}', solucion: '{modo}' }})); }} catch (e) {{}}""")
     pg = await ctx.new_page()
     pg.on('pageerror', lambda e, c=clave: errores.append(f'{c}: {e}'))
@@ -142,6 +150,7 @@ async def comprobar(b, puzzle, dispositivo, opts, tema, modo, errores, fallos, r
       return { fs: document.fullscreenElement && document.fullscreenElement.id, ancho: r.width, alto: r.height, vw: window.innerWidth, vh: window.innerHeight,
         scroll: document.documentElement.scrollWidth > window.innerWidth + 1, tema: document.documentElement.dataset.theme,
         m3d: !document.getElementById('colocar-3d').hidden, faltan: document.getElementById('colocar-faltan').textContent }; }""")
+    if info['tema'] != tema: fallos.append(f'{clave}: tema {info["tema"]} en vez de {tema}')
     if info['fs'] != 'colocar': fallos.append(f'{clave}: no está en pantalla completa ({info["fs"]})')
     if abs(info['ancho'] - info['vw']) > 1 or abs(info['alto'] - info['vh']) > 1: fallos.append(f'{clave}: la capa no ocupa la ventana ({info})')
     if info['scroll']: fallos.append(f'{clave}: scroll horizontal')
@@ -212,6 +221,7 @@ async def main():
     rapido = len(sys.argv) > 1 and sys.argv[1] == 'rapido'
     lista = os.environ.get('PUZZLES', 'wca3,band3,wca4,band4').split(',')
     if lista == ['resto']: lista = RESTO
+    if lista == ['cuboids']: lista = CUBOIDS
     async with async_playwright() as p:
         b = await p.chromium.launch(executable_path=CHROME, args=['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'])
         for puzzle in lista:
@@ -219,7 +229,7 @@ async def main():
                 for tema in ('dark', 'light'):
                     for modo in ('2d', '3d'):
                         # los 4x4: una combinación por dispositivo (tardan más) salvo que se pidan todas
-                        if puzzle not in ('wca3', 'band3') and not os.environ.get('TODAS') and (tema, modo) not in (('dark', '3d'), ('light', '2d')):
+                        if puzzle not in ('wca3', 'band3', *CUBOIDS) and not os.environ.get('TODAS') and (tema, modo) not in (('dark', '3d'), ('light', '2d')):
                             continue
                         if rapido and (tema, modo) != ('dark', '2d'): continue
                         todas = (dispositivo, tema, modo) in (('escritorio', 'dark', '3d'), ('movil', 'light', '2d'))

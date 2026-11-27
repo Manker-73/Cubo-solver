@@ -53,6 +53,10 @@ src/
     fto-geo.js      FTO: geometría (octaedro, cortes), red 2D, 16 giros, piezas (6 esquinas, 12 aristas, 24 triángulos), tétradas, 24 rotaciones
     fto-grupo.js    FTO: restricciones (Schreier–Sims), número de posiciones y cota inferior por conteo
     fto-solver.js   FTO: solver en tres fases (coordenadas propias + crearBuscador), estados aleatorios, simplificación
+    cuboide.js      CUBOIDES (noche 15): crearCuboide(a, b, c) = puzzle completo (validador con orientación libre, scramble, solver, colocar)
+    cuboide-geo.js  cuboides: caja troceada por los planos entre capas, giros de capa (90° solo en sección cuadrada), rotaciones, piezas, 3D
+    cuboide-grupo.js  cuboides: grupo de los giros de búsqueda (Schreier–Sims), colocaciones, órbitas, restricciones ℤ₂, identificación
+    cuboide-solver.js cuboides: solver óptimo (tabla exacta por BFS o IDA* con bases de patrones) desde el resuelto y sus rotaciones del grupo
   aprender/       modo aprender: soluciones por métodos humanos, explicadas por etapas
     guion.js          resultado común: etapas con objetivo, bloques con texto, algoritmo y piezas
     motor-cubo.js     cubos 2x2/3x3: piezas por colores, IDA* con tablas de 1–3 piezas, búsqueda de algoritmos (macros)
@@ -81,7 +85,8 @@ src/
 tests/            node --test (npm test; niveles: ver "Tests" más abajo)
   diseno.test.mjs rutas de las secciones y contraste ≥ 4,5:1 de los colores de los dos temas
   humo.test.mjs   prueba de humo de cada puzzle del registro, huellas de los giros, vendado y modo aprender
-  colocar.test.mjs  colocar piezas: ida y vuelta (WCA y vendados), rechazos y piezas iguales
+  colocar.test.mjs  colocar piezas: ida y vuelta (WCA, vendados y cuboides), rechazos y piezas iguales
+  cuboides.test.mjs cuboides: geometría y giros legales, grupo frente a Jaap, BFS completo, scrambles exactos y uniformes, solver óptimo (oráculo de colores), rechazos
   huellas.json    huellas (hash del estado) de cada giro básico y de una secuencia fija por puzzle
   aprender-comprobar.mjs  objetivos por etapa y comprobación de una solución del modo aprender (aprender y humo)
   util.mjs        CASOS, NIVEL, casosPor, guardarResultado, probarScrambles, probarSolver, debeRechazar
@@ -99,7 +104,9 @@ scripts/
   comprobar-aprender.py  modo aprender en Chromium real (escritorio y móvil)
   comprobar-primer-resolver.py  un solo clic en "Resolver" nada más cargar la página (caché vacía; móvil con la CPU a ×4)
   comprobar-bloqueos.py  cubo vendado en Chromium real (escritorio y móvil, con y sin 3D)
-  comprobar-colocar.py   «Colocar piezas» en Chromium real (WCA y Bandaged 3x3/4x4; escritorio/móvil, oscuro/claro, 2D/3D)
+  comprobar-colocar.py   «Colocar piezas» en Chromium real (WCA y Bandaged 3x3/4x4; PUZZLES=cuboids; escritorio/móvil, oscuro/claro, 2D/3D)
+  comprobar-cuboides.py  Cuboids en Chromium real: portada → cada cuboide → scramble → resolver → reproducir (8 combinaciones)
+  bfs-cuboide.mjs        BFS completo del 3x3x2 (406.425.600 posiciones, un byte cada una): número de Dios y distribución
   mezcla-bloqueos.mjs    cuánto hay que mezclar un cubo vendado con giros al azar (criterio de la longitud del scramble)
 ```
 
@@ -183,6 +190,31 @@ puzzle no necesita saber nada del Worker, pero su estado debe poder copiarse con
   - Límite de tiempo `tiempoMax` (10 s): recorta los pasos opcionales (anticipación, tiempo del 3x3, segundo intento del 4x4) si los anteriores ya han tardado; siempre devuelve una solución completa.
   - Si una búsqueda no termina dentro de su límite, se usa el método de conmutadores de la noche 3 para lo que falte (siempre correcto). Detalles y cifras en DECISIONES.md y ESTADO.md.
 
+### Cuboides (cómo está hecho, noche 15)
+- **Una línea por cuboide** en el registro: `crearCuboide(a, b, c, { id, nombre, costeScramble })` con a = ancho (x, R/L),
+  b = fondo (z, F/B), c = alto (y, U/D); categoría `cuboids`. Todo lo demás se deduce de las medidas.
+- `cuboide-geo.js`: caja de lado 2/max por cubito, caras U R F D L B (los colores de `PALETA_CUBO`), planos de corte entre
+  capas. Por eje: n capas; giros de capa si n ≥ 2, de 90°/180° si la sección es cuadrada y solo de 180° si no (nombres
+  `U U' U2`, `R2`; sin el 2 si el puzzle no tiene ningún giro de 90°: 3x3x1); M/E/S en la capa del medio de 3, 2R… en las
+  interiores; rotaciones x, y, z (las que conservan la forma) y alias de lectura (`R` = `R2`…). **Giros de búsqueda**: todas
+  las capas menos la del medio (n impar) o la del lado negativo (n = 2): mismos conjuntos que csTimer y misma métrica que con
+  todos los giros exteriores (ver DECISIONES.md). Piezas = cubitos, con sus pegatinas en orden U, D, F, B, R, L (la primera es
+  la de referencia); tipo esquina/arista/centro por cuántos ejes está en un extremo; nombre de posición (`UFR`, `FR`, `R`…).
+  Vista 3D con `modelo3DPegatinas` (giros con su eje y su capa).
+- `cuboide-grupo.js`: imágenes de los giros, cadena de Schreier–Sims del grupo de búsqueda (orden, pertenencia, elemento
+  uniforme), rotaciones que están en el grupo, **colocaciones** de cada pieza (órbita de su tupla de pegatinas; la posición de la
+  referencia determina la tupla), órbitas de huecos, rasgos ℤ₂ (paridad por órbita, volteos en órbitas de 2 formas) y
+  restricciones = núcleo; `previsto` = orden si solo hay esas (los tests lo igualan al de Schreier–Sims). `identificar(colores)`
+  da la imagen de pegatinas o errores tipados (inexistente, repetida, falta, especular, órbita, orientación).
+- `cuboide-solver.js`: coordenadas = variaciones de las posiciones de referencia de las piezas de una órbita, con tabla de
+  movimientos; tabla exacta (BFS) si el espacio cabe (≤ 30 M índices) o bases de patrones (órbita entera + piezas de otra,
+  ≤ 3 M) con IDA*; todas las tablas desde los objetivos (resuelto y rotaciones del grupo); poda de ejes por orden de capa.
+- `cuboide.js`: validador con los 8 reetiquetados de colores (orientación libre, como el Skewb) y mensajes; `resolver`;
+  scramble = elemento uniforme → solución óptima → inversa (`cuboide.scrambleDetallado` da además el estado elegido);
+  `colocarPiezas` con las rotaciones entre los generadores; campo propio `cuboide` (geometría, grupo, solver, analizar…).
+- Límite conocido: con piezas que se ven iguales (centros de los lados del 3x3x4…) `identificar` lanza un error, y con n ≥ 4
+  par quitar una capa cambia la métrica: son lo que falta para el 2x2x4 / 3x3x4 / 3x3x5 (anunciados en `PUZZLES_PRONTO`).
+
 ### Megaminx (cómo está hecho)
 - `megaminx-geo.js`: el motor geométrico da las 132 pegatinas, la red (dos flores), los 48 giros de cara (`R`, `R'`, `R2`, `R2'`…), los de Pochmann (`R++`, `D--`, `U`) y las 60 rotaciones. `megaminx-piezas.js` agrupa las pegatinas en piezas por las capas en las que están y crea el modelo de piezas; los centros pintados dan la orientación (se reetiquetan los colores).
 - `megaminx-busqueda.js`: una etapa = caras permitidas + piezas objetivo. Los huecos (posición·orientación) se numeran dentro de la región de la etapa; tablas de poda exactas de grupos de ≤ 3 piezas que cubren todos los pares; IDA* con la heurística del máximo, que puede devolver varias soluciones de la longitud mínima.
@@ -217,7 +249,8 @@ Action de tests. No genera nada ni cambia el bundle (esbuild recibe un tsconfig 
   `checkJs: false`, `strict`). Hoy: `core/puzzle.js`, `core/piezas.js`, `core/modelo3d.js`, `core/bloqueos.js`,
   `aprender/guion.js`, `puzzles/index.js`, `app/servicio.js`, `app/secciones.js` y los puzzles `skewb.js`,
   `pyraminx.js`, `cubo2.js` y los cuatro módulos del FTO; desde la noche 14, también `core/colocar.js`,
-  `puzzles/nxn-colocar.js` y `app/colocar-ui.js`. Los demás se leen para conocer sus tipos, pero no dan errores.
+  `puzzles/nxn-colocar.js` y `app/colocar-ui.js`; desde la noche 15, `puzzles/cuboide.js` (los otros tres módulos de los
+  cuboides son numéricos y no se comprueban; `cuboide.js` los usa como `any`). Los demás se leen para conocer sus tipos, pero no dan errores.
 - **Cómo se usan desde JavaScript**: `/** @import { Puzzle, EstadoPegatinas } from '../core/tipos.js' */` y
   comentarios `@param`, `@returns`, `@type`, `@typedef`. Un cast es `/** @type {X} */ (expresión)`: los
   paréntesis no cambian nada al ejecutar. **Nunca** se cambia código para contentar al comprobador (ni
@@ -459,13 +492,14 @@ tal cual, se buscan las identidades de los centros sueltos que lo hacen alcanzab
 #/                    portada: titular, una tarjeta por sección (SECCIONES), «Cómo funciona»
 #/como-funciona       portada con el foco en «Cómo funciona»
 #/wca[/<id>]          WCA Puzzles: la herramienta con el selector (puzzles con categoria 'wca' + PUZZLES_PRONTO bloqueados)
+#/cuboids[/<id>]      Cuboids (noche 15): igual, con la categoria 'cuboids' (secciones de catálogo: CATALOGOS en secciones.js)
 #/bandaged[?puzzle=4x4|5x5][&bloqueos=…|&firma=…]   Bandaged Cubes: 3x3 (por defecto), 4x4 o 5x5 con «Tus bloques»
 #/<bloqueada o desconocida>  -> #/ (replaceState)
 #bloqueos=… #firma=… ?bloqueos=… ?firma=…  (enlaces antiguos) -> #/bandaged?…
 ```
 
-- **`secciones.js`**: `SECCIONES = [{ id, nombre, descripcion, descripcionCorta?, estado: 'disponible' | 'bloqueada', estilo? }]` (los nombres en inglés, como en la comunidad; `INTRO_SECCION` tiene el texto en español de cada herramienta). `leerRuta(hash, search)` devuelve `{ seccion, puzzle?, consulta?, ancla?, redirigir?, antigua? }` y `hashDe(ruta)` lo contrario; no tocan el DOM (los prueba `tests/diseno.test.mjs`). **Para añadir una sección**: una línea en `SECCIONES` (bloqueada sale ya en la portada como «Próximamente»); para abrirla, `estado: 'disponible'` y, en `main.js`, qué hace `aplicarRuta` con ella (qué puzzles muestra el selector: los de su `categoria`).
-- **`main.js`**: `aplicarRuta()` (al cargar y en cada `hashchange`) muestra `#portada` o `#herramienta`, pone el título y la introducción de la sección y elige el puzzle (`seleccionar`, síncrona como siempre). `st.seccion` decide dos cosas: el selector (`pintarSelector` solo en WCA) y los bloques (`puzzleActivo` solo envuelve el 3x3 con `puzzleConBloqueos` en Bandaged; el panel de bloques recibe `base() = null` fuera de Bandaged y se oculta). Los cambios de URL que no son una navegación del usuario (elegir un chip, aplicar bloques, normalizar un enlace antiguo) usan `history.replaceState`, que no dispara `hashchange`.
+- **`secciones.js`**: `SECCIONES = [{ id, nombre, descripcion, descripcionCorta?, estado: 'disponible' | 'bloqueada', estilo? }]` (los nombres en inglés, como en la comunidad; `INTRO_SECCION` tiene el texto en español de cada herramienta). `leerRuta(hash, search)` devuelve `{ seccion, puzzle?, consulta?, ancla?, redirigir?, antigua? }` y `hashDe(ruta)` lo contrario; no tocan el DOM (los prueba `tests/diseno.test.mjs`). **Para añadir una sección**: una línea en `SECCIONES` (bloqueada sale ya en la portada como «Próximamente»); para abrirla, `estado: 'disponible'`. Si es de **catálogo** (un selector con los puzzles del registro de su `categoria`, como WCA Puzzles y Cuboids), basta con añadir su id a `CATALOGOS` y la categoría a `Categoria` (`tipos.d.ts`): `main.js` ya la trata (selector, `#/<id>/<puzzle>`, último puzzle guardado en `cubo-solver:puzzle:<id>`); si no, decir en `main.js` qué hace `aplicarRuta` con ella.
+- **`main.js`**: `aplicarRuta()` (al cargar y en cada `hashchange`) muestra `#portada` o `#herramienta`, pone el título y la introducción de la sección y elige el puzzle (`seleccionar`, síncrona como siempre). `st.seccion` decide dos cosas: el selector (`pintarSelector`: los puzzles de la categoría en las secciones de catálogo; 3x3/4x4/5x5 en Bandaged) y los bloques (`puzzleActivo` solo envuelve el 3x3 con `puzzleConBloqueos` en Bandaged; el panel de bloques recibe `base() = null` fuera de Bandaged y se oculta). Los cambios de URL que no son una navegación del usuario (elegir un chip, aplicar bloques, normalizar un enlace antiguo) usan `history.replaceState`, que no dispara `hashchange`.
 - La herramienta es un solo DOM para las dos secciones (mismos ids que antes). El orden de los paneles lo pone `ordenarPaneles(seccion)` (main.js, en `aplicarRuta`) moviendo los nodos, para que DOM, tabulador y vista coincidan: WCA Puzzles `#paneles > #paneles-par(Scramble, Resolver) + Tus bloques (oculto)`, con `.paneles-par { display: contents }` (maqueta de siempre); Bandaged Cubes `#paneles > #paneles-par(Tus bloques, Resolver) + Scramble`, una columna hasta 999 px y desde 1000 px Tus bloques | Resolver con el Scramble debajo a todo el ancho. En escritorio el Resolver es sticky si cabe en la ventana (clase `.cabe`, `vigilarResolverFijo`). Ver DECISIONES.md («Sesión orden de Bandaged Cubes»).
 - **Temas** (`tema.js` + `estilos.css`): `data-theme="dark" | "light"` en `<html>`; `:root` tiene los colores oscuros (por defecto, sin mirar `prefers-color-scheme`) y `:root[data-theme="light"]` los claros. Variables: `--fondo`, `--superficie` (paneles), `--linea`, `--tinta`, `--tenue`, `--acento`, `--acento-texto`, `--acento-tinta` (texto sobre acento), `--acento-suave`, `--raya-1`/`--raya-2` (fondo rayado de lo bloqueado), `--error(-suave)`, `--ok(-suave)`, `--aviso`, `--lienzo` (fondo de las vistas 2D/3D) y `--contorno` (contorno fino de los dibujos en oscuro). El test de contraste lee estos dos bloques del CSS: un color nuevo de texto o de fondo debe añadirse a su lista de pares.
 - **Fuentes**: `--f-display` (Bricolage Grotesque 800, títulos), `--f-texto` (Inter), `--f-mono` (JetBrains Mono 500, notación y etiquetas), incrustadas como `@font-face` en base64 por `build.mjs` (marcador `/*FUENTES*/` de la plantilla), con pilas del sistema detrás. La app no hace ninguna petición de red.
