@@ -1187,3 +1187,41 @@ bloqueada menos).
   pintor), con las mismas sombras. Una red desplegada no tiene sentido (las piezas sobresalen al mezclar), pero un
   dibujo sí: sirve sin WebGL y para «Colocar piezas» en 2D.
 - Pintar está desactivado (`avisoPintar`, como en los vendados 4x4/5x5): de un solo color no hay nada que pintar.
+
+# Investigación: tamaño y carga de la app (27/11/2026) — DECISIÓN PENDIENTE
+
+Informe completo, con método, cifras y cómo reproducirlo: `docs/investigacion-carga.md`; prototipos en la rama
+`investigacion/carga` (no fusionada). main no cambia de comportamiento (solo se añaden `scripts/medir-carga.py` y
+`scripts/servidor-pages.mjs`).
+
+## Lo medido (Chromium real, móvil, mediana de 5)
+- `dist/index.html` 937 KB → **376 KB con gzip**. **GitHub Pages solo sirve gzip** (no brotli, aunque se pida) y
+  `Cache-Control: max-age=600` (comprobado con las cabeceras).
+- Portada (= usable) con Fast 3G: 3,0 s (CPU ×1) y **4,2 s (CPU ×4)**; Slow 3G ×4: 11,0 s; con caché ×4: 2,1 s.
+- **El texto del Worker repite el 98,5 % del script principal**: 136 de los 376 KB descargados.
+- La CPU no se va en parsear (compilar ~0,1 s ×1) sino en **ejecutar**: el registro construye los 16 puzzles al
+  cargar (~0,35 s ×1, ~1,7 s ×4), y el Worker lo repite (~0,5 s). La portada solo ejecuta 26 KB del JS.
+- Fuentes: 60 KB de woff2 (78 KB en base64); Inter variable 100–900 cuando se usan 400–600. Minificación: ya al
+  máximo de esbuild. Código muerto: < 1 KB.
+
+## Opciones (prototipo medido; portada con Fast 3G y CPU ×4)
+| Opción | KB | Portada | Con caché | Trabajo / riesgo |
+|---|---|---|---|---|
+| main | 376 | 4,16 s | 2,08 s | — |
+| a · el Worker se crea con el mismo script (sin copia como texto) | 242 | 3,40 s | 2,13 s | bajo / bajo (comprobar `document.currentScript` en el artifact) |
+| b · fuentes: español + Inter 400–600 | 356 | 4,09 s | 2,33 s | muy bajo / muy bajo |
+| c · registro perezoso (no construir puzzles hasta usarlos) | 383 | 3,34 s | 1,55 s | medio / medio |
+| **a + b + c** (un solo HTML: artifact, sin conexión) | **223** | **2,27 s** | 1,29 s | |
+| + e2 · la portada no crea un contexto WebGL ni fuerza maquetación | 223 | 2,24 s | 1,54 s | muy bajo (ganancia dentro del ruido) |
+| d · varios ficheros solo para Pages (con a + b + c) | 224 | 3,20 s | **0,71 s** | medio; frío peor (una ida y vuelta más), visitas siguientes mejor |
+| e1 · a + b + c con brotli (otro alojamiento) | 194 | 2,02 s | 1,15 s | dejar Pages: no compensa |
+
+## Recomendación (pendiente de decidir)
+- **Ya**: a, luego c (con constructores perezosos en el registro, sin `Proxy`) y b. −153 KB y −1,9 s en la portada
+  del móvil, sin cambiar la arquitectura (un único HTML para Pages y el artifact, sin conexión, tablas en el Worker).
+- **Con la PWA**: build en varios ficheros para Pages (d, con hash en los nombres) que guarda el service worker; las
+  visitas siguientes bajan a ~0,7 s y funciona sin conexión. Los trozos por puzzle (registro asíncrono) solo si la
+  descarga vuelve a crecer mucho.
+- **Descartado**: evaluación diferida del código por secciones dentro del HTML (parsear no es el problema; lo que
+  costaba era ejecutar, y lo arregla c), terser (1–3 %), cambiar de alojamiento solo por brotli.
+- Pendiente de investigar: **maquetar** la portada (~0,12 s ×1, ~0,6 s ×4) es lo siguiente que más pesa.
