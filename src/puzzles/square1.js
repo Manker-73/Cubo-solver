@@ -29,10 +29,10 @@ import {
 export const PALETA = [
   { nombre: 'blanco', hex: '#f4f4f4' },
   { nombre: 'amarillo', hex: '#ffd60a' },
-  { nombre: 'verde', hex: '#2a9d4b' },
-  { nombre: 'rojo', hex: '#d62828' },
-  { nombre: 'azul', hex: '#1d5ad8' },
   { nombre: 'naranja', hex: '#f77f00' },
+  { nombre: 'azul', hex: '#1d5ad8' },
+  { nombre: 'rojo', hex: '#d62828' },
+  { nombre: 'verde', hex: '#2a9d4b' }, 
 ];
 const U = 0, D = 1;
 const LADOS = [4, 5, 2, 3]; // frente, derecha, detrás, izquierda
