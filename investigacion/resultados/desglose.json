@@ -1,0 +1,419 @@
+{
+ "html": {
+  "bytes": 959852,
+  "gzip": 384377,
+  "brotli": 260826
+ },
+ "scriptPrincipalSinWorker": {
+  "bytes": 461880,
+  "gzip": 172508,
+  "brotli": 145959
+ },
+ "textoWorker": {
+  "bytes": 374662,
+  "gzip": 139740,
+  "brotli": 117910
+ },
+ "htmlSinWorker": {
+  "bytes": 959852,
+  "gzip": 384377,
+  "brotli": 260826
+ },
+ "css": {
+  "bytes": 33182,
+  "gzip": 7277
+ },
+ "plantilla": {
+  "bytes": 14032
+ },
+ "fuentes": {
+  "bricolage-grotesque-800.woff2": {
+   "woff2": 17028,
+   "base64": 22704
+  },
+  "inter.woff2": {
+   "woff2": 35200,
+   "base64": 46936
+  },
+  "jetbrains-mono-500.woff2": {
+   "woff2": 7708,
+   "base64": 10280
+  }
+ },
+ "areas": {
+  "puzzle: NxN": {
+   "app": 88080,
+   "worker": 87032,
+   "dup": 88080,
+   "mods": 13
+  },
+  "modo aprender": {
+   "app": 82697,
+   "worker": 82742,
+   "dup": 82697,
+   "mods": 10
+  },
+  "bloqueos (vendados)": {
+   "app": 61468,
+   "worker": 50075,
+   "dup": 50248,
+   "mods": 5
+  },
+  "interfaz": {
+   "app": 47553,
+   "worker": 1792,
+   "dup": 1547,
+   "mods": 6
+  },
+  "puzzle: square-1": {
+   "app": 26268,
+   "worker": 26270,
+   "dup": 26268,
+   "mods": 2
+  },
+  "puzzle: megaminx": {
+   "app": 25452,
+   "worker": 25452,
+   "dup": 25452,
+   "mods": 6
+  },
+  "puzzle: shape mods": {
+   "app": 24771,
+   "worker": 24573,
+   "dup": 24771,
+   "mods": 3
+  },
+  "colocar piezas": {
+   "app": 23822,
+   "worker": 635,
+   "dup": 635,
+   "mods": 3
+  },
+  "núcleo": {
+   "app": 19103,
+   "worker": 19152,
+   "dup": 19103,
+   "mods": 10
+  },
+  "puzzle: FTO": {
+   "app": 17031,
+   "worker": 17031,
+   "dup": 17031,
+   "mods": 3
+  },
+  "vista 3D": {
+   "app": 13658,
+   "worker": 1498,
+   "dup": 1762,
+   "mods": 3
+  },
+  "puzzle: tpr4": {
+   "app": 11634,
+   "worker": 11599,
+   "dup": 11634,
+   "mods": 1
+  },
+  "puzzle: pyraminx": {
+   "app": 6665,
+   "worker": 6665,
+   "dup": 6665,
+   "mods": 1
+  },
+  "puzzle: 3x3 (Kociemba)": {
+   "app": 6419,
+   "worker": 6419,
+   "dup": 6419,
+   "mods": 1
+  },
+  "puzzle: skewb": {
+   "app": 6038,
+   "worker": 6038,
+   "dup": 6038,
+   "mods": 1
+  },
+  "registro de puzzles": {
+   "app": 1210,
+   "worker": 894,
+   "dup": 1210,
+   "mods": 1
+  }
+ },
+ "modulos": {
+  "src/core/bloqueos.js": {
+   "bytes": 45440,
+   "enWorker": true
+  },
+  "src/app/main.js": {
+   "bytes": 38114,
+   "enWorker": false
+  },
+  "src/aprender/metodos-nxn.js": {
+   "bytes": 29421,
+   "enWorker": true
+  },
+  "src/puzzles/cubo-grande.js": {
+   "bytes": 25816,
+   "enWorker": true
+  },
+  "src/puzzles/shapemod.js": {
+   "bytes": 18016,
+   "enWorker": true
+  },
+  "src/puzzles/square1.js": {
+   "bytes": 15740,
+   "enWorker": true
+  },
+  "src/aprender/metodos-3x3.js": {
+   "bytes": 15280,
+   "enWorker": true
+  },
+  "src/app/colocar-ui.js": {
+   "bytes": 14432,
+   "enWorker": false
+  },
+  "src/puzzles/tpr4.js": {
+   "bytes": 11634,
+   "enWorker": true
+  },
+  "src/app/bloqueos-ui.js": {
+   "bytes": 11220,
+   "enWorker": false
+  },
+  "src/puzzles/nxn-centros.js": {
+   "bytes": 11218,
+   "enWorker": true
+  },
+  "src/puzzles/square1-motor.js": {
+   "bytes": 10528,
+   "enWorker": true
+  },
+  "src/aprender/metodos-2x2.js": {
+   "bytes": 9424,
+   "enWorker": true
+  },
+  "src/app/vista3d.js": {
+   "bytes": 9081,
+   "enWorker": false
+  },
+  "src/core/colocar.js": {
+   "bytes": 8755,
+   "enWorker": false
+  },
+  "src/puzzles/megaminx.js": {
+   "bytes": 8615,
+   "enWorker": true
+  },
+  "src/puzzles/nxn-identidad.js": {
+   "bytes": 7895,
+   "enWorker": true
+  },
+  "src/puzzles/fto-solver.js": {
+   "bytes": 7759,
+   "enWorker": true
+  },
+  "src/puzzles/nxn.js": {
+   "bytes": 7138,
+   "enWorker": true
+  },
+  "src/aprender/metodos-square1.js": {
+   "bytes": 6995,
+   "enWorker": true
+  },
+  "src/puzzles/pyraminx.js": {
+   "bytes": 6665,
+   "enWorker": true
+  },
+  "src/puzzles/kociemba.js": {
+   "bytes": 6419,
+   "enWorker": true
+  },
+  "src/puzzles/cuboide.js": {
+   "bytes": 6321,
+   "enWorker": true
+  },
+  "src/puzzles/megaminx-solver.js": {
+   "bytes": 6231,
+   "enWorker": true
+  },
+  "src/puzzles/fto.js": {
+   "bytes": 6154,
+   "enWorker": true
+  },
+  "src/puzzles/skewb.js": {
+   "bytes": 6038,
+   "enWorker": true
+  },
+  "src/aprender/metodos-skewb.js": {
+   "bytes": 5891,
+   "enWorker": true
+  },
+  "src/aprender/metodos-pyraminx.js": {
+   "bytes": 5824,
+   "enWorker": true
+  },
+  "src/puzzles/cuboide-grupo.js": {
+   "bytes": 5216,
+   "enWorker": true
+  },
+  "src/puzzles/shapemod-geo.js": {
+   "bytes": 4955,
+   "enWorker": true
+  },
+  "src/puzzles/nxn-bloqueos.js": {
+   "bytes": 4532,
+   "enWorker": true
+  },
+  "src/puzzles/cubo3.js": {
+   "bytes": 4529,
+   "enWorker": true
+  },
+  "src/core/piezas.js": {
+   "bytes": 4149,
+   "enWorker": true
+  },
+  "src/puzzles/cuboide-geo.js": {
+   "bytes": 4001,
+   "enWorker": true
+  },
+  "src/puzzles/megaminx-ultima.js": {
+   "bytes": 3726,
+   "enWorker": true
+  },
+  "src/aprender/motor-cubo.js": {
+   "bytes": 3540,
+   "enWorker": true
+  },
+  "src/aprender/algoritmos.js": {
+   "bytes": 3518,
+   "enWorker": true
+  },
+  "src/puzzles/cuboide-solver.js": {
+   "bytes": 3500,
+   "enWorker": true
+  },
+  "src/puzzles/megaminx-busqueda.js": {
+   "bytes": 3156,
+   "enWorker": true
+  },
+  "src/core/geometria.js": {
+   "bytes": 3139,
+   "enWorker": true
+  },
+  "src/puzzles/fto-geo.js": {
+   "bytes": 3118,
+   "enWorker": true
+  },
+  "src/puzzles/nxn-piezas.js": {
+   "bytes": 3063,
+   "enWorker": true
+  },
+  "src/app/secciones.js": {
+   "bytes": 2927,
+   "enWorker": false
+  },
+  "src/core/minkwitz.js": {
+   "bytes": 2892,
+   "enWorker": true
+  },
+  "src/app/escena3d.js": {
+   "bytes": 2815,
+   "enWorker": false
+  },
+  "src/app/motor.js": {
+   "bytes": 2789,
+   "enWorker": false
+  },
+  "src/puzzles/cubo2.js": {
+   "bytes": 2785,
+   "enWorker": true
+  },
+  "src/puzzles/megaminx-geo.js": {
+   "bytes": 2606,
+   "enWorker": true
+  },
+  "src/puzzles/cubo3-bloqueos.js": {
+   "bytes": 2411,
+   "enWorker": true
+  },
+  "src/core/schreier.js": {
+   "bytes": 2155,
+   "enWorker": true
+  },
+  "src/aprender/objetivos-cubo.js": {
+   "bytes": 2071,
+   "enWorker": true
+  },
+  "src/puzzles/cubo-comun.js": {
+   "bytes": 2066,
+   "enWorker": true
+  },
+  "src/core/geopuzzle.js": {
+   "bytes": 2042,
+   "enWorker": true
+  },
+  "src/puzzles/shapemod-centros.js": {
+   "bytes": 1800,
+   "enWorker": true
+  },
+  "src/core/modelo3d.js": {
+   "bytes": 1762,
+   "enWorker": true
+  },
+  "src/app/servicio.js": {
+   "bytes": 1547,
+   "enWorker": true
+  },
+  "src/core/puzzle.js": {
+   "bytes": 1446,
+   "enWorker": true
+  },
+  "src/core/render.js": {
+   "bytes": 1371,
+   "enWorker": true
+  },
+  "src/core/calidad-practico.js": {
+   "bytes": 1304,
+   "enWorker": true
+  },
+  "src/app/reproductor.js": {
+   "bytes": 1269,
+   "enWorker": false
+  },
+  "src/puzzles/index.js": {
+   "bytes": 1210,
+   "enWorker": true
+  },
+  "src/puzzles/megaminx-piezas.js": {
+   "bytes": 1118,
+   "enWorker": true
+  },
+  "src/core/tabla-estados.js": {
+   "bytes": 1093,
+   "enWorker": true
+  },
+  "src/app/tema.js": {
+   "bytes": 907,
+   "enWorker": false
+  },
+  "src/core/perm.js": {
+   "bytes": 900,
+   "enWorker": true
+  },
+  "src/aprender/guion.js": {
+   "bytes": 733,
+   "enWorker": true
+  },
+  "src/puzzles/nxn-colocar.js": {
+   "bytes": 635,
+   "enWorker": true
+  },
+  "src/core/rng.js": {
+   "bytes": 539,
+   "enWorker": true
+  },
+  "src/core/simetria.js": {
+   "bytes": 470,
+   "enWorker": true
+  }
+ }
+}
