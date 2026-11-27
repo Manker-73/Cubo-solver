@@ -1,0 +1,43 @@
+{
+ "etiqueta": "d",
+ "dir": "investigacion/dist/d",
+ "comp": "gzip",
+ "reps": 5,
+ "condiciones": {},
+ "traza": {
+  "cpu1": {
+   "principal: compilar": 0.5,
+   "principal: compilar (perezoso)": 20.0,
+   "principal: ejecutar": 131.8,
+   "principal: estilos": 4.5,
+   "principal: evaluar (total)": 132.5,
+   "principal: llamadas": 4.9,
+   "principal: maquetar": 44.9,
+   "principal: parsear HTML": 4.3,
+   "principal: pintar": 2.0,
+   "worker: compilar": 95.0,
+   "worker: compilar (perezoso)": 96.5,
+   "worker: ejecutar": 170.0,
+   "worker: evaluar (total)": 265.3,
+   "worker: llamadas": 0.8,
+   "worker: parsear en segundo plano": 41.8
+  },
+  "cpu4": {
+   "principal: compilar": 1.5,
+   "principal: compilar (perezoso)": 109.2,
+   "principal: ejecutar": 235.0,
+   "principal: estilos": 32.0,
+   "principal: evaluar (total)": 237.0,
+   "principal: llamadas": 13.8,
+   "principal: maquetar": 259.2,
+   "principal: parsear HTML": 14.4,
+   "principal: pintar": 5.8,
+   "worker: compilar": 88.6,
+   "worker: compilar (perezoso)": 98.6,
+   "worker: ejecutar": 145.6,
+   "worker: evaluar (total)": 234.7,
+   "worker: llamadas": 0.8,
+   "worker: parsear en segundo plano": 32.9
+  }
+ }
+}

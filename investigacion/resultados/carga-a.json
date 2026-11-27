@@ -1,0 +1,1482 @@
+{
+ "etiqueta": "a",
+ "dir": "investigacion/dist/a",
+ "comp": "gzip",
+ "reps": 5,
+ "condiciones": {
+  "fast3g-x1": {
+   "medianas": {
+    "fria": {
+     "fcp": 1104,
+     "portada": 2286,
+     "usable": 2286,
+     "kb": 242.2
+    },
+    "cache": {
+     "fcp": 460,
+     "portada": 466,
+     "usable": 466,
+     "kb": 0.0
+    },
+    "wca3x3": {
+     "fcp": 1068,
+     "portada": 2418,
+     "usable": 2418,
+     "kb": 242.2,
+     "listo3x3": 4085
+    }
+   },
+   "repeticiones": {
+    "fria": [
+     {
+      "portada": 2285.7000000476837,
+      "listo": null,
+      "lt": [
+       [
+        1981.7000000476837,
+        302
+       ]
+      ],
+      "fcp": 1124,
+      "transfer": 247981,
+      "decodificado": 594922,
+      "recursos": [],
+      "domContentLoaded": 2288.100000023842,
+      "load": 2313.4000000953674,
+      "usable": 2285.7000000476837,
+      "errores": []
+     },
+     {
+      "portada": 2287.3000000715256,
+      "listo": null,
+      "lt": [
+       [
+        1982.7000000476837,
+        302
+       ]
+      ],
+      "fcp": 1068,
+      "transfer": 247981,
+      "decodificado": 594922,
+      "recursos": [],
+      "domContentLoaded": 2290.5,
+      "load": 2293.899999976158,
+      "usable": 2287.3000000715256,
+      "errores": []
+     },
+     {
+      "portada": 2356.1999999284744,
+      "listo": null,
+      "lt": [
+       [
+        1984.8999999761581,
+        363
+       ]
+      ],
+      "fcp": 1064,
+      "transfer": 247981,
+      "decodificado": 594922,
+      "recursos": [],
+      "domContentLoaded": 2353,
+      "load": 2355.5,
+      "usable": 2356.1999999284744,
+      "errores": []
+     },
+     {
+      "portada": 2278.5,
+      "listo": null,
+      "lt": [
+       [
+        1965.5,
+        280
+       ]
+      ],
+      "fcp": 1104,
+      "transfer": 247981,
+      "decodificado": 594922,
+      "recursos": [],
+      "domContentLoaded": 2275.5,
+      "load": 2277.8000000715256,
+      "usable": 2278.5,
+      "errores": []
+     },
+     {
+      "portada": 2257.6999999284744,
+      "listo": null,
+      "lt": [
+       [
+        1973.6999999284744,
+        272
+       ]
+      ],
+      "fcp": 1104,
+      "transfer": 247981,
+      "decodificado": 594922,
+      "recursos": [],
+      "domContentLoaded": 2255.0999999046326,
+      "load": 2257.1999999284744,
+      "usable": 2257.6999999284744,
+      "errores": []
+     }
+    ],
+    "cache": [
+     {
+      "portada": 430.2000000476837,
+      "listo": null,
+      "lt": [
+       [
+        59.299999952316284,
+        367
+       ]
+      ],
+      "fcp": 484,
+      "transfer": 0,
+      "decodificado": 594922,
+      "recursos": [],
+      "domContentLoaded": 489.89999997615814,
+      "load": 521.6000000238419,
+      "usable": 430.2000000476837,
+      "errores": []
+     },
+     {
+      "portada": 468,
+      "listo": null,
+      "lt": [
+       [
+        36,
+        342
+       ]
+      ],
+      "fcp": 460,
+      "transfer": 0,
+      "decodificado": 594922,
+      "recursos": [],
+      "domContentLoaded": 428.2000000476837,
+      "load": 467,
+      "usable": 468,
+      "errores": []
+     },
+     {
+      "portada": 466.2000000476837,
+      "listo": null,
+      "lt": [
+       [
+        29.399999976158142,
+        350
+       ]
+      ],
+      "fcp": 452,
+      "transfer": 0,
+      "decodificado": 594922,
+      "recursos": [],
+      "domContentLoaded": 428.7000000476837,
+      "load": 465.60000002384186,
+      "usable": 466.2000000476837,
+      "errores": []
+     },
+     {
+      "portada": 456.3000000715256,
+      "listo": null,
+      "lt": [
+       [
+        30,
+        345
+       ]
+      ],
+      "fcp": 448,
+      "transfer": 0,
+      "decodificado": 594922,
+      "recursos": [],
+      "domContentLoaded": 422.3000000715256,
+      "load": 455.89999997615814,
+      "usable": 456.3000000715256,
+      "errores": []
+     },
+     {
+      "portada": 508.5,
+      "listo": null,
+      "lt": [
+       [
+        30.700000047683716,
+        365
+       ]
+      ],
+      "fcp": 472,
+      "transfer": 0,
+      "decodificado": 594922,
+      "recursos": [],
+      "domContentLoaded": 478.39999997615814,
+      "load": 507.7000000476837,
+      "usable": 508.5,
+      "errores": []
+     }
+    ],
+    "wca3x3": [
+     {
+      "portada": 2547.2000000476837,
+      "listo": 4227.600000023842,
+      "lt": [
+       [
+        1984.7999999523163,
+        478
+       ],
+       [
+        2462.7999999523163,
+        72
+       ]
+      ],
+      "fcp": 1124,
+      "transfer": 247981,
+      "decodificado": 594922,
+      "recursos": [],
+      "domContentLoaded": 2544.2999999523163,
+      "load": 2546.5,
+      "usable": 2547.2000000476837,
+      "errores": []
+     },
+     {
+      "portada": 2417.600000023842,
+      "listo": 4085.2000000476837,
+      "lt": [
+       [
+        1993.2000000476837,
+        378
+       ]
+      ],
+      "fcp": 1068,
+      "transfer": 247981,
+      "decodificado": 594922,
+      "recursos": [],
+      "domContentLoaded": 2414.100000023842,
+      "load": 2416.899999976158,
+      "usable": 2417.600000023842,
+      "errores": []
+     },
+     {
+      "portada": 2391.399999976158,
+      "listo": 4055.100000023842,
+      "lt": [
+       [
+        1987.1000000238419,
+        358
+       ]
+      ],
+      "fcp": 1056,
+      "transfer": 247981,
+      "decodificado": 594922,
+      "recursos": [],
+      "domContentLoaded": 2388.2000000476837,
+      "load": 2390.7000000476837,
+      "usable": 2391.399999976158,
+      "errores": []
+     },
+     {
+      "portada": 2409.399999976158,
+      "listo": 4039.7999999523163,
+      "lt": [
+       [
+        1970.2999999523163,
+        385
+       ]
+      ],
+      "fcp": 1068,
+      "transfer": 247981,
+      "decodificado": 594922,
+      "recursos": [],
+      "domContentLoaded": 2406.600000023842,
+      "load": 2408.7000000476837,
+      "usable": 2409.399999976158,
+      "errores": []
+     },
+     {
+      "portada": 2455.5999999046326,
+      "listo": 4136.699999928474,
+      "lt": [
+       [
+        1949.8999999761581,
+        409
+       ],
+       [
+        2359.6999999284744,
+        83
+       ]
+      ],
+      "fcp": 1056,
+      "transfer": 247981,
+      "decodificado": 594922,
+      "recursos": [],
+      "domContentLoaded": 2452.1999999284744,
+      "load": 2454.6999999284744,
+      "usable": 2455.5999999046326,
+      "errores": []
+     }
+    ]
+   },
+   "errores": []
+  },
+  "fast3g-x4": {
+   "medianas": {
+    "fria": {
+     "fcp": 1304,
+     "portada": 3404,
+     "usable": 3404,
+     "kb": 242.2
+    },
+    "cache": {
+     "fcp": 608,
+     "portada": 2052,
+     "usable": 2135,
+     "kb": 0.0
+    },
+    "wca3x3": {
+     "fcp": 1352,
+     "portada": 3762,
+     "usable": 3762,
+     "kb": 242.2,
+     "listo3x3": 5452
+    }
+   },
+   "repeticiones": {
+    "fria": [
+     {
+      "portada": 3431.5,
+      "listo": null,
+      "lt": [
+       [
+        1992,
+        1427
+       ]
+      ],
+      "fcp": 1304,
+      "transfer": 247981,
+      "decodificado": 594922,
+      "recursos": [],
+      "domContentLoaded": 3443.7999999523163,
+      "load": 3449.5999999046326,
+      "usable": 3431.5,
+      "errores": []
+     },
+     {
+      "portada": 3276.600000023842,
+      "listo": null,
+      "lt": [
+       [
+        1274.3999999761581,
+        67
+       ],
+       [
+        1997.1000000238419,
+        1264
+       ]
+      ],
+      "fcp": 1220,
+      "transfer": 247981,
+      "decodificado": 594922,
+      "recursos": [],
+      "domContentLoaded": 3307.7999999523163,
+      "load": 3313.6999999284744,
+      "usable": 3276.600000023842,
+      "errores": []
+     },
+     {
+      "portada": 3232.899999976158,
+      "listo": null,
+      "lt": [
+       [
+        1011.6000000238419,
+        383
+       ],
+       [
+        1415.8000000715256,
+        103
+       ],
+       [
+        2016.3000000715256,
+        1214
+       ]
+      ],
+      "fcp": 1480,
+      "transfer": 247981,
+      "decodificado": 594922,
+      "recursos": [],
+      "domContentLoaded": 3238.8000000715256,
+      "load": 3242.7000000476837,
+      "usable": 3232.899999976158,
+      "errores": []
+     },
+     {
+      "portada": 3684.8000000715256,
+      "listo": null,
+      "lt": [
+       [
+        1530,
+        67
+       ],
+       [
+        1980.6000000238419,
+        1585
+       ],
+       [
+        3590.9000000953674,
+        62
+       ]
+      ],
+      "fcp": 1556,
+      "transfer": 247981,
+      "decodificado": 594922,
+      "recursos": [],
+      "domContentLoaded": 3666,
+      "load": 3683.600000023842,
+      "usable": 3684.8000000715256,
+      "errores": []
+     },
+     {
+      "portada": 3403.899999976158,
+      "listo": null,
+      "lt": [
+       [
+        1304.2999999523163,
+        106
+       ],
+       [
+        1967.5,
+        1320
+       ]
+      ],
+      "fcp": 1296,
+      "transfer": 247981,
+      "decodificado": 594922,
+      "recursos": [],
+      "domContentLoaded": 3377.7999999523163,
+      "load": 3402,
+      "usable": 3403.899999976158,
+      "errores": []
+     }
+    ],
+    "cache": [
+     {
+      "portada": 1818.8999999761581,
+      "listo": null,
+      "lt": [
+       [
+        647.6999999284744,
+        103
+       ],
+       [
+        925.1999999284744,
+        877
+       ]
+      ],
+      "fcp": 608,
+      "transfer": 0,
+      "decodificado": 594922,
+      "recursos": [],
+      "domContentLoaded": 1879.1999999284744,
+      "load": 1884.5,
+      "usable": 1818.8999999761581,
+      "errores": []
+     },
+     {
+      "portada": 1869.3999999761581,
+      "listo": null,
+      "lt": [
+       [
+        463.7999999523163,
+        1354
+       ],
+       [
+        1922.3999999761581,
+        76
+       ],
+       [
+        2268.399999976158,
+        62
+       ]
+      ],
+      "fcp": 1904,
+      "transfer": 0,
+      "decodificado": 594922,
+      "recursos": [],
+      "domContentLoaded": 2271.5,
+      "load": 2329.5,
+      "usable": 2330.399999976158,
+      "errores": []
+     },
+     {
+      "portada": 2148.399999976158,
+      "listo": null,
+      "lt": [
+       [
+        648,
+        1471
+       ],
+       [
+        2191.5999999046326,
+        52
+       ]
+      ],
+      "fcp": 700,
+      "transfer": 0,
+      "decodificado": 594922,
+      "recursos": [],
+      "domContentLoaded": 2537,
+      "load": 2545.899999976158,
+      "usable": 2243.5999999046326,
+      "errores": []
+     },
+     {
+      "portada": 2052.2999999523163,
+      "listo": null,
+      "lt": [
+       [
+        449.60000002384186,
+        83
+       ],
+       [
+        842.5,
+        1205
+       ],
+       [
+        2066.7000000476837,
+        68
+       ]
+      ],
+      "fcp": 444,
+      "transfer": 0,
+      "decodificado": 594922,
+      "recursos": [],
+      "domContentLoaded": 2106.600000023842,
+      "load": 2127.399999976158,
+      "usable": 2134.7000000476837,
+      "errores": []
+     },
+     {
+      "portada": 2096.5,
+      "listo": null,
+      "lt": [
+       [
+        250.5,
+        82
+       ],
+       [
+        434.89999997615814,
+        1579
+       ]
+      ],
+      "fcp": 464,
+      "transfer": 0,
+      "decodificado": 594922,
+      "recursos": [],
+      "domContentLoaded": 2291.100000023842,
+      "load": 2296.2000000476837,
+      "usable": 2096.5,
+      "errores": []
+     }
+    ],
+    "wca3x3": [
+     {
+      "portada": 3987.5,
+      "listo": 5754.600000023842,
+      "lt": [
+       [
+        1334.8999999761581,
+        54
+       ],
+       [
+        1964,
+        1888
+       ],
+       [
+        3852.2000000476837,
+        135
+       ]
+      ],
+      "fcp": 1372,
+      "transfer": 247981,
+      "decodificado": 594922,
+      "recursos": [],
+      "domContentLoaded": 3996.600000023842,
+      "load": 4000.899999976158,
+      "usable": 3987.5,
+      "errores": []
+     },
+     {
+      "portada": 3832.3000000715256,
+      "listo": 5485.300000071526,
+      "lt": [
+       [
+        1302.4000000953674,
+        84
+       ],
+       [
+        1973.2000000476837,
+        1759
+       ],
+       [
+        3732.5,
+        99
+       ]
+      ],
+      "fcp": 1320,
+      "transfer": 247981,
+      "decodificado": 594922,
+      "recursos": [],
+      "domContentLoaded": 3842.8000000715256,
+      "load": 3855.9000000953674,
+      "usable": 3832.3000000715256,
+      "errores": []
+     },
+     {
+      "portada": 3760.399999976158,
+      "listo": 5337.100000023842,
+      "lt": [
+       [
+        1362.7999999523163,
+        75
+       ],
+       [
+        1948,
+        1678
+       ],
+       [
+        3626.6999999284744,
+        89
+       ]
+      ],
+      "fcp": 1352,
+      "transfer": 247981,
+      "decodificado": 594922,
+      "recursos": [],
+      "domContentLoaded": 3753.7999999523163,
+      "load": 3759.899999976158,
+      "usable": 3760.399999976158,
+      "errores": []
+     },
+     {
+      "portada": 3762.399999976158,
+      "listo": 5451.799999952316,
+      "lt": [
+       [
+        997.8999999761581,
+        425
+       ],
+       [
+        1442.8999999761581,
+        53
+       ],
+       [
+        2002.6999999284744,
+        1549
+       ],
+       [
+        3551.899999976158,
+        209
+       ]
+      ],
+      "fcp": 1508,
+      "transfer": 247981,
+      "decodificado": 594922,
+      "recursos": [],
+      "domContentLoaded": 3776.2999999523163,
+      "load": 3780.899999976158,
+      "usable": 3762.399999976158,
+      "errores": []
+     },
+     {
+      "portada": 3411.600000023842,
+      "listo": 4982.100000023842,
+      "lt": [
+       [
+        1388.5,
+        54
+       ],
+       [
+        1997.1999999284744,
+        1326
+       ],
+       [
+        3324.100000023842,
+        87
+       ]
+      ],
+      "fcp": 1240,
+      "transfer": 247981,
+      "decodificado": 594922,
+      "recursos": [],
+      "domContentLoaded": 3416.6999999284744,
+      "load": 3419.5,
+      "usable": 3411.600000023842,
+      "errores": []
+     }
+    ]
+   },
+   "errores": []
+  },
+  "slow3g-x1": {
+   "medianas": {
+    "fria": {
+     "fcp": 3532,
+     "portada": 7304,
+     "usable": 7304,
+     "kb": 242.2
+    },
+    "cache": {
+     "fcp": 472,
+     "portada": 444,
+     "usable": 444,
+     "kb": 0.0
+    },
+    "wca3x3": {
+     "fcp": 3524,
+     "portada": 7507,
+     "usable": 7507,
+     "kb": 242.2,
+     "listo3x3": 9244
+    }
+   },
+   "repeticiones": {
+    "fria": [
+     {
+      "portada": 7265.800000071526,
+      "listo": null,
+      "lt": [
+       [
+        6989.100000023842,
+        262
+       ]
+      ],
+      "fcp": 3544,
+      "transfer": 247981,
+      "decodificado": 594922,
+      "recursos": [],
+      "domContentLoaded": 7262.300000071526,
+      "load": 7265.200000047684,
+      "usable": 7265.800000071526,
+      "errores": []
+     },
+     {
+      "portada": 7340,
+      "listo": null,
+      "lt": [
+       [
+        7003.199999928474,
+        319
+       ]
+      ],
+      "fcp": 3532,
+      "transfer": 247981,
+      "decodificado": 594922,
+      "recursos": [],
+      "domContentLoaded": 7337.399999976158,
+      "load": 7339.5,
+      "usable": 7340,
+      "errores": []
+     },
+     {
+      "portada": 7303.700000047684,
+      "listo": null,
+      "lt": [
+       [
+        7009.399999976158,
+        292
+       ]
+      ],
+      "fcp": 3524,
+      "transfer": 247981,
+      "decodificado": 594922,
+      "recursos": [],
+      "domContentLoaded": 7309.5,
+      "load": 7312,
+      "usable": 7303.700000047684,
+      "errores": []
+     },
+     {
+      "portada": 7292.700000047684,
+      "listo": null,
+      "lt": [
+       [
+        6994.399999976158,
+        284
+       ]
+      ],
+      "fcp": 3548,
+      "transfer": 247981,
+      "decodificado": 594922,
+      "recursos": [],
+      "domContentLoaded": 7289.5,
+      "load": 7291.899999976158,
+      "usable": 7292.700000047684,
+      "errores": []
+     },
+     {
+      "portada": 7364.899999976158,
+      "listo": null,
+      "lt": [
+       [
+        6988.699999928474,
+        359
+       ]
+      ],
+      "fcp": 3532,
+      "transfer": 247981,
+      "decodificado": 594922,
+      "recursos": [],
+      "domContentLoaded": 7361.199999928474,
+      "load": 7364.299999952316,
+      "usable": 7364.899999976158,
+      "errores": []
+     }
+    ],
+    "cache": [
+     {
+      "portada": 496.2000000476837,
+      "listo": null,
+      "lt": [
+       [
+        33.10000002384186,
+        355
+       ]
+      ],
+      "fcp": 472,
+      "transfer": 0,
+      "decodificado": 594922,
+      "recursos": [],
+      "domContentLoaded": 468,
+      "load": 495.5,
+      "usable": 496.2000000476837,
+      "errores": []
+     },
+     {
+      "portada": 418.2999999523163,
+      "listo": null,
+      "lt": [
+       [
+        50.5,
+        364
+       ]
+      ],
+      "fcp": 456,
+      "transfer": 0,
+      "decodificado": 594922,
+      "recursos": [],
+      "domContentLoaded": 466.2000000476837,
+      "load": 496.7000000476837,
+      "usable": 418.2999999523163,
+      "errores": []
+     },
+     {
+      "portada": 558.5,
+      "listo": null,
+      "lt": [
+       [
+        28.799999952316284,
+        391
+       ],
+       [
+        496.10000002384186,
+        62
+       ]
+      ],
+      "fcp": 536,
+      "transfer": 0,
+      "decodificado": 594922,
+      "recursos": [],
+      "domContentLoaded": 496.7999999523163,
+      "load": 557.8999999761581,
+      "usable": 558.5,
+      "errores": []
+     },
+     {
+      "portada": 443.7000000476837,
+      "listo": null,
+      "lt": [
+       [
+        63.799999952316284,
+        370
+       ]
+      ],
+      "fcp": 512,
+      "transfer": 0,
+      "decodificado": 594922,
+      "recursos": [],
+      "domContentLoaded": 510.2000000476837,
+      "load": 537.7000000476837,
+      "usable": 443.7000000476837,
+      "errores": []
+     },
+     {
+      "portada": 424.2000000476837,
+      "listo": null,
+      "lt": [
+       [
+        35.200000047683716,
+        357
+       ]
+      ],
+      "fcp": 464,
+      "transfer": 0,
+      "decodificado": 594922,
+      "recursos": [],
+      "domContentLoaded": 466,
+      "load": 493.89999997615814,
+      "usable": 424.2000000476837,
+      "errores": []
+     }
+    ],
+    "wca3x3": [
+     {
+      "portada": 7427,
+      "listo": 9176.300000071526,
+      "lt": [
+       [
+        6988.600000023842,
+        385
+       ]
+      ],
+      "fcp": 3520,
+      "transfer": 247981,
+      "decodificado": 594922,
+      "recursos": [],
+      "domContentLoaded": 7423.399999976158,
+      "load": 7426,
+      "usable": 7427,
+      "errores": []
+     },
+     {
+      "portada": 7521.300000071526,
+      "listo": 9369.899999976158,
+      "lt": [
+       [
+        6990.700000047684,
+        468
+       ],
+       [
+        7459.399999976158,
+        61
+       ]
+      ],
+      "fcp": 3536,
+      "transfer": 247981,
+      "decodificado": 594922,
+      "recursos": [],
+      "domContentLoaded": 7526.600000023842,
+      "load": 7529.899999976158,
+      "usable": 7521.300000071526,
+      "errores": []
+     },
+     {
+      "portada": 7582.600000023842,
+      "listo": 9322,
+      "lt": [
+       [
+        6992.299999952316,
+        424
+       ],
+       [
+        7416.699999928474,
+        153
+       ]
+      ],
+      "fcp": 3524,
+      "transfer": 247981,
+      "decodificado": 594922,
+      "recursos": [],
+      "domContentLoaded": 7579.199999928474,
+      "load": 7581.899999976158,
+      "usable": 7582.600000023842,
+      "errores": []
+     },
+     {
+      "portada": 7445.300000071526,
+      "listo": 9202.600000023842,
+      "lt": [
+       [
+        6987.300000071526,
+        377
+       ],
+       [
+        7365.100000023842,
+        69
+       ]
+      ],
+      "fcp": 3512,
+      "transfer": 247981,
+      "decodificado": 594922,
+      "recursos": [],
+      "domContentLoaded": 7442,
+      "load": 7444.399999976158,
+      "usable": 7445.300000071526,
+      "errores": []
+     },
+     {
+      "portada": 7506.600000023842,
+      "listo": 9244,
+      "lt": [
+       [
+        6984.199999928474,
+        434
+       ],
+       [
+        7419,
+        70
+       ]
+      ],
+      "fcp": 3528,
+      "transfer": 247981,
+      "decodificado": 594922,
+      "recursos": [],
+      "domContentLoaded": 7500.899999976158,
+      "load": 7505.199999928474,
+      "usable": 7506.600000023842,
+      "errores": []
+     }
+    ]
+   },
+   "errores": []
+  },
+  "slow3g-x4": {
+   "medianas": {
+    "fria": {
+     "fcp": 3728,
+     "portada": 8418,
+     "usable": 8418,
+     "kb": 242.2
+    },
+    "cache": {
+     "fcp": 616,
+     "portada": 2138,
+     "usable": 2138,
+     "kb": 0.0
+    },
+    "wca3x3": {
+     "fcp": 3664,
+     "portada": 8873,
+     "usable": 8873,
+     "kb": 242.2,
+     "listo3x3": 10586
+    }
+   },
+   "repeticiones": {
+    "fria": [
+     {
+      "portada": 8286,
+      "listo": null,
+      "lt": [
+       [
+        7014.199999928474,
+        1268
+       ]
+      ],
+      "fcp": 3688,
+      "transfer": 247981,
+      "decodificado": 594922,
+      "recursos": [],
+      "domContentLoaded": 8320.5,
+      "load": 8325,
+      "usable": 8286,
+      "errores": []
+     },
+     {
+      "portada": 8418.199999928474,
+      "listo": null,
+      "lt": [
+       [
+        3827.7999999523163,
+        61
+       ],
+       [
+        7017.699999928474,
+        1389
+       ]
+      ],
+      "fcp": 3868,
+      "transfer": 247981,
+      "decodificado": 594922,
+      "recursos": [],
+      "domContentLoaded": 8426.799999952316,
+      "load": 8431.5,
+      "usable": 8418.199999928474,
+      "errores": []
+     },
+     {
+      "portada": 7918.799999952316,
+      "listo": null,
+      "lt": [
+       [
+        3671.6999999284744,
+        63
+       ],
+       [
+        6989.399999976158,
+        837
+       ]
+      ],
+      "fcp": 3728,
+      "transfer": 247981,
+      "decodificado": 594922,
+      "recursos": [],
+      "domContentLoaded": 7895.100000023842,
+      "load": 7918,
+      "usable": 7918.799999952316,
+      "errores": []
+     },
+     {
+      "portada": 8458.700000047684,
+      "listo": null,
+      "lt": [
+       [
+        3617.399999976158,
+        95
+       ],
+       [
+        7025.200000047684,
+        1419
+       ]
+      ],
+      "fcp": 3656,
+      "transfer": 247981,
+      "decodificado": 594922,
+      "recursos": [],
+      "domContentLoaded": 8462.600000023842,
+      "load": 8467.700000047684,
+      "usable": 8458.700000047684,
+      "errores": []
+     },
+     {
+      "portada": 8585.399999976158,
+      "listo": null,
+      "lt": [
+       [
+        3425.600000023842,
+        56
+       ],
+       [
+        4052.7000000476837,
+        108
+       ],
+       [
+        7018.600000023842,
+        1535
+       ],
+       [
+        8647.700000047684,
+        50
+       ]
+      ],
+      "fcp": 4076,
+      "transfer": 247981,
+      "decodificado": 594922,
+      "recursos": [],
+      "domContentLoaded": 8651.100000023842,
+      "load": 8697.600000023842,
+      "usable": 8697.700000047684,
+      "errores": []
+     }
+    ],
+    "cache": [
+     {
+      "portada": 2422.899999976158,
+      "listo": null,
+      "lt": [
+       [
+        672,
+        71
+       ],
+       [
+        916.1999999284744,
+        1406
+       ],
+       [
+        2366.2999999523163,
+        56
+       ]
+      ],
+      "fcp": 700,
+      "transfer": 0,
+      "decodificado": 594922,
+      "recursos": [],
+      "domContentLoaded": 2491.5,
+      "load": 2505.6999999284744,
+      "usable": 2422.899999976158,
+      "errores": []
+     },
+     {
+      "portada": 2138.1999999284744,
+      "listo": null,
+      "lt": [
+       [
+        666.3999999761581,
+        1135
+       ],
+       [
+        1813.0999999046326,
+        87
+       ]
+      ],
+      "fcp": 700,
+      "transfer": 0,
+      "decodificado": 594922,
+      "recursos": [],
+      "domContentLoaded": 2128.899999976158,
+      "load": 2135.5,
+      "usable": 2138.1999999284744,
+      "errores": []
+     },
+     {
+      "portada": 2314,
+      "listo": null,
+      "lt": [
+       [
+        580.8999999761581,
+        1287
+       ],
+       [
+        1924.5999999046326,
+        67
+       ],
+       [
+        2242.2999999523163,
+        59
+       ]
+      ],
+      "fcp": 616,
+      "transfer": 0,
+      "decodificado": 594922,
+      "recursos": [],
+      "domContentLoaded": 2462.5,
+      "load": 2480.5999999046326,
+      "usable": 2314,
+      "errores": []
+     },
+     {
+      "portada": 1954.6999999284744,
+      "listo": null,
+      "lt": [
+       [
+        483.59999990463257,
+        70
+       ],
+       [
+        745.3999999761581,
+        1134
+       ]
+      ],
+      "fcp": 500,
+      "transfer": 0,
+      "decodificado": 594922,
+      "recursos": [],
+      "domContentLoaded": 1947.2999999523163,
+      "load": 1953,
+      "usable": 1954.6999999284744,
+      "errores": []
+     },
+     {
+      "portada": 2090.5,
+      "listo": null,
+      "lt": [
+       [
+        476,
+        78
+       ],
+       [
+        725,
+        1261
+       ]
+      ],
+      "fcp": 460,
+      "transfer": 0,
+      "decodificado": 594922,
+      "recursos": [],
+      "domContentLoaded": 2074.600000023842,
+      "load": 2084.5,
+      "usable": 2090.5,
+      "errores": []
+     }
+    ],
+    "wca3x3": [
+     {
+      "portada": 9068.700000047684,
+      "listo": 10772.399999976158,
+      "lt": [
+       [
+        3699.5,
+        85
+       ],
+       [
+        3966.2000000476837,
+        56
+       ],
+       [
+        7002.700000047684,
+        1939
+       ],
+       [
+        8942.300000071526,
+        126
+       ]
+      ],
+      "fcp": 3740,
+      "transfer": 247981,
+      "decodificado": 594922,
+      "recursos": [],
+      "domContentLoaded": 9075.5,
+      "load": 9081.5,
+      "usable": 9068.700000047684,
+      "errores": []
+     },
+     {
+      "portada": 8844.399999976158,
+      "listo": 10558.199999928474,
+      "lt": [
+       [
+        3573.7999999523163,
+        105
+       ],
+       [
+        7048.799999952316,
+        1640
+       ],
+       [
+        8689,
+        155
+       ]
+      ],
+      "fcp": 3632,
+      "transfer": 247981,
+      "decodificado": 594922,
+      "recursos": [],
+      "domContentLoaded": 8858.699999928474,
+      "load": 8863.099999904633,
+      "usable": 8844.399999976158,
+      "errores": []
+     },
+     {
+      "portada": 8873.399999976158,
+      "listo": 10585.899999976158,
+      "lt": [
+       [
+        3628.399999976158,
+        70
+       ],
+       [
+        7001.699999928474,
+        1753
+       ],
+       [
+        8755.600000023842,
+        117
+       ]
+      ],
+      "fcp": 3664,
+      "transfer": 247981,
+      "decodificado": 594922,
+      "recursos": [],
+      "domContentLoaded": 8885.699999928474,
+      "load": 8895.299999952316,
+      "usable": 8873.399999976158,
+      "errores": []
+     },
+     {
+      "portada": 9261.100000023842,
+      "listo": 10938.899999976158,
+      "lt": [
+       [
+        3663.399999976158,
+        51
+       ],
+       [
+        3815.7999999523163,
+        107
+       ],
+       [
+        7031.399999976158,
+        1968
+       ],
+       [
+        8999.5,
+        260
+       ],
+       [
+        9274.899999976158,
+        56
+       ]
+      ],
+      "fcp": 3720,
+      "transfer": 247981,
+      "decodificado": 594922,
+      "recursos": [],
+      "domContentLoaded": 9277.799999952316,
+      "load": 9316.199999928474,
+      "usable": 9330.899999976158,
+      "errores": []
+     },
+     {
+      "portada": 8699.399999976158,
+      "listo": 10388.399999976158,
+      "lt": [
+       [
+        3569.5,
+        104
+       ],
+       [
+        7010.799999952316,
+        1555
+       ],
+       [
+        8565.799999952316,
+        133
+       ]
+      ],
+      "fcp": 3616,
+      "transfer": 247981,
+      "decodificado": 594922,
+      "recursos": [],
+      "domContentLoaded": 8710.799999952316,
+      "load": 8714.799999952316,
+      "usable": 8699.399999976158,
+      "errores": []
+     }
+    ]
+   },
+   "errores": []
+  }
+ },
+ "traza": {
+  "cpu1": {
+   "principal: GC": 34.0,
+   "principal: compilar": 32.3,
+   "principal: compilar (perezoso)": 76.2,
+   "principal: ejecutar": 353.0,
+   "principal: estilos": 5.5,
+   "principal: evaluar (total)": 385.4,
+   "principal: llamadas": 5.3,
+   "principal: maquetar": 115.4,
+   "principal: parsear HTML": 394.2,
+   "principal: pintar": 2.2,
+   "worker: GC": 62.5,
+   "worker: compilar": 50.0,
+   "worker: compilar (perezoso)": 126.6,
+   "worker: ejecutar": 468.4,
+   "worker: evaluar (total)": 519.0,
+   "worker: llamadas": 1.0
+  },
+  "cpu4": {
+   "principal: GC": 66.8,
+   "principal: compilar": 101.6,
+   "principal: compilar (perezoso)": 407.2,
+   "principal: ejecutar": 1306.6,
+   "principal: estilos": 31.6,
+   "principal: evaluar (total)": 1408.6,
+   "principal: llamadas": 12.3,
+   "principal: maquetar": 506.4,
+   "principal: parsear HTML": 1462.3,
+   "principal: pintar": 31.1,
+   "worker: GC": 43.8,
+   "worker: compilar": 62.5,
+   "worker: compilar (perezoso)": 125.4,
+   "worker: ejecutar": 388.4,
+   "worker: evaluar (total)": 451.4,
+   "worker: llamadas": 0.7
+  }
+ }
+}

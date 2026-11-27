@@ -8,6 +8,7 @@
 //   abc    a + b + c, en un solo HTML (sirve también para el artifact)
 //   d      varios ficheros (solo para Pages): index.html + app.js (defer) + estilos.css + fuentes .woff2, con a + b + c;
 //          el Worker hace importScripts(app.js) (lo toma de la caché HTTP)
+//   abce   abc + e2: la portada no crea un contexto WebGL para saber si hay 3D ni fuerza una maquetación
 import { build } from 'esbuild';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -37,8 +38,29 @@ const aliasPerezoso = (meta) => ({
   },
 });
 
-async function js({ unico, perezoso, meta }) {
-  const extra = perezoso ? { plugins: [aliasPerezoso(meta)], define: { __META_PUZZLES__: JSON.stringify(meta) } } : { define: {} };
+// PROTOTIPO (opción e2): la portada no necesita saber si hay WebGL (crear un contexto cuesta) ni medir el panel del
+// resolvedor con una maquetación forzada (el ResizeObserver ya lo mide al observarlo). Cambios en main.js al vuelo.
+const ajustesPortada = {
+  name: 'ajustes-portada',
+  setup(b) {
+    b.onLoad({ filter: /src[\\/]app[\\/]main\.js$/ }, (args) => {
+      let s = fs.readFileSync(args.path, 'utf8').replace(/\r\n/g, '\n');
+      const cambios = [
+        ['  st.webgl = hayWebGL(document);', `  {
+    const fijar = (v) => Object.defineProperty(st, 'webgl', { value: v, writable: true, enumerable: true, configurable: true });
+    Object.defineProperty(st, 'webgl', { configurable: true, enumerable: true, get() { const v = hayWebGL(document); fijar(v); return v; }, set: fijar });
+  }`],
+        ["  window.addEventListener('resize', mirar);\n  mirar();", "  window.addEventListener('resize', mirar);\n  if (typeof ResizeObserver !== 'function') mirar();"],
+      ];
+      for (const [a, n] of cambios) { if (!s.includes(a)) throw new Error('ajustes: no encuentro ' + a); s = s.replace(a, n); }
+      return { contents: s, loader: 'js' };
+    });
+  },
+};
+
+async function js({ unico, perezoso, meta, ajustes }) {
+  const extra = perezoso ? { plugins: [aliasPerezoso(meta)], define: { __META_PUZZLES__: JSON.stringify(meta) } } : { define: {}, plugins: [] };
+  if (ajustes) extra.plugins = [...extra.plugins, ajustesPortada];
   if (unico) {
     const r = await build({ entryPoints: [path.join(dirInv, 'proto/entrada-unica.js')], ...opciones, ...extra, define: { ...extra.define, __CODIGO_WORKER__: 'globalThis.__CODIGO_PROPIO__' } });
     return r.outputFiles[0].text;
@@ -65,11 +87,11 @@ function envolver(cuerpo) {
   return `${cabeza}${cuerpo.slice(0, corte)}\n${trasCuerpo}</head>\n<body>\n${cuerpo.slice(corte)}\n</body>\n</html>\n`;
 }
 
-async function variante(nombre, { unico = false, recorte = false, perezoso = false, ficheros = false }, meta) {
+async function variante(nombre, { unico = false, recorte = false, perezoso = false, ficheros = false, ajustes = false }, meta) {
   const out = path.join(dirInv, 'dist', nombre);
   fs.rmSync(out, { recursive: true, force: true });
   fs.mkdirSync(out, { recursive: true });
-  const codigo = (await js({ unico, perezoso, meta })).replace(/<\/script/gi, '<\\/script');
+  const codigo = (await js({ unico, perezoso, meta, ajustes })).replace(/<\/script/gi, '<\\/script');
   const css = fs.readFileSync(path.join(raiz, 'src/app/estilos.css'), 'utf8');
   const plantilla = fs.readFileSync(path.join(raiz, 'src/app/plantilla.html'), 'utf8');
   let cuerpo;
@@ -106,6 +128,7 @@ const VARIANTES = {
   base: {}, a: { unico: true }, b: { recorte: true }, c: { perezoso: true },
   abc: { unico: true, recorte: true, perezoso: true },
   d: { unico: true, recorte: true, perezoso: true, ficheros: true },
+  abce: { unico: true, recorte: true, perezoso: true, ajustes: true },
 };
 const meta = await metaPuzzles();
 const pedidas = process.argv.slice(2).length ? process.argv.slice(2) : Object.keys(VARIANTES);

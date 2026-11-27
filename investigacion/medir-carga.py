@@ -12,7 +12,7 @@
 #            `portada` (TTI simplificado) — «se puede usar»;
 #   listo3x3 (solo en #/wca/3x3) scramble generado y «Cargar» activo (incluye las tablas de Kociemba en el Worker);
 #   kb       bytes transferidos (Resource Timing: transferSize de la página y de sus recursos).
-# Con --traza, además, una carga fría sin red simulada con CPU ×1 y ×4 y la traza de Chromium: tiempo de parseo,
+# Con --traza, además, --reps-traza (5) cargas frías (mediana) sin red simulada con CPU ×1 y ×4 y la traza de Chromium: tiempo de parseo,
 # compilación y ejecución del JavaScript en el hilo principal y en los Workers.
 # Resultado: medianas por condición (y todas las repeticiones en --salida).
 import argparse, asyncio, json, os, statistics, subprocess, sys, time
@@ -128,7 +128,7 @@ async def main():
     ap.add_argument('--dir', default='dist'); ap.add_argument('--reps', type=int, default=5)
     ap.add_argument('--etiqueta', default='base'); ap.add_argument('--salida'); ap.add_argument('--comp', default='gzip')
     ap.add_argument('--puerto', default='8765'); ap.add_argument('--traza', action='store_true'); ap.add_argument('--solo')
-    ap.add_argument('--pagina', default='index.html')
+    ap.add_argument('--pagina', default='index.html'); ap.add_argument('--reps-traza', type=int, default=5)
     a = ap.parse_args()
     srv = subprocess.Popen(['node', os.path.join(RAIZ, 'investigacion/servidor.mjs'), os.path.join(RAIZ, a.dir), a.puerto, a.comp], stdout=subprocess.PIPE)
     srv.stdout.readline()
@@ -138,7 +138,10 @@ async def main():
         async with async_playwright() as p:
             b = await p.chromium.launch(executable_path=CHROME, args=['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'])
             if a.traza:
-                todo['traza'] = {f'cpu{c}': await traza(b, base, c) for c in (1, 4)}
+                todo['traza'] = {}
+                for c in (1, 4):
+                    ts = [await traza(b, base, c) for _ in range(a.reps_traza)]
+                    todo['traza'][f'cpu{c}'] = {k: round(statistics.median([t.get(k, 0) for t in ts]), 1) for k in sorted({k for t in ts for k in t})}
                 print('traza', json.dumps(todo['traza'], ensure_ascii=False), flush=True)
             for red, cpu in CONDICIONES:
                 clave = f'{red}-x{cpu}'

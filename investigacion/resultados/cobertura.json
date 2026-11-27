@@ -1,0 +1,26 @@
+{
+ "base": {
+  "portada": {
+   "script_kb": 811.7,
+   "ejecutado_kb": 457.3,
+   "pct": 56.3
+  },
+  "3x3": {
+   "script_kb": 811.7,
+   "ejecutado_kb": 484.6,
+   "pct": 59.7
+  }
+ },
+ "abc": {
+  "portada": {
+   "script_kb": 460.6,
+   "ejecutado_kb": 25.6,
+   "pct": 5.5
+  },
+  "3x3": {
+   "script_kb": 460.6,
+   "ejecutado_kb": 127.1,
+   "pct": 27.6
+  }
+ }
+}

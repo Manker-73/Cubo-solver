@@ -1,0 +1,41 @@
+{
+ "etiqueta": "abc",
+ "dir": "investigacion/dist/abc",
+ "comp": "gzip",
+ "reps": 5,
+ "condiciones": {},
+ "traza": {
+  "cpu1": {
+   "principal: compilar": 32.9,
+   "principal: compilar (perezoso)": 57.4,
+   "principal: ejecutar": 238.0,
+   "principal: estilos": 78.5,
+   "principal: evaluar (total)": 271.0,
+   "principal: llamadas": 4.6,
+   "principal: maquetar": 116.3,
+   "principal: parsear HTML": 291.5,
+   "principal: pintar": 1.7,
+   "worker: compilar": 109.8,
+   "worker: compilar (perezoso)": 111.1,
+   "worker: ejecutar": 2.8,
+   "worker: evaluar (total)": 113.2,
+   "worker: llamadas": 1.1
+  },
+  "cpu4": {
+   "principal: compilar": 171.9,
+   "principal: compilar (perezoso)": 231.3,
+   "principal: ejecutar": 248.1,
+   "principal: estilos": 39.8,
+   "principal: evaluar (total)": 423.9,
+   "principal: llamadas": 13.7,
+   "principal: maquetar": 657.6,
+   "principal: parsear HTML": 430.4,
+   "principal: pintar": 13.8,
+   "worker: compilar": 77.9,
+   "worker: compilar (perezoso)": 82.8,
+   "worker: ejecutar": 3.3,
+   "worker: evaluar (total)": 82.9,
+   "worker: llamadas": 0.8
+  }
+ }
+}

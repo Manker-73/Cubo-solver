@@ -1,0 +1,3037 @@
+{
+ "etiqueta": "d",
+ "dir": "investigacion/dist/d",
+ "comp": "gzip",
+ "reps": 5,
+ "condiciones": {
+  "fast3g-x1": {
+   "medianas": {
+    "fria": {
+     "fcp": 1520,
+     "portada": 2993,
+     "usable": 2993,
+     "kb": 223.8
+    },
+    "cache": {
+     "fcp": 144,
+     "portada": 201,
+     "usable": 201,
+     "kb": 0.0
+    },
+    "wca3x3": {
+     "fcp": 1512,
+     "portada": 3190,
+     "usable": 3190,
+     "kb": 223.8,
+     "listo3x3": 4845
+    }
+   },
+   "repeticiones": {
+    "fria": [
+     {
+      "portada": 2982.5,
+      "listo": null,
+      "lt": [
+       [
+        1335.5,
+        77
+       ]
+      ],
+      "fcp": 1536,
+      "transfer": 229208,
+      "decodificado": 559587,
+      "recursos": [
+       [
+        "inter.woff2",
+        20064,
+        1439
+       ],
+       [
+        "bricolage-grotesque-800.woff2",
+        13620,
+        1408
+       ],
+       [
+        "estilos.css",
+        7712,
+        1331
+       ],
+       [
+        "app.js",
+        176939,
+        2925
+       ],
+       [
+        "jetbrains-mono-500.woff2",
+        6160,
+        2057
+       ]
+      ],
+      "domContentLoaded": 2964.399999976158,
+      "load": 2966.3000000715256,
+      "usable": 2982.5,
+      "errores": []
+     },
+     {
+      "portada": 2980.100000023842,
+      "listo": null,
+      "lt": [
+       [
+        1330.1999999284744,
+        73
+       ]
+      ],
+      "fcp": 1504,
+      "transfer": 229208,
+      "decodificado": 559587,
+      "recursos": [
+       [
+        "inter.woff2",
+        20064,
+        1417
+       ],
+       [
+        "bricolage-grotesque-800.woff2",
+        13620,
+        1387
+       ],
+       [
+        "estilos.css",
+        7712,
+        1326
+       ],
+       [
+        "app.js",
+        176939,
+        2943
+       ],
+       [
+        "jetbrains-mono-500.woff2",
+        6160,
+        2051
+       ]
+      ],
+      "domContentLoaded": 2972.399999976158,
+      "load": 2974.7999999523163,
+      "usable": 2980.100000023842,
+      "errores": []
+     },
+     {
+      "portada": 2998.1999999284744,
+      "listo": null,
+      "lt": [
+       [
+        1336.8999999761581,
+        78
+       ]
+      ],
+      "fcp": 1516,
+      "transfer": 229208,
+      "decodificado": 559587,
+      "recursos": [
+       [
+        "inter.woff2",
+        20064,
+        1439
+       ],
+       [
+        "bricolage-grotesque-800.woff2",
+        13620,
+        1393
+       ],
+       [
+        "estilos.css",
+        7712,
+        1333
+       ],
+       [
+        "app.js",
+        176939,
+        2933
+       ],
+       [
+        "jetbrains-mono-500.woff2",
+        6160,
+        2068
+       ]
+      ],
+      "domContentLoaded": 2981.0999999046326,
+      "load": 2985.5999999046326,
+      "usable": 2998.1999999284744,
+      "errores": []
+     },
+     {
+      "portada": 3013.3000000715256,
+      "listo": null,
+      "lt": [
+       [
+        1347.2000000476837,
+        74
+       ],
+       [
+        2951.7000000476837,
+        55
+       ]
+      ],
+      "fcp": 1520,
+      "transfer": 229208,
+      "decodificado": 559587,
+      "recursos": [
+       [
+        "inter.woff2",
+        20064,
+        1435
+       ],
+       [
+        "estilos.css",
+        7712,
+        1343
+       ],
+       [
+        "bricolage-grotesque-800.woff2",
+        13620,
+        1419
+       ],
+       [
+        "app.js",
+        176939,
+        2947
+       ],
+       [
+        "jetbrains-mono-500.woff2",
+        6160,
+        2068
+       ]
+      ],
+      "domContentLoaded": 3004.5,
+      "load": 3006.5,
+      "usable": 3013.3000000715256,
+      "errores": []
+     },
+     {
+      "portada": 2993.2000000476837,
+      "listo": null,
+      "lt": [
+       [
+        1333.7000000476837,
+        74
+       ]
+      ],
+      "fcp": 1528,
+      "transfer": 229208,
+      "decodificado": 559587,
+      "recursos": [
+       [
+        "inter.woff2",
+        20064,
+        1435
+       ],
+       [
+        "bricolage-grotesque-800.woff2",
+        13620,
+        1389
+       ],
+       [
+        "estilos.css",
+        7712,
+        1328
+       ],
+       [
+        "app.js",
+        176939,
+        2940
+       ],
+       [
+        "jetbrains-mono-500.woff2",
+        6160,
+        2051
+       ]
+      ],
+      "domContentLoaded": 2986.5,
+      "load": 2988.2999999523163,
+      "usable": 2993.2000000476837,
+      "errores": []
+     }
+    ],
+    "cache": [
+     {
+      "portada": 165.89999997615814,
+      "listo": null,
+      "lt": [
+       [
+        92,
+        70
+       ]
+      ],
+      "fcp": 144,
+      "transfer": 0,
+      "decodificado": 559587,
+      "recursos": [
+       [
+        "inter.woff2",
+        0,
+        17
+       ],
+       [
+        "bricolage-grotesque-800.woff2",
+        0,
+        18
+       ],
+       [
+        "estilos.css",
+        0,
+        18
+       ],
+       [
+        "app.js",
+        0,
+        27
+       ],
+       [
+        "jetbrains-mono-500.woff2",
+        0,
+        57
+       ]
+      ],
+      "domContentLoaded": 160.39999997615814,
+      "load": 162.60000002384186,
+      "usable": 165.89999997615814,
+      "errores": []
+     },
+     {
+      "portada": 196.5,
+      "listo": null,
+      "lt": [
+       [
+        96.39999997615814,
+        97
+       ]
+      ],
+      "fcp": 140,
+      "transfer": 0,
+      "decodificado": 559587,
+      "recursos": [
+       [
+        "inter.woff2",
+        0,
+        17
+       ],
+       [
+        "bricolage-grotesque-800.woff2",
+        0,
+        18
+       ],
+       [
+        "estilos.css",
+        0,
+        18
+       ],
+       [
+        "app.js",
+        0,
+        35
+       ],
+       [
+        "jetbrains-mono-500.woff2",
+        0,
+        55
+       ]
+      ],
+      "domContentLoaded": 191.70000004768372,
+      "load": 193.60000002384186,
+      "usable": 196.5,
+      "errores": []
+     },
+     {
+      "portada": 218.70000004768372,
+      "listo": null,
+      "lt": [
+       [
+        81.5,
+        134
+       ]
+      ],
+      "fcp": 120,
+      "transfer": 0,
+      "decodificado": 559587,
+      "recursos": [
+       [
+        "inter.woff2",
+        0,
+        17
+       ],
+       [
+        "bricolage-grotesque-800.woff2",
+        0,
+        17
+       ],
+       [
+        "estilos.css",
+        0,
+        18
+       ],
+       [
+        "app.js",
+        0,
+        26
+       ],
+       [
+        "jetbrains-mono-500.woff2",
+        0,
+        47
+       ]
+      ],
+      "domContentLoaded": 213.70000004768372,
+      "load": 215.5,
+      "usable": 218.70000004768372,
+      "errores": []
+     },
+     {
+      "portada": 209.60000002384186,
+      "listo": null,
+      "lt": [
+       [
+        92.60000002384186,
+        114
+       ]
+      ],
+      "fcp": 156,
+      "transfer": 0,
+      "decodificado": 559587,
+      "recursos": [
+       [
+        "inter.woff2",
+        0,
+        23
+       ],
+       [
+        "bricolage-grotesque-800.woff2",
+        0,
+        23
+       ],
+       [
+        "estilos.css",
+        0,
+        24
+       ],
+       [
+        "app.js",
+        0,
+        29
+       ],
+       [
+        "jetbrains-mono-500.woff2",
+        0,
+        55
+       ]
+      ],
+      "domContentLoaded": 203.89999997615814,
+      "load": 207,
+      "usable": 209.60000002384186,
+      "errores": []
+     },
+     {
+      "portada": 200.89999997615814,
+      "listo": null,
+      "lt": [
+       [
+        98.89999997615814,
+        99
+       ]
+      ],
+      "fcp": 160,
+      "transfer": 0,
+      "decodificado": 559587,
+      "recursos": [
+       [
+        "inter.woff2",
+        0,
+        16
+       ],
+       [
+        "bricolage-grotesque-800.woff2",
+        0,
+        17
+       ],
+       [
+        "estilos.css",
+        0,
+        17
+       ],
+       [
+        "app.js",
+        0,
+        32
+       ],
+       [
+        "jetbrains-mono-500.woff2",
+        0,
+        55
+       ]
+      ],
+      "domContentLoaded": 195.5,
+      "load": 197.5,
+      "usable": 200.89999997615814,
+      "errores": []
+     }
+    ],
+    "wca3x3": [
+     {
+      "portada": 3214.399999976158,
+      "listo": 4845.399999976158,
+      "lt": [
+       [
+        1328.3000000715256,
+        77
+       ],
+       [
+        2966.100000023842,
+        191
+       ],
+       [
+        3157.8000000715256,
+        53
+       ],
+       [
+        4732.399999976158,
+        107
+       ]
+      ],
+      "fcp": 1520,
+      "transfer": 229208,
+      "decodificado": 559587,
+      "recursos": [
+       [
+        "inter.woff2",
+        20064,
+        1431
+       ],
+       [
+        "bricolage-grotesque-800.woff2",
+        13620,
+        1385
+       ],
+       [
+        "estilos.css",
+        7712,
+        1324
+       ],
+       [
+        "app.js",
+        176939,
+        2954
+       ],
+       [
+        "jetbrains-mono-500.woff2",
+        6160,
+        2059
+       ]
+      ],
+      "domContentLoaded": 3141.399999976158,
+      "load": 3157.100000023842,
+      "usable": 3214.399999976158,
+      "errores": []
+     },
+     {
+      "portada": 3189.5,
+      "listo": 4737.800000071526,
+      "lt": [
+       [
+        1346.8000000715256,
+        101
+       ],
+       [
+        2983.8000000715256,
+        165
+       ],
+       [
+        4623.700000047684,
+        108
+       ]
+      ],
+      "fcp": 1528,
+      "transfer": 229208,
+      "decodificado": 559587,
+      "recursos": [
+       [
+        "inter.woff2",
+        20064,
+        1432
+       ],
+       [
+        "bricolage-grotesque-800.woff2",
+        13620,
+        1402
+       ],
+       [
+        "estilos.css",
+        7712,
+        1339
+       ],
+       [
+        "app.js",
+        176939,
+        2971
+       ],
+       [
+        "jetbrains-mono-500.woff2",
+        6160,
+        2090
+       ]
+      ],
+      "domContentLoaded": 3126.8000000715256,
+      "load": 3147.899999976158,
+      "usable": 3189.5,
+      "errores": []
+     },
+     {
+      "portada": 3141.1999999284744,
+      "listo": 4796.599999904633,
+      "lt": [
+       [
+        1312,
+        77
+       ],
+       [
+        2934.5999999046326,
+        164
+       ],
+       [
+        4674,
+        114
+       ]
+      ],
+      "fcp": 1476,
+      "transfer": 229208,
+      "decodificado": 559587,
+      "recursos": [
+       [
+        "inter.woff2",
+        20064,
+        1433
+       ],
+       [
+        "bricolage-grotesque-800.woff2",
+        13620,
+        1386
+       ],
+       [
+        "estilos.css",
+        7712,
+        1308
+       ],
+       [
+        "app.js",
+        176939,
+        2930
+       ],
+       [
+        "jetbrains-mono-500.woff2",
+        6160,
+        2048
+       ]
+      ],
+      "domContentLoaded": 3077.5,
+      "load": 3098.399999976158,
+      "usable": 3141.1999999284744,
+      "errores": []
+     },
+     {
+      "portada": 3168.1999999284744,
+      "listo": 4856.799999952316,
+      "lt": [
+       [
+        1312.5999999046326,
+        78
+       ],
+       [
+        2923.5,
+        201
+       ],
+       [
+        4744.199999928474,
+        107
+       ]
+      ],
+      "fcp": 1484,
+      "transfer": 229208,
+      "decodificado": 559587,
+      "recursos": [
+       [
+        "inter.woff2",
+        20064,
+        1432
+       ],
+       [
+        "bricolage-grotesque-800.woff2",
+        13620,
+        1385
+       ],
+       [
+        "estilos.css",
+        7712,
+        1309
+       ],
+       [
+        "app.js",
+        176939,
+        2919
+       ],
+       [
+        "jetbrains-mono-500.woff2",
+        6160,
+        2043
+       ]
+      ],
+      "domContentLoaded": 3105.5,
+      "load": 3124.399999976158,
+      "usable": 3168.1999999284744,
+      "errores": []
+     },
+     {
+      "portada": 3233.7000000476837,
+      "listo": 4853.800000071526,
+      "lt": [
+       [
+        1330.2000000476837,
+        79
+       ],
+       [
+        2959.100000023842,
+        232
+       ],
+       [
+        4738.5,
+        110
+       ]
+      ],
+      "fcp": 1512,
+      "transfer": 229208,
+      "decodificado": 559587,
+      "recursos": [
+       [
+        "inter.woff2",
+        20064,
+        1432
+       ],
+       [
+        "bricolage-grotesque-800.woff2",
+        13620,
+        1412
+       ],
+       [
+        "estilos.css",
+        7712,
+        1325
+       ],
+       [
+        "app.js",
+        176939,
+        2954
+       ],
+       [
+        "jetbrains-mono-500.woff2",
+        6160,
+        2062
+       ]
+      ],
+      "domContentLoaded": 3169.600000023842,
+      "load": 3190.9000000953674,
+      "usable": 3233.7000000476837,
+      "errores": []
+     }
+    ]
+   },
+   "errores": []
+  },
+  "fast3g-x4": {
+   "medianas": {
+    "fria": {
+     "fcp": 2096,
+     "portada": 3204,
+     "usable": 3204,
+     "kb": 223.8
+    },
+    "cache": {
+     "fcp": 488,
+     "portada": 709,
+     "usable": 709,
+     "kb": 0.0
+    },
+    "wca3x3": {
+     "fcp": 2096,
+     "portada": 3838,
+     "usable": 3838,
+     "kb": 223.8,
+     "listo3x3": 5834
+    }
+   },
+   "repeticiones": {
+    "fria": [
+     {
+      "portada": 3150.899999976158,
+      "listo": null,
+      "lt": [
+       [
+        1368.3999999761581,
+        448
+       ],
+       [
+        2963.5,
+        151
+       ]
+      ],
+      "fcp": 2048,
+      "transfer": 229208,
+      "decodificado": 559587,
+      "recursos": [
+       [
+        "inter.woff2",
+        20064,
+        1448
+       ],
+       [
+        "bricolage-grotesque-800.woff2",
+        13620,
+        1418
+       ],
+       [
+        "estilos.css",
+        7712,
+        1355
+       ],
+       [
+        "app.js",
+        176939,
+        2957
+       ],
+       [
+        "jetbrains-mono-500.woff2",
+        6160,
+        2464
+       ]
+      ],
+      "domContentLoaded": 3104.399999976158,
+      "load": 3114,
+      "usable": 3150.899999976158,
+      "errores": []
+     },
+     {
+      "portada": 3265.5,
+      "listo": null,
+      "lt": [
+       [
+        1391.6000000238419,
+        470
+       ],
+       [
+        3002.4000000953674,
+        212
+       ],
+       [
+        3214.4000000953674,
+        50
+       ]
+      ],
+      "fcp": 2128,
+      "transfer": 229208,
+      "decodificado": 559587,
+      "recursos": [
+       [
+        "inter.woff2",
+        20064,
+        1488
+       ],
+       [
+        "bricolage-grotesque-800.woff2",
+        13620,
+        1457
+       ],
+       [
+        "estilos.css",
+        7712,
+        1379
+       ],
+       [
+        "app.js",
+        176939,
+        2989
+       ],
+       [
+        "jetbrains-mono-500.woff2",
+        6160,
+        2523
+       ]
+      ],
+      "domContentLoaded": 3190.5,
+      "load": 3212.2000000476837,
+      "usable": 3265.5,
+      "errores": []
+     },
+     {
+      "portada": 3274.6999999284744,
+      "listo": null,
+      "lt": [
+       [
+        1372.7999999523163,
+        485
+       ],
+       [
+        2978.2999999523163,
+        267
+       ]
+      ],
+      "fcp": 2096,
+      "transfer": 229208,
+      "decodificado": 559587,
+      "recursos": [
+       [
+        "inter.woff2",
+        20064,
+        1469
+       ],
+       [
+        "bricolage-grotesque-800.woff2",
+        13620,
+        1438
+       ],
+       [
+        "estilos.css",
+        7712,
+        1361
+       ],
+       [
+        "app.js",
+        176939,
+        2957
+       ],
+       [
+        "jetbrains-mono-500.woff2",
+        6160,
+        2510
+       ]
+      ],
+      "domContentLoaded": 3211,
+      "load": 3243.6999999284744,
+      "usable": 3274.6999999284744,
+      "errores": []
+     },
+     {
+      "portada": 3204.399999976158,
+      "listo": null,
+      "lt": [
+       [
+        1390.5,
+        403
+       ],
+       [
+        2998.6999999284744,
+        195
+       ]
+      ],
+      "fcp": 2060,
+      "transfer": 229208,
+      "decodificado": 559587,
+      "recursos": [
+       [
+        "inter.woff2",
+        20064,
+        1481
+       ],
+       [
+        "bricolage-grotesque-800.woff2",
+        13620,
+        1435
+       ],
+       [
+        "estilos.css",
+        7712,
+        1373
+       ],
+       [
+        "app.js",
+        176939,
+        2992
+       ],
+       [
+        "jetbrains-mono-500.woff2",
+        6160,
+        2435
+       ]
+      ],
+      "domContentLoaded": 3189.6999999284744,
+      "load": 3193.5999999046326,
+      "usable": 3204.399999976158,
+      "errores": []
+     },
+     {
+      "portada": 3190.8000000715256,
+      "listo": null,
+      "lt": [
+       [
+        1404.1000000238419,
+        352
+       ],
+       [
+        3016.600000023842,
+        171
+       ]
+      ],
+      "fcp": 2104,
+      "transfer": 229208,
+      "decodificado": 559587,
+      "recursos": [
+       [
+        "inter.woff2",
+        20064,
+        1485
+       ],
+       [
+        "bricolage-grotesque-800.woff2",
+        13620,
+        1470
+       ],
+       [
+        "estilos.css",
+        7712,
+        1393
+       ],
+       [
+        "app.js",
+        176939,
+        3004
+       ],
+       [
+        "jetbrains-mono-500.woff2",
+        6160,
+        2423
+       ]
+      ],
+      "domContentLoaded": 3171.5,
+      "load": 3188.100000023842,
+      "usable": 3190.8000000715256,
+      "errores": []
+     }
+    ],
+    "cache": [
+     {
+      "portada": 587.7000000476837,
+      "listo": null,
+      "lt": [
+       [
+        345.7999999523163,
+        219
+       ]
+      ],
+      "fcp": 344,
+      "transfer": 0,
+      "decodificado": 559587,
+      "recursos": [
+       [
+        "inter.woff2",
+        0,
+        29
+       ],
+       [
+        "bricolage-grotesque-800.woff2",
+        0,
+        29
+       ],
+       [
+        "estilos.css",
+        0,
+        30
+       ],
+       [
+        "app.js",
+        0,
+        49
+       ],
+       [
+        "jetbrains-mono-500.woff2",
+        0,
+        77
+       ]
+      ],
+      "domContentLoaded": 541.8999999761581,
+      "load": 562.7000000476837,
+      "usable": 587.7000000476837,
+      "errores": []
+     },
+     {
+      "portada": 1155,
+      "listo": null,
+      "lt": [
+       [
+        88.89999997615814,
+        960
+       ],
+       [
+        1052.5999999046326,
+        57
+       ]
+      ],
+      "fcp": 1236,
+      "transfer": 0,
+      "decodificado": 559587,
+      "recursos": [
+       [
+        "inter.woff2",
+        0,
+        38
+       ],
+       [
+        "bricolage-grotesque-800.woff2",
+        0,
+        39
+       ],
+       [
+        "estilos.css",
+        0,
+        39
+       ],
+       [
+        "app.js",
+        0,
+        47
+       ],
+       [
+        "jetbrains-mono-500.woff2",
+        0,
+        691
+       ]
+      ],
+      "domContentLoaded": 1033.5,
+      "load": 1054.1999999284744,
+      "usable": 1155,
+      "errores": []
+     },
+     {
+      "portada": 738.6999999284744,
+      "listo": null,
+      "lt": [
+       [
+        459.39999997615814,
+        245
+       ]
+      ],
+      "fcp": 504,
+      "transfer": 0,
+      "decodificado": 559587,
+      "recursos": [
+       [
+        "inter.woff2",
+        0,
+        49
+       ],
+       [
+        "bricolage-grotesque-800.woff2",
+        0,
+        50
+       ],
+       [
+        "estilos.css",
+        0,
+        50
+       ],
+       [
+        "app.js",
+        0,
+        93
+       ],
+       [
+        "jetbrains-mono-500.woff2",
+        0,
+        215
+       ]
+      ],
+      "domContentLoaded": 671.7999999523163,
+      "load": 755.6999999284744,
+      "usable": 738.6999999284744,
+      "errores": []
+     },
+     {
+      "portada": 709.3999999761581,
+      "listo": null,
+      "lt": [
+       [
+        553.2999999523163,
+        152
+       ]
+      ],
+      "fcp": 488,
+      "transfer": 0,
+      "decodificado": 559587,
+      "recursos": [
+       [
+        "inter.woff2",
+        0,
+        46
+       ],
+       [
+        "bricolage-grotesque-800.woff2",
+        0,
+        46
+       ],
+       [
+        "estilos.css",
+        0,
+        47
+       ],
+       [
+        "app.js",
+        0,
+        164
+       ],
+       [
+        "jetbrains-mono-500.woff2",
+        0,
+        193
+       ]
+      ],
+      "domContentLoaded": 702.8999999761581,
+      "load": 705.5999999046326,
+      "usable": 709.3999999761581,
+      "errores": []
+     },
+     {
+      "portada": 506.39999997615814,
+      "listo": null,
+      "lt": [
+       [
+        279.09999990463257,
+        223
+       ]
+      ],
+      "fcp": 340,
+      "transfer": 0,
+      "decodificado": 559587,
+      "recursos": [
+       [
+        "inter.woff2",
+        0,
+        38
+       ],
+       [
+        "bricolage-grotesque-800.woff2",
+        0,
+        39
+       ],
+       [
+        "estilos.css",
+        0,
+        39
+       ],
+       [
+        "app.js",
+        0,
+        47
+       ],
+       [
+        "jetbrains-mono-500.woff2",
+        0,
+        95
+       ]
+      ],
+      "domContentLoaded": 498,
+      "load": 501.89999997615814,
+      "usable": 506.39999997615814,
+      "errores": []
+     }
+    ],
+    "wca3x3": [
+     {
+      "portada": 3837.7000000476837,
+      "listo": 5792.899999976158,
+      "lt": [
+       [
+        1421,
+        431
+       ],
+       [
+        3039.7999999523163,
+        708
+       ],
+       [
+        3748.2999999523163,
+        77
+       ],
+       [
+        5222.700000047684,
+        522
+       ]
+      ],
+      "fcp": 2124,
+      "transfer": 229208,
+      "decodificado": 559587,
+      "recursos": [
+       [
+        "inter.woff2",
+        20064,
+        1488
+       ],
+       [
+        "bricolage-grotesque-800.woff2",
+        13620,
+        1458
+       ],
+       [
+        "estilos.css",
+        7712,
+        1396
+       ],
+       [
+        "app.js",
+        176939,
+        3033
+       ],
+       [
+        "jetbrains-mono-500.woff2",
+        6160,
+        2523
+       ]
+      ],
+      "domContentLoaded": 3631.2000000476837,
+      "load": 3746.399999976158,
+      "usable": 3837.7000000476837,
+      "errores": []
+     },
+     {
+      "portada": 3786.7000000476837,
+      "listo": 5621.200000047684,
+      "lt": [
+       [
+        1415.2999999523163,
+        406
+       ],
+       [
+        3037.399999976158,
+        684
+       ],
+       [
+        3722,
+        64
+       ],
+       [
+        5213.700000047684,
+        387
+       ]
+      ],
+      "fcp": 2096,
+      "transfer": 229208,
+      "decodificado": 559587,
+      "recursos": [
+       [
+        "inter.woff2",
+        20064,
+        1485
+       ],
+       [
+        "bricolage-grotesque-800.woff2",
+        13620,
+        1455
+       ],
+       [
+        "estilos.css",
+        7712,
+        1395
+       ],
+       [
+        "app.js",
+        176939,
+        3022
+       ],
+       [
+        "jetbrains-mono-500.woff2",
+        6160,
+        2466
+       ]
+      ],
+      "domContentLoaded": 3635.600000023842,
+      "load": 3721.2999999523163,
+      "usable": 3786.7000000476837,
+      "errores": []
+     },
+     {
+      "portada": 3769.5,
+      "listo": 5834.5,
+      "lt": [
+       [
+        1428,
+        445
+       ],
+       [
+        3069.6999999284744,
+        602
+       ],
+       [
+        3672,
+        84
+       ],
+       [
+        5266.399999976158,
+        553
+       ]
+      ],
+      "fcp": 2076,
+      "transfer": 229208,
+      "decodificado": 559587,
+      "recursos": [
+       [
+        "inter.woff2",
+        20064,
+        1500
+       ],
+       [
+        "bricolage-grotesque-800.woff2",
+        13620,
+        1469
+       ],
+       [
+        "estilos.css",
+        7712,
+        1408
+       ],
+       [
+        "app.js",
+        176939,
+        3056
+       ],
+       [
+        "jetbrains-mono-500.woff2",
+        6160,
+        2547
+       ]
+      ],
+      "domContentLoaded": 3592,
+      "load": 3669.899999976158,
+      "usable": 3769.5,
+      "errores": []
+     },
+     {
+      "portada": 3850.899999976158,
+      "listo": 5971.399999976158,
+      "lt": [
+       [
+        1422.2999999523163,
+        408
+       ],
+       [
+        3052.6999999284744,
+        708
+       ],
+       [
+        3761.0999999046326,
+        88
+       ],
+       [
+        5332.599999904633,
+        616
+       ]
+      ],
+      "fcp": 2096,
+      "transfer": 229208,
+      "decodificado": 559587,
+      "recursos": [
+       [
+        "inter.woff2",
+        20064,
+        1502
+       ],
+       [
+        "bricolage-grotesque-800.woff2",
+        13620,
+        1471
+       ],
+       [
+        "estilos.css",
+        7712,
+        1410
+       ],
+       [
+        "app.js",
+        176939,
+        3039
+       ],
+       [
+        "jetbrains-mono-500.woff2",
+        6160,
+        2485
+       ]
+      ],
+      "domContentLoaded": 3659,
+      "load": 3751.5,
+      "usable": 3850.899999976158,
+      "errores": []
+     },
+     {
+      "portada": 3843.5,
+      "listo": 5963.699999928474,
+      "lt": [
+       [
+        1414.5,
+        395
+       ],
+       [
+        3013.600000023842,
+        729
+       ],
+       [
+        3743.1999999284744,
+        99
+       ],
+       [
+        5346.299999952316,
+        596
+       ]
+      ],
+      "fcp": 2116,
+      "transfer": 229208,
+      "decodificado": 559587,
+      "recursos": [
+       [
+        "inter.woff2",
+        20064,
+        1489
+       ],
+       [
+        "bricolage-grotesque-800.woff2",
+        13620,
+        1457
+       ],
+       [
+        "estilos.css",
+        7712,
+        1396
+       ],
+       [
+        "app.js",
+        176939,
+        3004
+       ],
+       [
+        "jetbrains-mono-500.woff2",
+        6160,
+        2465
+       ]
+      ],
+      "domContentLoaded": 3632.7999999523163,
+      "load": 3739.6999999284744,
+      "usable": 3843.5,
+      "errores": []
+     }
+    ]
+   },
+   "errores": []
+  },
+  "slow3g-x1": {
+   "medianas": {
+    "fria": {
+     "fcp": 4756,
+     "portada": 10357,
+     "usable": 10357,
+     "kb": 223.8
+    },
+    "cache": {
+     "fcp": 140,
+     "portada": 218,
+     "usable": 218,
+     "kb": 0.0
+    },
+    "wca3x3": {
+     "fcp": 4748,
+     "portada": 10535,
+     "usable": 10535,
+     "kb": 223.8,
+     "listo3x3": 12194
+    }
+   },
+   "repeticiones": {
+    "fria": [
+     {
+      "portada": 10356.700000047684,
+      "listo": null,
+      "lt": [
+       [
+        10291.600000023842,
+        50
+       ]
+      ],
+      "fcp": 4744,
+      "transfer": 229208,
+      "decodificado": 559587,
+      "recursos": [
+       [
+        "inter.woff2",
+        20064,
+        5008
+       ],
+       [
+        "bricolage-grotesque-800.woff2",
+        13620,
+        4885
+       ],
+       [
+        "estilos.css",
+        7712,
+        4592
+       ],
+       [
+        "app.js",
+        176939,
+        10287
+       ],
+       [
+        "jetbrains-mono-500.woff2",
+        6160,
+        6959
+       ]
+      ],
+      "domContentLoaded": 10339.700000047684,
+      "load": 10341.399999976158,
+      "usable": 10356.700000047684,
+      "errores": []
+     },
+     {
+      "portada": 10371,
+      "listo": null,
+      "lt": [],
+      "fcp": 4768,
+      "transfer": 229208,
+      "decodificado": 559587,
+      "recursos": [
+       [
+        "inter.woff2",
+        20064,
+        4989
+       ],
+       [
+        "bricolage-grotesque-800.woff2",
+        13620,
+        4860
+       ],
+       [
+        "estilos.css",
+        7712,
+        4627
+       ],
+       [
+        "app.js",
+        176939,
+        10313
+       ],
+       [
+        "jetbrains-mono-500.woff2",
+        6160,
+        6993
+       ]
+      ],
+      "domContentLoaded": 10363.900000095367,
+      "load": 10365.600000023842,
+      "usable": 10371,
+      "errores": []
+     },
+     {
+      "portada": 10337.300000071526,
+      "listo": null,
+      "lt": [],
+      "fcp": 4764,
+      "transfer": 229208,
+      "decodificado": 559587,
+      "recursos": [
+       [
+        "inter.woff2",
+        20064,
+        4979
+       ],
+       [
+        "bricolage-grotesque-800.woff2",
+        13620,
+        4858
+       ],
+       [
+        "estilos.css",
+        7712,
+        4594
+       ],
+       [
+        "app.js",
+        176939,
+        10287
+       ],
+       [
+        "jetbrains-mono-500.woff2",
+        6160,
+        6995
+       ]
+      ],
+      "domContentLoaded": 10327.200000047684,
+      "load": 10328.800000071526,
+      "usable": 10337.300000071526,
+      "errores": []
+     },
+     {
+      "portada": 10296.600000023842,
+      "listo": null,
+      "lt": [],
+      "fcp": 4708,
+      "transfer": 229208,
+      "decodificado": 559587,
+      "recursos": [
+       [
+        "inter.woff2",
+        20064,
+        4974
+       ],
+       [
+        "bricolage-grotesque-800.woff2",
+        13620,
+        4852
+       ],
+       [
+        "estilos.css",
+        7712,
+        4556
+       ],
+       [
+        "app.js",
+        176939,
+        10248
+       ],
+       [
+        "jetbrains-mono-500.woff2",
+        6160,
+        6923
+       ]
+      ],
+      "domContentLoaded": 10287.699999928474,
+      "load": 10290.799999952316,
+      "usable": 10296.600000023842,
+      "errores": []
+     },
+     {
+      "portada": 10450.099999904633,
+      "listo": null,
+      "lt": [
+       [
+        10349.199999928474,
+        82
+       ]
+      ],
+      "fcp": 4756,
+      "transfer": 229208,
+      "decodificado": 559587,
+      "recursos": [
+       [
+        "inter.woff2",
+        20064,
+        4973
+       ],
+       [
+        "bricolage-grotesque-800.woff2",
+        13620,
+        4850
+       ],
+       [
+        "estilos.css",
+        7712,
+        4616
+       ],
+       [
+        "app.js",
+        176939,
+        10344
+       ],
+       [
+        "jetbrains-mono-500.woff2",
+        6160,
+        6990
+       ]
+      ],
+      "domContentLoaded": 10429.399999976158,
+      "load": 10431.099999904633,
+      "usable": 10450.099999904633,
+      "errores": []
+     }
+    ],
+    "cache": [
+     {
+      "portada": 236.70000004768372,
+      "listo": null,
+      "lt": [
+       [
+        122,
+        112
+       ]
+      ],
+      "fcp": 184,
+      "transfer": 0,
+      "decodificado": 559587,
+      "recursos": [
+       [
+        "inter.woff2",
+        0,
+        26
+       ],
+       [
+        "bricolage-grotesque-800.woff2",
+        0,
+        27
+       ],
+       [
+        "estilos.css",
+        0,
+        27
+       ],
+       [
+        "app.js",
+        0,
+        35
+       ],
+       [
+        "jetbrains-mono-500.woff2",
+        0,
+        86
+       ]
+      ],
+      "domContentLoaded": 231.80000007152557,
+      "load": 233.80000007152557,
+      "usable": 236.70000004768372,
+      "errores": []
+     },
+     {
+      "portada": 238.39999997615814,
+      "listo": null,
+      "lt": [
+       [
+        84.30000007152557,
+        150
+       ]
+      ],
+      "fcp": 136,
+      "transfer": 0,
+      "decodificado": 559587,
+      "recursos": [
+       [
+        "inter.woff2",
+        0,
+        17
+       ],
+       [
+        "bricolage-grotesque-800.woff2",
+        0,
+        18
+       ],
+       [
+        "estilos.css",
+        0,
+        18
+       ],
+       [
+        "app.js",
+        0,
+        33
+       ],
+       [
+        "jetbrains-mono-500.woff2",
+        0,
+        52
+       ]
+      ],
+      "domContentLoaded": 231.60000002384186,
+      "load": 234.60000002384186,
+      "usable": 238.39999997615814,
+      "errores": []
+     },
+     {
+      "portada": 197.5,
+      "listo": null,
+      "lt": [
+       [
+        99.10000002384186,
+        95
+       ]
+      ],
+      "fcp": 140,
+      "transfer": 0,
+      "decodificado": 559587,
+      "recursos": [
+       [
+        "inter.woff2",
+        0,
+        17
+       ],
+       [
+        "estilos.css",
+        0,
+        18
+       ],
+       [
+        "bricolage-grotesque-800.woff2",
+        0,
+        17
+       ],
+       [
+        "app.js",
+        0,
+        32
+       ],
+       [
+        "jetbrains-mono-500.woff2",
+        0,
+        55
+       ]
+      ],
+      "domContentLoaded": 192.80000007152557,
+      "load": 194.60000002384186,
+      "usable": 197.5,
+      "errores": []
+     },
+     {
+      "portada": 214.80000007152557,
+      "listo": null,
+      "lt": [
+       [
+        105.60000002384186,
+        105
+       ]
+      ],
+      "fcp": 156,
+      "transfer": 0,
+      "decodificado": 559587,
+      "recursos": [
+       [
+        "inter.woff2",
+        0,
+        19
+       ],
+       [
+        "estilos.css",
+        0,
+        35
+       ],
+       [
+        "bricolage-grotesque-800.woff2",
+        0,
+        33
+       ],
+       [
+        "app.js",
+        0,
+        40
+       ],
+       [
+        "jetbrains-mono-500.woff2",
+        0,
+        66
+       ]
+      ],
+      "domContentLoaded": 208,
+      "load": 210.30000007152557,
+      "usable": 214.80000007152557,
+      "errores": []
+     },
+     {
+      "portada": 217.70000004768372,
+      "listo": null,
+      "lt": [
+       [
+        89.29999995231628,
+        125
+       ]
+      ],
+      "fcp": 140,
+      "transfer": 0,
+      "decodificado": 559587,
+      "recursos": [
+       [
+        "inter.woff2",
+        0,
+        19
+       ],
+       [
+        "bricolage-grotesque-800.woff2",
+        0,
+        21
+       ],
+       [
+        "estilos.css",
+        0,
+        21
+       ],
+       [
+        "app.js",
+        0,
+        27
+       ],
+       [
+        "jetbrains-mono-500.woff2",
+        0,
+        52
+       ]
+      ],
+      "domContentLoaded": 212.20000004768372,
+      "load": 214.10000002384186,
+      "usable": 217.70000004768372,
+      "errores": []
+     }
+    ],
+    "wca3x3": [
+     {
+      "portada": 10489.299999952316,
+      "listo": 12063,
+      "lt": [
+       [
+        10302.399999976158,
+        146
+       ],
+       [
+        11950.100000023842,
+        107
+       ]
+      ],
+      "fcp": 4740,
+      "transfer": 229208,
+      "decodificado": 559587,
+      "recursos": [
+       [
+        "inter.woff2",
+        20064,
+        4979
+       ],
+       [
+        "bricolage-grotesque-800.woff2",
+        13620,
+        4857
+       ],
+       [
+        "estilos.css",
+        7712,
+        4597
+       ],
+       [
+        "app.js",
+        176939,
+        10298
+       ],
+       [
+        "jetbrains-mono-500.woff2",
+        6160,
+        6988
+       ]
+      ],
+      "domContentLoaded": 10433.700000047684,
+      "load": 10448.700000047684,
+      "usable": 10489.299999952316,
+      "errores": []
+     },
+     {
+      "portada": 10567.700000047684,
+      "listo": 12304.5,
+      "lt": [
+       [
+        10351,
+        165
+       ],
+       [
+        12186.5,
+        111
+       ]
+      ],
+      "fcp": 4764,
+      "transfer": 229208,
+      "decodificado": 559587,
+      "recursos": [
+       [
+        "inter.woff2",
+        20064,
+        5013
+       ],
+       [
+        "bricolage-grotesque-800.woff2",
+        13620,
+        4889
+       ],
+       [
+        "estilos.css",
+        7712,
+        4627
+       ],
+       [
+        "app.js",
+        176939,
+        10345
+       ],
+       [
+        "jetbrains-mono-500.woff2",
+        6160,
+        6995
+       ]
+      ],
+      "domContentLoaded": 10500.600000023842,
+      "load": 10516.5,
+      "usable": 10567.700000047684,
+      "errores": []
+     },
+     {
+      "portada": 10416.200000047684,
+      "listo": 11534.700000047684,
+      "lt": [
+       [
+        10269.5,
+        114
+       ],
+       [
+        11457.200000047684,
+        71
+       ]
+      ],
+      "fcp": 4716,
+      "transfer": 229208,
+      "decodificado": 559587,
+      "recursos": [
+       [
+        "inter.woff2",
+        20064,
+        4984
+       ],
+       [
+        "bricolage-grotesque-800.woff2",
+        13620,
+        4861
+       ],
+       [
+        "estilos.css",
+        7712,
+        4567
+       ],
+       [
+        "app.js",
+        176939,
+        10263
+       ],
+       [
+        "jetbrains-mono-500.woff2",
+        6160,
+        6962
+       ]
+      ],
+      "domContentLoaded": 10370.700000047684,
+      "load": 10383,
+      "usable": 10416.200000047684,
+      "errores": []
+     },
+     {
+      "portada": 10534.700000047684,
+      "listo": 12466.600000023842,
+      "lt": [
+       [
+        4625.800000071526,
+        90
+       ],
+       [
+        10323.200000047684,
+        166
+       ],
+       [
+        12346.200000047684,
+        112
+       ]
+      ],
+      "fcp": 4796,
+      "transfer": 229208,
+      "decodificado": 559587,
+      "recursos": [
+       [
+        "inter.woff2",
+        20064,
+        4974
+       ],
+       [
+        "bricolage-grotesque-800.woff2",
+        13620,
+        4852
+       ],
+       [
+        "estilos.css",
+        7712,
+        4620
+       ],
+       [
+        "app.js",
+        176939,
+        10312
+       ],
+       [
+        "jetbrains-mono-500.woff2",
+        6160,
+        6987
+       ]
+      ],
+      "domContentLoaded": 10472.5,
+      "load": 10489.600000023842,
+      "usable": 10534.700000047684,
+      "errores": []
+     },
+     {
+      "portada": 10578.300000071526,
+      "listo": 12194.100000023842,
+      "lt": [
+       [
+        4596.100000023842,
+        83
+       ],
+       [
+        10287.700000047684,
+        242
+       ],
+       [
+        12072.100000023842,
+        116
+       ]
+      ],
+      "fcp": 4748,
+      "transfer": 229208,
+      "decodificado": 559587,
+      "recursos": [
+       [
+        "inter.woff2",
+        20064,
+        4979
+       ],
+       [
+        "bricolage-grotesque-800.woff2",
+        13620,
+        4855
+       ],
+       [
+        "estilos.css",
+        7712,
+        4591
+       ],
+       [
+        "app.js",
+        176939,
+        10284
+       ],
+       [
+        "jetbrains-mono-500.woff2",
+        6160,
+        6959
+       ]
+      ],
+      "domContentLoaded": 10508.400000095367,
+      "load": 10529.400000095367,
+      "usable": 10578.300000071526,
+      "errores": []
+     }
+    ]
+   },
+   "errores": []
+  },
+  "slow3g-x4": {
+   "medianas": {
+    "fria": {
+     "fcp": 5120,
+     "portada": 10551,
+     "usable": 10551,
+     "kb": 223.8
+    },
+    "cache": {
+     "fcp": 480,
+     "portada": 721,
+     "usable": 721,
+     "kb": 0.0
+    },
+    "wca3x3": {
+     "fcp": 5172,
+     "portada": 11130,
+     "usable": 11130,
+     "kb": 223.8,
+     "listo3x3": 13131
+    }
+   },
+   "repeticiones": {
+    "fria": [
+     {
+      "portada": 10638,
+      "listo": null,
+      "lt": [
+       [
+        5236.800000071526,
+        124
+       ],
+       [
+        10395.100000023842,
+        192
+       ]
+      ],
+      "fcp": 5188,
+      "transfer": 229208,
+      "decodificado": 559587,
+      "recursos": [
+       [
+        "inter.woff2",
+        20064,
+        5011
+       ],
+       [
+        "bricolage-grotesque-800.woff2",
+        13620,
+        4886
+       ],
+       [
+        "estilos.css",
+        7712,
+        4654
+       ],
+       [
+        "app.js",
+        176939,
+        10383
+       ],
+       [
+        "jetbrains-mono-500.woff2",
+        6160,
+        7413
+       ]
+      ],
+      "domContentLoaded": 10558.5,
+      "load": 10586.5,
+      "usable": 10638,
+      "errores": []
+     },
+     {
+      "portada": 10560.700000047684,
+      "listo": null,
+      "lt": [
+       [
+        10336.899999976158,
+        193
+       ]
+      ],
+      "fcp": 5064,
+      "transfer": 229208,
+      "decodificado": 559587,
+      "recursos": [
+       [
+        "inter.woff2",
+        20064,
+        5007
+       ],
+       [
+        "bricolage-grotesque-800.woff2",
+        13620,
+        4886
+       ],
+       [
+        "estilos.css",
+        7712,
+        4624
+       ],
+       [
+        "app.js",
+        176939,
+        10321
+       ],
+       [
+        "jetbrains-mono-500.woff2",
+        6160,
+        7296
+       ]
+      ],
+      "domContentLoaded": 10509.700000047684,
+      "load": 10528.800000071526,
+      "usable": 10560.700000047684,
+      "errores": []
+     },
+     {
+      "portada": 10545.299999952316,
+      "listo": null,
+      "lt": [
+       [
+        5156.899999976158,
+        112
+       ],
+       [
+        10430.700000047684,
+        111
+       ]
+      ],
+      "fcp": 5112,
+      "transfer": 229208,
+      "decodificado": 559587,
+      "recursos": [
+       [
+        "inter.woff2",
+        20064,
+        5042
+       ],
+       [
+        "bricolage-grotesque-800.woff2",
+        13620,
+        4920
+       ],
+       [
+        "estilos.css",
+        7712,
+        4674
+       ],
+       [
+        "app.js",
+        176939,
+        10381
+       ],
+       [
+        "jetbrains-mono-500.woff2",
+        6160,
+        7316
+       ]
+      ],
+      "domContentLoaded": 10540.399999976158,
+      "load": 10542.100000023842,
+      "usable": 10545.299999952316,
+      "errores": []
+     },
+     {
+      "portada": 10550.899999976158,
+      "listo": null,
+      "lt": [
+       [
+        5070.700000047684,
+        69
+       ],
+       [
+        10362.600000023842,
+        140
+       ]
+      ],
+      "fcp": 5120,
+      "transfer": 229208,
+      "decodificado": 559587,
+      "recursos": [
+       [
+        "inter.woff2",
+        20064,
+        5015
+       ],
+       [
+        "bricolage-grotesque-800.woff2",
+        13620,
+        4891
+       ],
+       [
+        "estilos.css",
+        7712,
+        4657
+       ],
+       [
+        "app.js",
+        176939,
+        10353
+       ],
+       [
+        "jetbrains-mono-500.woff2",
+        6160,
+        7350
+       ]
+      ],
+      "domContentLoaded": 10485.100000023842,
+      "load": 10502,
+      "usable": 10550.899999976158,
+      "errores": []
+     },
+     {
+      "portada": 10544.600000023842,
+      "listo": null,
+      "lt": [
+       [
+        5090.699999928474,
+        72
+       ],
+       [
+        10331.199999928474,
+        189
+       ]
+      ],
+      "fcp": 5140,
+      "transfer": 229208,
+      "decodificado": 559587,
+      "recursos": [
+       [
+        "inter.woff2",
+        20064,
+        4974
+       ],
+       [
+        "bricolage-grotesque-800.woff2",
+        13620,
+        4853
+       ],
+       [
+        "estilos.css",
+        7712,
+        4623
+       ],
+       [
+        "app.js",
+        176939,
+        10324
+       ],
+       [
+        "jetbrains-mono-500.woff2",
+        6160,
+        7385
+       ]
+      ],
+      "domContentLoaded": 10488.899999976158,
+      "load": 10505.5,
+      "usable": 10544.600000023842,
+      "errores": []
+     }
+    ],
+    "cache": [
+     {
+      "portada": 912.2000000476837,
+      "listo": null,
+      "lt": [
+       [
+        186.40000009536743,
+        705
+       ]
+      ],
+      "fcp": 1012,
+      "transfer": 0,
+      "decodificado": 559587,
+      "recursos": [
+       [
+        "inter.woff2",
+        0,
+        86
+       ],
+       [
+        "bricolage-grotesque-800.woff2",
+        0,
+        87
+       ],
+       [
+        "estilos.css",
+        0,
+        88
+       ],
+       [
+        "app.js",
+        0,
+        102
+       ],
+       [
+        "jetbrains-mono-500.woff2",
+        0,
+        633
+       ]
+      ],
+      "domContentLoaded": 870.8000000715256,
+      "load": 894.1000000238419,
+      "usable": 912.2000000476837,
+      "errores": []
+     },
+     {
+      "portada": 721.1999999284744,
+      "listo": null,
+      "lt": [
+       [
+        561.5,
+        155
+       ]
+      ],
+      "fcp": 480,
+      "transfer": 0,
+      "decodificado": 559587,
+      "recursos": [
+       [
+        "inter.woff2",
+        0,
+        56
+       ],
+       [
+        "bricolage-grotesque-800.woff2",
+        0,
+        56
+       ],
+       [
+        "estilos.css",
+        0,
+        58
+       ],
+       [
+        "app.js",
+        0,
+        126
+       ],
+       [
+        "jetbrains-mono-500.woff2",
+        0,
+        181
+       ]
+      ],
+      "domContentLoaded": 704.8999999761581,
+      "load": 716.2999999523163,
+      "usable": 721.1999999284744,
+      "errores": []
+     },
+     {
+      "portada": 650.1999999284744,
+      "listo": null,
+      "lt": [
+       [
+        432.5,
+        158
+       ]
+      ],
+      "fcp": 480,
+      "transfer": 0,
+      "decodificado": 559587,
+      "recursos": [
+       [
+        "inter.woff2",
+        0,
+        71
+       ],
+       [
+        "bricolage-grotesque-800.woff2",
+        0,
+        72
+       ],
+       [
+        "estilos.css",
+        0,
+        76
+       ],
+       [
+        "app.js",
+        0,
+        120
+       ],
+       [
+        "jetbrains-mono-500.woff2",
+        0,
+        263
+       ]
+      ],
+      "domContentLoaded": 586.0999999046326,
+      "load": 605.8999999761581,
+      "usable": 650.1999999284744,
+      "errores": []
+     },
+     {
+      "portada": 1061.3999999761581,
+      "listo": null,
+      "lt": [
+       [
+        197.10000002384186,
+        853
+       ]
+      ],
+      "fcp": 1152,
+      "transfer": 0,
+      "decodificado": 559587,
+      "recursos": [
+       [
+        "inter.woff2",
+        0,
+        69
+       ],
+       [
+        "bricolage-grotesque-800.woff2",
+        0,
+        69
+       ],
+       [
+        "estilos.css",
+        0,
+        71
+       ],
+       [
+        "app.js",
+        0,
+        103
+       ],
+       [
+        "jetbrains-mono-500.woff2",
+        0,
+        700
+       ]
+      ],
+      "domContentLoaded": 1034.1000000238419,
+      "load": 1062.6999999284744,
+      "usable": 1061.3999999761581,
+      "errores": []
+     },
+     {
+      "portada": 587.2999999523163,
+      "listo": null,
+      "lt": [
+       [
+        369.5,
+        181
+       ],
+       [
+        593.8999999761581,
+        53
+       ]
+      ],
+      "fcp": 432,
+      "transfer": 0,
+      "decodificado": 559587,
+      "recursos": [
+       [
+        "inter.woff2",
+        0,
+        50
+       ],
+       [
+        "bricolage-grotesque-800.woff2",
+        0,
+        51
+       ],
+       [
+        "estilos.css",
+        0,
+        52
+       ],
+       [
+        "app.js",
+        0,
+        93
+       ],
+       [
+        "jetbrains-mono-500.woff2",
+        0,
+        120
+       ]
+      ],
+      "domContentLoaded": 548.3999999761581,
+      "load": 550.6999999284744,
+      "usable": 646.8999999761581,
+      "errores": []
+     }
+    ],
+    "wca3x3": [
+     {
+      "portada": 11084.5,
+      "listo": 13193.799999952316,
+      "lt": [
+       [
+        5296.099999904633,
+        115
+       ],
+       [
+        10348.399999976158,
+        654
+       ],
+       [
+        11002.599999904633,
+        72
+       ],
+       [
+        12557.199999928474,
+        610
+       ]
+      ],
+      "fcp": 5172,
+      "transfer": 229208,
+      "decodificado": 559587,
+      "recursos": [
+       [
+        "inter.woff2",
+        20064,
+        5042
+       ],
+       [
+        "bricolage-grotesque-800.woff2",
+        13620,
+        4918
+       ],
+       [
+        "estilos.css",
+        7712,
+        4642
+       ],
+       [
+        "app.js",
+        176939,
+        10338
+       ],
+       [
+        "jetbrains-mono-500.woff2",
+        6160,
+        7367
+       ]
+      ],
+      "domContentLoaded": 10919.599999904633,
+      "load": 11002,
+      "usable": 11084.5,
+      "errores": []
+     },
+     {
+      "portada": 11367,
+      "listo": 13687,
+      "lt": [
+       [
+        5058.599999904633,
+        51
+       ],
+       [
+        10390.199999928474,
+        884
+       ],
+       [
+        11274.399999976158,
+        86
+       ],
+       [
+        12975.399999976158,
+        679
+       ]
+      ],
+      "fcp": 5112,
+      "transfer": 229208,
+      "decodificado": 559587,
+      "recursos": [
+       [
+        "inter.woff2",
+        20064,
+        5034
+       ],
+       [
+        "bricolage-grotesque-800.woff2",
+        13620,
+        4926
+       ],
+       [
+        "estilos.css",
+        7712,
+        4680
+       ],
+       [
+        "app.js",
+        176939,
+        10385
+       ],
+       [
+        "jetbrains-mono-500.woff2",
+        6160,
+        7348
+       ]
+      ],
+      "domContentLoaded": 11169.699999928474,
+      "load": 11273.699999928474,
+      "usable": 11367,
+      "errores": []
+     },
+     {
+      "portada": 11105.100000023842,
+      "listo": 13091.600000023842,
+      "lt": [
+       [
+        5120.399999976158,
+        68
+       ],
+       [
+        10332,
+        706
+       ],
+       [
+        11038.799999952316,
+        66
+       ],
+       [
+        12704.600000023842,
+        376
+       ]
+      ],
+      "fcp": 5176,
+      "transfer": 229208,
+      "decodificado": 559587,
+      "recursos": [
+       [
+        "inter.woff2",
+        20064,
+        4975
+       ],
+       [
+        "bricolage-grotesque-800.woff2",
+        13620,
+        4867
+       ],
+       [
+        "estilos.css",
+        7712,
+        4621
+       ],
+       [
+        "app.js",
+        176939,
+        10323
+       ],
+       [
+        "jetbrains-mono-500.woff2",
+        6160,
+        7412
+       ]
+      ],
+      "domContentLoaded": 10926,
+      "load": 11035.299999952316,
+      "usable": 11105.100000023842,
+      "errores": []
+     },
+     {
+      "portada": 11130.300000071526,
+      "listo": 13050.899999976158,
+      "lt": [
+       [
+        4656.800000071526,
+        506
+       ],
+       [
+        10364.5,
+        668
+       ],
+       [
+        11032.800000071526,
+        96
+       ],
+       [
+        12526,
+        510
+       ]
+      ],
+      "fcp": 5260,
+      "transfer": 229208,
+      "decodificado": 559587,
+      "recursos": [
+       [
+        "inter.woff2",
+        20064,
+        5005
+       ],
+       [
+        "bricolage-grotesque-800.woff2",
+        13620,
+        4897
+       ],
+       [
+        "estilos.css",
+        7712,
+        4651
+       ],
+       [
+        "app.js",
+        176939,
+        10353
+       ],
+       [
+        "jetbrains-mono-500.woff2",
+        6160,
+        7441
+       ]
+      ],
+      "domContentLoaded": 10934.600000023842,
+      "load": 11029.399999976158,
+      "usable": 11130.300000071526,
+      "errores": []
+     },
+     {
+      "portada": 11147.199999928474,
+      "listo": 13131,
+      "lt": [
+       [
+        10366.799999952316,
+        688
+       ],
+       [
+        11055,
+        81
+       ],
+       [
+        12785,
+        304
+       ]
+      ],
+      "fcp": 5088,
+      "transfer": 229208,
+      "decodificado": 559587,
+      "recursos": [
+       [
+        "inter.woff2",
+        20064,
+        5013
+       ],
+       [
+        "bricolage-grotesque-800.woff2",
+        13620,
+        4890
+       ],
+       [
+        "estilos.css",
+        7712,
+        4643
+       ],
+       [
+        "app.js",
+        176939,
+        10352
+       ],
+       [
+        "jetbrains-mono-500.woff2",
+        6160,
+        7322
+       ]
+      ],
+      "domContentLoaded": 10970.799999952316,
+      "load": 11052.699999928474,
+      "usable": 11147.199999928474,
+      "errores": []
+     }
+    ]
+   },
+   "errores": []
+  }
+ },
+ "traza": {
+  "cpu1": {
+   "principal: compilar": 0.4,
+   "principal: compilar (perezoso)": 19.3,
+   "principal: ejecutar": 146.8,
+   "principal: estilos": 5.2,
+   "principal: evaluar (total)": 147.4,
+   "principal: llamadas": 12.1,
+   "principal: maquetar": 47.4,
+   "principal: parsear HTML": 3.4,
+   "principal: pintar": 2.2,
+   "worker: compilar": 47.5,
+   "worker: compilar (perezoso)": 48.6,
+   "worker: ejecutar": 69.8,
+   "worker: evaluar (total)": 117.8,
+   "worker: llamadas": 0.7,
+   "worker: parsear en segundo plano": 70.6
+  },
+  "cpu4": {
+   "principal: compilar": 2.6,
+   "principal: compilar (perezoso)": 134.1,
+   "principal: ejecutar": 187.4,
+   "principal: estilos": 32.5,
+   "principal: evaluar (total)": 190.8,
+   "principal: llamadas": 18.6,
+   "principal: maquetar": 309.9,
+   "principal: parsear HTML": 17.0,
+   "principal: pintar": 15.5,
+   "worker: compilar": 67.3,
+   "worker: compilar (perezoso)": 68.7,
+   "worker: ejecutar": 111.1,
+   "worker: evaluar (total)": 179.0,
+   "worker: llamadas": 0.7,
+   "worker: parsear en segundo plano": 24.8
+  }
+ }
+}
