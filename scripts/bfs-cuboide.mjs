@@ -8,10 +8,10 @@
 // rotación y = U D' (que está en el grupo): de los cuatro estados s·yᵏ se toma el que deja la esquina 0
 // en el primer hueco de su órbita de y (arriba o abajo). Índice = esquinas normalizadas (2·7! = 10.080)
 // × aristas (8! = 40.320). Las esquinas y las aristas no tienen orientación libre (la decide el hueco).
-import { obtenerPuzzle } from '../src/puzzles/index.js';
+import { cargarPuzzle } from '../src/puzzles/index.js';
 import { indicePerm, permDeIndice } from '../src/core/perm.js';
 
-const p = obtenerPuzzle('3x3x2');
+const p = await cargarPuzzle('3x3x2');
 const G = p.cuboide.G, Gr = p.cuboide.grupo();
 const movs = G.busqueda;
 const nM = movs.length;

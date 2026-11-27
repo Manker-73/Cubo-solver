@@ -13,7 +13,9 @@ import { casosPor, guardarResultado } from './util.mjs';
 import { rngConSemilla } from '../src/core/rng.js';
 import { crearModeloColocar, crearSesionColocar } from '../src/core/colocar.js';
 import { puzzleConBloqueos } from '../src/core/bloqueos.js';
-import { PUZZLES } from '../src/puzzles/index.js';
+import { todosLosPuzzles } from '../src/puzzles/index.js';
+// (registro perezoso, sesión «carga más rápida»: los puzzles se construyen al pedirlos; aquí, todos)
+const PUZZLES = await todosLosPuzzles();
 import cubo3 from '../src/puzzles/cubo3.js';
 import { crearCuboGrande } from '../src/puzzles/cubo-grande.js';
 import { crearCuboConIdentidad } from '../src/puzzles/nxn-identidad.js';

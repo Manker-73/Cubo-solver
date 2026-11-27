@@ -50,6 +50,11 @@ const pendientesDe = (win) => () => (win.__peticionesPendientes ? win.__peticion
 // pero el constructor de JSDOM devuelve el control antes de vaciarlas: los tests esperan a que se vacíen
 // (un temporizador de 0 ms corre después de todas) antes de su primera acción, como un usuario real.
 const trasArrancar = () => espera(0);
+// Elegir un puzzle por primera vez lo construye (registro perezoso): import() de su módulo, que en el build es
+// una cadena de microtareas. Los dos paneles cambian antes de que el navegador pinte o atienda cualquier otra
+// cosa (otra tarea, otro clic), que es lo que ve el usuario. Los tests que comprueban «al momento» tras un clic
+// ceden SOLO microtareas (ningún temporizador ni respuesta de un Worker puede colarse) antes de mirar.
+const vaciarMicrotareas = async () => { for (let i = 0; i < 200; i++) await null; };
 
 let html = null;
 function construir() {
@@ -477,7 +482,7 @@ function instalarWorker(window, registro) {
       registro.workers.push(this);
       vivos.add(this);
     }
-    postMessage(m) { registro.peticiones.push(m.op); if (m && m.id != null) this.pendientes.add(m.id); this.w.postMessage(m); }
+    postMessage(m) { registro.peticiones.push(m.op); if (registro.mensajes) registro.mensajes.push({ ...m, a: this }); if (m && m.id != null) this.pendientes.add(m.id); this.w.postMessage(m); }
     terminate() { vivos.delete(this); this.pendientes.clear(); this.w.terminate(); }
   };
 }
@@ -513,7 +518,7 @@ test('build: el código de los solvers va una sola vez y el Worker es el mismo s
   const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => m[1]).filter((x) => x.length > 10000);
   assert.equal(scripts.length, 1, 'un solo script con el código');
   // (textos ASCII: los que llevan tildes van escapados en el bundle)
-  for (const txt of ['Puzzle desconocido', 'el Worker no responde', 'Operaci\\xF3n desconocida']) {
+  for (const txt of ['no tiene validador', 'el Worker no responde', 'Operaci\\xF3n desconocida']) {
     assert.equal(html.split(txt).length - 1, 1, `«${txt}» aparece una sola vez en el HTML`);
   }
   const reg = { workers: [], peticiones: [], respuestas: 0, codigos: [] };
@@ -567,7 +572,7 @@ test('app: si el Worker no se puede crear o falla, todo sigue en el hilo princip
 
 // ---------- Cambio de puzzle: los dos paneles a la vez; scrambles precargados ----------
 // (los puzzles del selector de WCA Puzzles; los de Cuboids tienen su propio test)
-const LISTA = (await import('../src/puzzles/index.js')).PUZZLES.filter((p) => p.categoria === 'wca');
+const LISTA = (await (await import('../src/puzzles/index.js')).todosLosPuzzles()).filter((p) => p.categoria === 'wca');
 const porNombre = (n) => LISTA.find((p) => p.nombre === n);
 const ESTADO_ALEATORIO = ['2x2', '3x3', 'pyraminx', 'skewb', 'square1', 'fto'];
 
@@ -661,6 +666,7 @@ test('app: etiqueta del tipo de scramble correcta en todos los puzzles (al cambi
   for (const c of chips) {
     const p = porNombre(c.textContent);
     c.click();
+    await vaciarMicrotareas();
     const etiqueta = doc.getElementById('tipo-scramble').textContent;
     if (ESTADO_ALEATORIO.includes(p.id)) assert.equal(etiqueta, 'estado aleatorio', p.id);
     else assert.match(etiqueta, /^movimientos aleatorios/, p.id);
@@ -705,10 +711,12 @@ test('app: una respuesta tardía de un puzzle anterior no cambia la vista (y que
   const { doc, hasta } = ctx;
   assert.equal(ctl.workers, 2);
   chipDe(doc, 'Pyraminx').click();
+  await vaciarMicrotareas();
   assert.equal(generando(doc), true, 'el Pyraminx aún no tiene scramble (su respuesta tarda)');
   assert.equal(doc.getElementById('panel-scramble').dataset.puzzle, 'pyraminx');
   await espera(150);
   chipDe(doc, 'Skewb').click();
+  await vaciarMicrotareas();
   await hasta(() => !generando(doc));
   const textoSkewb = doc.getElementById('scramble').textContent;
   const svgSkewb = doc.getElementById('vista-scramble').innerHTML;
@@ -1593,7 +1601,9 @@ test('app: Cuboids (portada, rutas, 3x3x1 / 3x3x2 / 2x2x3: scramble, cargar, res
 // ---------------------------------------------------------------------------
 // Shape Mods (noche 16): Mirror Blocks y Ghost Cube
 // ---------------------------------------------------------------------------
-import { obtenerPuzzle as puzzleDelRegistro } from '../src/puzzles/index.js';
+import { cargarPuzzle } from '../src/puzzles/index.js';
+const SHAPE_MODS = { mirror: await cargarPuzzle('mirror'), ghost: await cargarPuzzle('ghost') };
+const puzzleDelRegistro = (id) => SHAPE_MODS[id];
 
 test('app: Shape Mods (portada, rutas, Mirror Blocks / Ghost Cube: scramble, cargar, resolver, reproducir y colocar piezas)', { timeout: 900000 }, async (t) => {
   const ctx = await abrir(t, { url: 'https://localhost/', esperarHerramienta: false });
@@ -1663,4 +1673,35 @@ test('app: Shape Mods (portada, rutas, Mirror Blocks / Ghost Cube: scramble, car
   assert.ok(!chipDe(doc, 'Mirror Blocks'), 'los shape mods no salen en WCA Puzzles');
   assert.deepEqual(errores, []);
   w.close();
+});
+
+// ---------------------------------------------------------------------------
+// Registro perezoso (sesión «carga más rápida»): la portada no construye ningún puzzle, ni en la página ni en
+// los Workers; al entrar en uno se construye ese (y en el Worker de fondo, los de las precargas que se le piden).
+// ---------------------------------------------------------------------------
+test('app: la portada no construye ningún puzzle (página y Workers); al entrar en el 3x3 se construye solo ese', async (t) => {
+  const reg = { workers: [], peticiones: [], respuestas: 0, mensajes: [] };
+  const ctx = await abrir(t, { url: 'https://localhost/', esperarHerramienta: false, beforeParse: (win) => instalarWorker(win, reg) });
+  if (!ctx) return;
+  const { w, doc, errores } = ctx;
+  try {
+    await ctx.hasta(() => doc.querySelector('a.tarjeta-seccion'));
+    assert.match(doc.getElementById('modo-calculo').textContent, /Web Worker/);
+    assert.deepEqual([...w.cuboSolver.construidos()], [], 'página: ninguno en la portada');
+    assert.deepEqual(JSON.parse(JSON.stringify(await w.cuboSolver.construidosWorkers())), { principal: [], fondo: [] }, 'Workers: ninguno en la portada');
+    w.location.hash = '#/wca/3x3';
+    await herramientaLista(ctx, 'wca', '3x3');
+    assert.deepEqual([...w.cuboSolver.construidos()], ['3x3'], 'página: solo el 3x3');
+    const enWorkers = JSON.parse(JSON.stringify(await w.cuboSolver.construidosWorkers()));
+    // (copias: los arrays de jsdom son de otro «realm» y deepStrictEqual los da por distintos)
+    // el principal genera las tablas del 3x3; el de fondo, el scramble del 3x3 y las precargas que se le pidan
+    assert.deepEqual(enWorkers.principal.filter((id) => id !== '3x3'), [], 'Worker principal: solo el 3x3');
+    const fondo = reg.workers.find((x) => reg.mensajes.some((m) => m.a === x && m.op === 'scramble' && m.puzzle === '3x3'));
+    const pedidosAlFondo = new Set(reg.mensajes.filter((m) => m.puzzle && m.a === fondo).map((m) => m.puzzle));
+    for (const id of enWorkers.fondo) assert.ok(id === '3x3' || pedidosAlFondo.has(id), `Worker de fondo: ${id} sin pedírselo`);
+    assert.deepEqual(errores, []);
+  } finally {
+    reg.workers.forEach((x) => x.terminate());
+    w.close();
+  }
 });

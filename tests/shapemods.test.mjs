@@ -8,7 +8,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { obtenerPuzzle } from '../src/puzzles/index.js';
+import { cargarPuzzle } from '../src/puzzles/index.js';
+// (registro perezoso, sesión «carga más rápida»: los puzzles se construyen al pedirlos; aquí, todos)
+const SHAPE_MODS = { mirror: await cargarPuzzle('mirror'), ghost: await cargarPuzzle('ghost') };
+const obtenerPuzzle = (id) => SHAPE_MODS[id];
 import cubo3 from '../src/puzzles/cubo3.js';
 import { ordenGrupo } from '../src/core/grupo.js';
 import { rngConSemilla, entero } from '../src/core/rng.js';

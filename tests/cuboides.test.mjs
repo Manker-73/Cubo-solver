@@ -4,7 +4,10 @@
 // con el puzzle reorientado al azar (comparado con un BFS independiente sobre los colores) y rechazos.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { obtenerPuzzle, PUZZLES, PUZZLES_PRONTO } from '../src/puzzles/index.js';
+import { todosLosPuzzles, PUZZLES_PRONTO } from '../src/puzzles/index.js';
+// (registro perezoso, sesión «carga más rápida»: los puzzles se construyen al pedirlos; aquí, todos)
+const PUZZLES = await todosLosPuzzles();
+const obtenerPuzzle = (id) => PUZZLES.find((p) => p.id === id);
 import { crearCuboide } from '../src/puzzles/cuboide.js';
 import { aplicarPerm } from '../src/core/perm.js';
 import { reetiquetar } from '../src/core/simetria.js';

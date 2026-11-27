@@ -533,6 +533,27 @@ export type Categoria = 'wca' | 'cuboids' | 'shapemods';
 
 export type PuzzleRegistrado = Puzzle<unknown> & { categoria: Categoria };
 
+/**
+ * Entrada del registro de puzzles (src/puzzles/index.js): lo que la portada y los selectores necesitan sin
+ * construir el puzzle, y cómo construirlo (registro perezoso, sesión «carga más rápida»). `nombre`,
+ * `costeScramble` y `capacidades` son los del puzzle construido (lo comprueba tests/registro.test.mjs).
+ */
+export interface EntradaRegistro {
+  id: string;
+  nombre: string;
+  categoria: Categoria;
+  costeScramble: number;
+  capacidades: Capacidades;
+  /** Construye el puzzle (carga su módulo con import()). La llama solo cargarPuzzle, una vez. */
+  crear(): Promise<Puzzle<unknown>>;
+}
+
+/** Puzzle de Bandaged Cubes: su nombre en la URL (#/bandaged?puzzle=4x4) y el id de su puzzle base. */
+export interface EntradaBandaged {
+  url: string;
+  id: string;
+}
+
 /** Puzzle anunciado que aún no existe (el selector lo muestra bloqueado). */
 export interface PuzzlePronto {
   id: string;
@@ -733,6 +754,7 @@ interface PeticionPuzzle {
 
 export type Peticion =
   | { op: 'ping' }
+  | { op: 'construidos' }
   | (PeticionPuzzle & { op: 'inicializar' })
   | (PeticionPuzzle & { op: 'scramble'; opciones?: { modo?: 'practico' | 'mezclado'; giros?: number } })
   | (PeticionPuzzle & { op: 'validar'; estado: unknown; opciones?: OpcionesValidar })
@@ -741,9 +763,11 @@ export type Peticion =
 
 export type Operacion = Peticion['op'];
 
-/** Respuesta de cada operación (lo que devuelve `atender`). */
+/** Respuesta de cada operación (lo que devuelve, con una promesa, `atender`). */
 export interface RespuestasPorOperacion {
   ping: 'ok';
+  /** Ids de los puzzles construidos en ese hilo, en orden (registro perezoso; para los tests y el diagnóstico). */
+  construidos: string[];
   inicializar: { ms: number; yaEstaba: boolean; analisis?: InfoBloqueos };
   scramble: { movimientos: Movimiento[]; ms: number };
   validar: Validacion;

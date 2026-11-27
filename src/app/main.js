@@ -3,7 +3,7 @@
 // (tablas, scrambles de estado aleatorio, validación y búsquedas) va a un Web
 // Worker a través de motor.js, con el hilo principal como alternativa.
 
-import { PUZZLES, PUZZLES_PRONTO, BANDAGED, buscarPuzzle } from '../puzzles/index.js';
+import { REGISTRO, PUZZLES_PRONTO, BANDAGED, cargarPuzzle, existePuzzle, puzzleCargado, puzzlesConstruidos } from '../puzzles/index.js';
 import { crearMotor } from './motor.js';
 import { crearVista3D, hayWebGL } from './vista3d.js';
 import { crearReproductor } from './reproductor.js';
@@ -69,7 +69,7 @@ const st = {
 // llevan los bloques. En WCA Puzzles el 3x3 es siempre el normal.
 const vendados = new Map(); // id + clave de los bloques -> puzzle con bloqueos
 function puzzleActivo(id) {
-  const base = buscarPuzzle(id); // del registro o una base del modo vendado (4x4, 5x5)
+  const base = puzzleCargado(id); // del registro o una base del modo vendado (4x4, 5x5); ya construido (seleccionar)
   if (!base || !base.soporteBloqueos || st.seccion !== 'bandaged' || !st.bloqueos.length) return base;
   const k = id + '#' + claveBloqueos(st.bloqueos);
   if (!vendados.has(k)) vendados.set(k, puzzleConBloqueos(base, st.bloqueos));
@@ -79,7 +79,7 @@ function puzzleActivo(id) {
 const claveP = (p) => (p.claveBloqueos ? p.id + '#' + p.claveBloqueos : p.id);
 /** Datos de una petición al motor: con los bloques, si el puzzle los tiene. */
 const datosDe = (p, extra = {}) => (p.bloqueos && p.bloqueos.length ? { ...extra, bloqueos: p.bloqueos } : extra);
-const baseDe = (p) => (p ? buscarPuzzle(p.id) : null);
+const baseDe = (p) => (p ? puzzleCargado(p.id) : null);
 /** Puzzle de Bandaged Cubes por su nombre en la URL (3x3 si no existe). */
 const bandagedDe = (url) => BANDAGED.find((b) => b.url === url) || BANDAGED[0];
 /** Cambia el puzzle de Bandaged Cubes (guarda los bloques del que se deja). */
@@ -319,7 +319,7 @@ function pintarSelector() {
       el.addEventListener('click', () => {
         cambiarVendado(b.url);
         reemplazarURL(hashVendado());
-        seleccionar(bandagedDe(st.vendado).puzzle.id);
+        seleccionar(bandagedDe(st.vendado).id);
       });
       nav.appendChild(el);
     }
@@ -327,7 +327,7 @@ function pintarSelector() {
   }
   // secciones de catálogo (WCA Puzzles, Cuboids): los puzzles del registro de su categoría
   const sec = st.seccion;
-  for (const p of PUZZLES.filter((x) => x.categoria === sec)) {
+  for (const p of REGISTRO.filter((x) => x.categoria === sec)) {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'chip' + (puedeResolver(p) ? ' con-solver' : '');
@@ -348,7 +348,22 @@ function pintarSelector() {
   }
 }
 
+// Registro perezoso: el puzzle se construye la primera vez que se elige (cargarPuzzle). Si mientras se
+// construye se elige otro, esta selección ya no cuenta (turnoSeleccion). Si ya estaba construido, todo
+// cambia al momento, sin esperas.
+let turnoSeleccion = 0;
 async function seleccionar(id) {
+  const turno = ++turnoSeleccion;
+  if (!puzzleCargado(id)) {
+    if (!existePuzzle(id)) return;
+    try {
+      await cargarPuzzle(id);
+    } catch (err) {
+      mensaje('error', `No se pudo cargar el puzzle: ${err.message}`);
+      return;
+    }
+    if (turno !== turnoSeleccion) return;
+  }
   const p = puzzleActivo(id);
   if (!p) return;
   if (editorColocar) editorColocar.cerrar();
@@ -492,7 +507,7 @@ function rellenarPrecargas(p) {
 }
 function precargarOtros(p) {
   const local = motor.modo() !== 'worker';
-  const candidatos = PUZZLES
+  const candidatos = REGISTRO
     .filter((q) => q.id !== p.id && !st.precargados.has(claveP(q)) && !st.enCamino.has(claveP(q)))
     // sin Worker, solo los que no necesitan tablas (no bloquear la página);
     // en el móvil, los pesados solo cuando el usuario ya ha elegido ese puzzle
@@ -1311,7 +1326,7 @@ const clavePuzzleGuardado = (seccion) => (seccion === 'wca' ? 'cubo-solver:puzzl
 
 /** Puzzle de una sección de catálogo que se abre sin uno en la URL: el último elegido (o el primero; en WCA, el 3x3). @param {string} seccion */
 function puzzleInicial(seccion) {
-  const lista = PUZZLES.filter((p) => p.categoria === seccion);
+  const lista = REGISTRO.filter((p) => p.categoria === seccion);
   const porDefecto = seccion === 'wca' ? '3x3' : lista[0].id;
   let id = porDefecto;
   try { id = localStorage.getItem(clavePuzzleGuardado(seccion)) || id; } catch { /* sin almacenamiento */ }
@@ -1383,7 +1398,7 @@ function aplicarRuta({ navegacion = false } = {}) {
   $('intro-seccion').textContent = INTRO_SECCION[r.seccion] || '';
   document.title = `${datos.nombre} · Cubo-solver`;
   if (CATALOGOS.includes(r.seccion)) {
-    const valido = r.puzzle && PUZZLES.some((p) => p.id === r.puzzle && p.categoria === r.seccion);
+    const valido = r.puzzle && REGISTRO.some((p) => p.id === r.puzzle && p.categoria === r.seccion);
     const id = valido ? r.puzzle : (st.p && !entra ? st.p.id : puzzleInicial(r.seccion));
     reemplazarURL(hashDe({ seccion: r.seccion, puzzle: id }));
     if (entra || !st.p || st.p.id !== id) seleccionar(id);
@@ -1402,7 +1417,7 @@ function aplicarRuta({ navegacion = false } = {}) {
     reemplazarURL(hashVendado());
     const clave = (p) => (p && p.claveBloqueos) || '';
     const quiero = st.bloqueos.length ? claveBloqueos(st.bloqueos) : '';
-    const id = bandagedDe(st.vendado).puzzle.id;
+    const id = bandagedDe(st.vendado).id;
     if (entra || !st.p || st.p.id !== id || clave(st.p) !== quiero) seleccionar(id);
   }
   if (navegacion && entra) {
@@ -1489,6 +1504,9 @@ export function iniciar({ codigoWorker = null } = {}) {
       return m;
     },
     resuelto: () => st.p.estaResuelto(estadoMostrado()),
+    // puzzles construidos en la página (registro perezoso: en la portada, ninguno) y en cada Worker
+    construidos: () => puzzlesConstruidos(),
+    construidosWorkers: () => motor.construidosWorkers(),
     // (para las comprobaciones en Chromium: muestra un scramble concreto como si lo hubiera generado
     // la app; sesión «validador con muchas geometrías», el scramble del fallo)
     mostrarScramble: (movs) => mostrarScramble(st.p, movs),

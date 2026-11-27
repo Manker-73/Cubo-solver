@@ -3,7 +3,8 @@
 //   npm run bench            (50 casos por puzzle)
 //   N=200 npm run bench      (más casos)
 //   PUZZLE=square1 npm run bench
-import { PUZZLES } from '../src/puzzles/index.js';
+import { todosLosPuzzles } from '../src/puzzles/index.js';
+const PUZZLES = await todosLosPuzzles();
 import { rngConSemilla } from '../src/core/rng.js';
 
 const N = parseInt(process.env.N || '50', 10);

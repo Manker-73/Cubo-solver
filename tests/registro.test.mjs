@@ -2,9 +2,55 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { PUZZLES } from '../src/puzzles/index.js';
+import { execFileSync } from 'node:child_process';
+import { todosLosPuzzles, REGISTRO, BANDAGED, cargarPuzzle, puzzleCargado, puzzlesConstruidos, existePuzzle } from '../src/puzzles/index.js';
 import { definirPuzzle } from '../src/core/puzzle.js';
 import { rngConSemilla } from '../src/core/rng.js';
+
+// ---------- Registro perezoso (sesión «carga más rápida») ----------
+test('registro: importarlo no construye ningún puzzle (ni ejecuta sus módulos)', () => {
+  // en otro proceso, para que ningún otro test haya construido nada antes
+  const codigo = `const m = await import(${JSON.stringify(new URL('../src/puzzles/index.js', import.meta.url).href)});
+    console.log(JSON.stringify({ construidos: m.puzzlesConstruidos(), entradas: m.REGISTRO.length }));`;
+  const r = JSON.parse(execFileSync(process.execPath, ['--input-type=module', '-e', codigo], { encoding: 'utf8' }));
+  assert.deepEqual(r.construidos, []);
+  assert.equal(r.entradas, 16);
+});
+
+// los demás tests de este fichero recorren todos los puzzles, construidos
+const PUZZLES = await todosLosPuzzles();
+
+test('registro: cada entrada dice lo mismo que su puzzle construido (nombre, categoría, coste, capacidades)', () => {
+  assert.deepEqual(PUZZLES.map((p) => p.id), REGISTRO.map((e) => e.id), 'mismo orden');
+  for (const [i, e] of REGISTRO.entries()) {
+    const p = PUZZLES[i];
+    assert.equal(p.nombre, e.nombre, e.id);
+    assert.equal(p.categoria, e.categoria, e.id);
+    assert.equal(p.costeScramble, e.costeScramble, e.id);
+    assert.deepEqual(p.capacidades, e.capacidades, e.id);
+    assert.equal(puzzleCargado(e.id), p);
+  }
+});
+
+test('registro: las bases de Bandaged Cubes existen y tienen el id de su entrada', async () => {
+  for (const b of BANDAGED) {
+    assert.ok(existePuzzle(b.id), b.url);
+    const p = await cargarPuzzle(b.id);
+    assert.equal(p.id, b.id);
+    assert.ok(p.soporteBloqueos, `${b.url}: se puede vendar`);
+  }
+  // el 4x4 vendado comparte el puzzle (y el solver sin bloques) con el 4x4 de la lista
+  assert.ok(puzzlesConstruidos().includes('vendado-4x4'));
+});
+
+test('registro: cada puzzle se construye una sola vez; un id desconocido se rechaza', async () => {
+  const [a, b] = await Promise.all([cargarPuzzle('3x3'), cargarPuzzle('3x3')]);
+  assert.equal(a, b);
+  assert.equal(await cargarPuzzle('3x3'), a);
+  assert.equal(puzzlesConstruidos().filter((id) => id === '3x3').length, 1);
+  assert.equal(existePuzzle('nada'), false);
+  await assert.rejects(cargarPuzzle('nada'), /desconocido/);
+});
 
 test('registro: ids únicos y todos los puzzles pedidos', () => {
   const ids = PUZZLES.map((p) => p.id);

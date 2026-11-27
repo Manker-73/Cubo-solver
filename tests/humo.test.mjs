@@ -18,7 +18,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import crypto from 'node:crypto';
-import { PUZZLES } from '../src/puzzles/index.js';
+import { todosLosPuzzles } from '../src/puzzles/index.js';
+// (registro perezoso, sesión «carga más rápida»: los puzzles se construyen al pedirlos; aquí, todos)
+const PUZZLES = await todosLosPuzzles();
 import { rngConSemilla } from '../src/core/rng.js';
 import { crear3x3Vendado } from '../src/puzzles/vendado.js';
 import { probarScrambles, probarSolver, NIVEL } from './util.mjs';

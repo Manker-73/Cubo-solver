@@ -4,11 +4,11 @@
 
 import { atender } from './servicio.js';
 
-self.onmessage = (ev) => {
+self.onmessage = async (ev) => {
   const { id, ...msg } = ev.data || {};
   const t0 = (self.performance || Date).now();
   try {
-    const resultado = atender(msg);
+    const resultado = await atender(msg);
     self.postMessage({ id, ok: true, resultado, ms: (self.performance || Date).now() - t0 });
   } catch (err) {
     self.postMessage({ id, ok: false, error: String((err && err.message) || err) });

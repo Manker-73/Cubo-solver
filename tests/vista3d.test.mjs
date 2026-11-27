@@ -3,7 +3,10 @@
 // depender de WebGL: la escena (src/app/escena3d.js) es la misma que dibuja la app.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { PUZZLES, obtenerPuzzle } from '../src/puzzles/index.js';
+import { todosLosPuzzles } from '../src/puzzles/index.js';
+// (registro perezoso, sesión «carga más rápida»: los puzzles se construyen al pedirlos; aquí, todos)
+const PUZZLES = await todosLosPuzzles();
+const obtenerPuzzle = (id) => PUZZLES.find((p) => p.id === id);
 import { comprobarGiro3D, compararFotos, pegatinasDePiezas } from '../src/core/modelo3d.js';
 import { crearEscena3D } from '../src/app/escena3d.js';
 import { crearReproductor } from '../src/app/reproductor.js';

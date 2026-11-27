@@ -169,5 +169,11 @@ export function crearMotor({ codigoWorker = null, alCambiarModo = () => {}, dosW
     /** Peticiones enviadas (para los tests). */
     registro,
     workers: () => trabajadores.filter((t) => t.vivo).map((t) => t.nombre),
+    /**
+     * Ids de los puzzles construidos en cada Worker vivo, { principal: [...], fondo: [...] } (registro
+     * perezoso; para los tests y el diagnóstico). Sin Workers, {}.
+     */
+    construidosWorkers: async () => Object.fromEntries(await Promise.all(trabajadores.filter((t) => t.vivo)
+      .map(async (t) => [t.nombre, await encolar({ op: 'construidos' }, 'alta', t.nombre)]))),
   };
 }

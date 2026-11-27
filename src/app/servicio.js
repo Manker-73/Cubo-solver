@@ -3,7 +3,7 @@
 // Lo usan el Web Worker (worker.js) y, si no hay Worker, el hilo principal
 // (motor.js). Solo usa la interfaz común de los puzzles.
 
-import { buscarPuzzle } from '../puzzles/index.js';
+import { cargarPuzzle, existePuzzle, puzzlesConstruidos } from '../puzzles/index.js';
 import { rngSeguro } from '../core/rng.js';
 import { puzzleConBloqueos, claveBloqueos } from '../core/bloqueos.js';
 
@@ -22,13 +22,15 @@ const CONFIGS_GUARDADAS = 3;
 /** @type {Map<string, PuzzleVendado<EstadoPegatinas>>} */
 const conBloqueos = new Map();
 /**
- * El puzzle de la petición: el del registro o, si trae bloqueos, su versión vendada.
- * @param {Exclude<Peticion, { op: 'ping' }>} msg
- * @returns {PuzzleServicio}
+ * El puzzle de la petición: el del registro o, si trae bloqueos, su versión vendada. El del registro se
+ * construye la primera vez que se pide (registro perezoso).
+ * @param {Exclude<Peticion, { op: 'ping' } | { op: 'construidos' }>} msg
+ * @returns {Promise<PuzzleServicio>}
  */
-export function puzzleDePeticion(msg) {
-  const p = buscarPuzzle(msg.puzzle); // los del registro y las bases del modo vendado (4x4, 5x5)
-  if (!p) throw new Error(`Puzzle desconocido: ${msg.puzzle}`);
+export async function puzzleDePeticion(msg) {
+  // los del registro y las bases del modo vendado (4x4, 5x5)
+  if (!existePuzzle(msg.puzzle)) throw new Error(`Puzzle desconocido: ${msg.puzzle}`);
+  const p = await cargarPuzzle(msg.puzzle);
   const def = msg.bloqueos;
   if (!def || !def.length || !p.soporteBloqueos) return p;
   const k = p.id + '#' + claveBloqueos(def);
@@ -42,9 +44,10 @@ export function puzzleDePeticion(msg) {
 }
 
 /**
- * Atiende una petición { op, puzzle, estado, opciones, bloqueos } y devuelve el resultado
- * (lanza un error si algo falla). Operaciones:
+ * Atiende una petición { op, puzzle, estado, opciones, bloqueos } y devuelve (con una promesa) el
+ * resultado (rechaza si algo falla). Operaciones:
  *   ping                      -> 'ok'
+ *   construidos               -> ids de los puzzles construidos en este hilo (registro perezoso)
  *   inicializar               -> { ms, yaEstaba, analisis } (analisis: solo con bloqueos)
  * Con `bloqueos` ([[clave de pieza, ...]], ver src/core/bloqueos.js) se usa el
  * puzzle vendado de esa configuración (sus tablas se generan una vez y se guardan).
@@ -54,11 +57,12 @@ export function puzzleDePeticion(msg) {
  *   aprender  (estado, opciones.metodo) -> guion del método humano (ver src/aprender/guion.js)
  * (Tipos de cada petición y su respuesta: Peticion y RespuestasPorOperacion en src/core/tipos.d.ts.)
  * @param {Peticion} msg
- * @returns {Respuesta}
+ * @returns {Promise<Respuesta>}
  */
-export function atender(msg) {
+export async function atender(msg) {
   if (msg.op === 'ping') return 'ok';
-  const p = puzzleDePeticion(msg);
+  if (msg.op === 'construidos') return puzzlesConstruidos();
+  const p = await puzzleDePeticion(msg);
   switch (msg.op) {
     case 'inicializar': {
       const analisis = () => (p.analisis ? p.analisis() : undefined);
