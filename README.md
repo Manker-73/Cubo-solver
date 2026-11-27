@@ -139,6 +139,7 @@ npm run bench         # benchmark de los solvers (N=200 npm run bench para más 
 
   Áreas: `2x2`, `3x3`, `4x4`–`7x7`, `nxn`, `diseno` (o `tema`), `pyraminx`, `skewb`, `square1` (o `sq1`), `megaminx`, `vendado` (o `bloqueos`), `colocar`, `aprender`, `3d`, `app`, `humo`, `registro`. Cada área ejecuta sus ficheros enteros y, en los compartidos (humo, aprender, vista 3D, registro), los tests cuyo nombre la menciona.
 - Variables: `HILOS=n` (hilos de los tests largos), `CASOS_NXN`, `CASOS_MEGA`, `CASOS_BLOQUEOS`, `CASOS_APRENDER` (casos de esos tests), `TAMANOS=4,5` (cubos grandes), `BLOQUEOS=pareja,cab` (configuraciones vendadas).
+- **Ningún test depende de la velocidad de la máquina** (sesión de mantenimiento, 27/11/2026): las esperas de la app cuentan vueltas en las que la app no hace nada (no milisegundos de reloj), los scrambles del 3x3 tienen presupuesto en nodos, los tests de bloqueos no cortan la búsqueda a los 30 s y hay tests con un «reloj de máquina lenta» (`conRelojLento` en `tests/util.mjs`). Ver DECISIONES.md.
 - Los resultados (porcentajes, longitudes, tiempos) de `npm test` se guardan en `tests/resultados/`; los de los niveles con menos casos van a `tests/.resultados-parciales/` (ignorado por git), para no pisar los de la suite completa (`GUARDAR=1` lo fuerza).
 
 - **`npm run tipos`**: el código es JavaScript; TypeScript solo comprueba los tipos (no genera nada ni cambia lo que se ejecuta). Los contratos (interfaz de un puzzle, bloqueos, modo aprender, vista 3D, secciones, mensajes con el Worker) están en `src/core/tipos.d.ts`; qué ficheros se comprueban y cómo tipar un puzzle nuevo, en ARQUITECTURA.md («Tipos»).
@@ -165,3 +166,9 @@ python3 scripts/comprobar-primer-resolver.py # un clic en Resolver nada más car
 python3 scripts/comprobar-fto.py             # FTO: tiempos (CPU ×4) y recorrido completo en 4 modos
 python3 scripts/comprobar-colocar.py         # «Colocar piezas» en pantalla completa: WCA y Bandaged 3x3/4x4, escritorio/móvil, oscuro/claro, 2D/3D
 ```
+
+**Capturas**: los scripts las escriben en `docs/capturas/` (se sobrescriben en cada ejecución). Esa carpeta
+**no se sube al repositorio** (está en `.gitignore`): las capturas pesaban el 90 % del historial. Para tener las
+de una versión sin instalar nada: pestaña **Actions** → *Capturas (Chromium)* → *Run workflow* (se eligen los
+scripts; por defecto `diseno colocar`) → al terminar, en la ejecución, *Artifacts* → `capturas` (zip, se guarda
+30 días). Si una captura hace falta en la documentación, se enlaza el artifact o se añade a propósito, una sola.

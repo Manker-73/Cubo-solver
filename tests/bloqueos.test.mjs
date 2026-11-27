@@ -234,11 +234,11 @@ for (const cfg of CONFIGS) {
     // otra vez en cada worker_thread costaba más que resolver los casos: hasta 6 s por copia)
     const enEsteHilo = !COMPLETO && info.espacio === 'pequeño';
     const { resultados } = enEsteHilo
-      ? { resultados: estados.map((e) => { const t = performance.now(); const r = p.resolver(e, { msMax: MS_SOLVER }); return { r, ms: performance.now() - t }; }) }
+      ? { resultados: estados.map((e) => { const t = performance.now(); const r = p.resolver(e, { msMax: MS_SOLVER, msDuro: Infinity }); return { r, ms: performance.now() - t }; }) }
       : await resolverEnParalelo({
       modulo: new URL('../src/puzzles/vendado.js', import.meta.url).href,
       exportar: 'crear3x3Vendado', args: [def],
-      estados, opciones: { msMax: MS_SOLVER },
+      estados, opciones: { msMax: MS_SOLVER, msDuro: Infinity },
     });
     const est = { n: 0, suma: 0, ms: 0, msMax: 0, A: { n: 0, suma: 0, ms: 0 }, B: { n: 0, suma: 0, ms: 0, f1: 0, f2: 0 }, gana: {}, sin: { n: 0, suma: 0, optimas: 0 } };
     resultados.forEach(({ r, ms }, i) => {
@@ -584,11 +584,11 @@ for (const cfg of CONFIGS_NXN) {
     const msScr = (performance.now() - tScr) / N_CASOS_NXN;
     // en este hilo (que ya tiene las tablas) si el espacio es pequeño o hay pocos casos; si no, en paralelo
     const { resultados } = info.espacio === 'pequeño' || !COMPLETO
-      ? { resultados: estados.map((e) => { const t = performance.now(); const r = p.resolver(e, { msMax: MS_SOLVER }); return { r, ms: performance.now() - t }; }) }
+      ? { resultados: estados.map((e) => { const t = performance.now(); const r = p.resolver(e, { msMax: MS_SOLVER, msDuro: Infinity }); return { r, ms: performance.now() - t }; }) }
       : await resolverEnParalelo({
         modulo: new URL('../src/puzzles/vendado.js', import.meta.url).href,
         exportar: 'crearNxNVendado', args: [cfg.N, cfg.def],
-        estados, opciones: { msMax: MS_SOLVER },
+        estados, opciones: { msMax: MS_SOLVER, msDuro: Infinity },
       });
     const est = { n: 0, suma: 0, max: 0, ms: 0, msMax: 0, gana: {}, f1: 0, f2: 0, nB: 0, fallos: [] };
     resultados.forEach(({ r, ms }, i) => {
@@ -740,11 +740,11 @@ for (const cfg of CONFIGS_GRANDES) for (const modo of ['practico', 'mezclado']) 
     }
     const sols = estados.slice(0, N_GRANDES_SOL);
     const { resultados: rs } = !COMPLETO
-      ? { resultados: sols.map((e) => { const t = performance.now(); const r = p.resolver(e, { msMax: 2500, compararSinBloqueos: false }); return { r, ms: performance.now() - t }; }) }
+      ? { resultados: sols.map((e) => { const t = performance.now(); const r = p.resolver(e, { msMax: 2500, msDuro: Infinity, compararSinBloqueos: false }); return { r, ms: performance.now() - t }; }) }
       : await resolverEnParalelo({
         modulo: new URL('../src/puzzles/vendado.js', import.meta.url).href,
         exportar: 'crearNxNVendado', args: [cfg.N, cfg.def],
-        estados: sols, opciones: { msMax: 2500, compararSinBloqueos: false },
+        estados: sols, opciones: { msMax: 2500, msDuro: Infinity, compararSinBloqueos: false },
       });
     const lon = [], ms = [];
     let fallos = 0;

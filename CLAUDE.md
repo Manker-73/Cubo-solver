@@ -44,7 +44,7 @@ Antes de diseñar cambios estructurales, tomar decisiones técnicas o planificar
 * **`scripts/`, `tests/` y `docs/` — Build, verificación y capturas**
   * `scripts/build.mjs`, `scripts/construir.mjs`, `scripts/fuentes.sh`: Empaquetado autónomo en `dist/index.html` y `dist/artifact.html`.
   * `scripts/tests.mjs`, `scripts/bench.mjs`, `tests/*.test.mjs`, `tests/resultados/*.json`: Tests unitarios, de integración y benchmarks en Node.js con resultados de referencia (*golden files*).
-  * `scripts/comprobar-*.py`: Scripts de comprobación visual y funcional en Python / Playwright (generan capturas y reportes en `docs/capturas/`).
+  * `scripts/comprobar-*.py`: Scripts de comprobación visual y funcional en Python / Playwright (generan capturas y reportes en `docs/capturas/`, que **no se sube a git**: está en `.gitignore`; las capturas de una versión salen como artifact de la Action manual «Capturas (Chromium)», `.github/workflows/capturas.yml`). No añadas capturas al repositorio salvo una concreta que la documentación necesite.
 
 ---
 
@@ -65,5 +65,18 @@ Antes de diseñar cambios estructurales, tomar decisiones técnicas o planificar
 ## Flujo de Verificación
 Antes de dar por finalizada cualquier modificación:
 1. **Tests en Node.js**: Ejecutar la suite de pruebas (`node scripts/tests.mjs` o los scripts definidos en `package.json`) y comprobar que no haya regresiones respecto a `tests/resultados/*.json` ni `tests/huellas.json`.
+   * **Ningún test puede depender de la velocidad de la máquina**: nada de esperas o aserciones en milisegundos de reloj. En la app, `hasta(cond, ms)` (vueltas ociosas, no reloj); en solvers con límite de tiempo, afirmar solo lo que se cumple aun sin tiempo (comprobarlo con `conRelojLento` de `tests/util.mjs`) o usar presupuestos en nodos. Ver DECISIONES.md («Sesión de mantenimiento»).
 2. **Comprobaciones visuales / E2E (Python)**: Si se modifica la UI, WebGL (`src/app/`), bloqueos o el modo Aprender (`src/aprender/`), ejecutar los scripts pertinentes en `scripts/comprobar-*.py` (`comprobar-3d.py`, `comprobar-aprender.py`, `comprobar-bloqueos.py`, `comprobar-diseno.py`, etc.).
 3. **Build autónomo**: Ejecutar el empaquetado (`node scripts/construir.mjs` / `node scripts/build.mjs` según `package.json`) y verificar que `dist/index.html` y `dist/artifact.html` se generen sin errores.
+
+---
+
+## Flujo de una sesión de trabajo ("noche")
+Las sesiones largas se lanzan con un prompt que solo trae el objetivo, las restricciones y la verificación propias de esa noche. Todo lo de esta sección se aplica SIEMPRE, aunque el prompt no lo repita.
+
+### Permisos (lo primero de todo)
+Nadie estará esperando para aprobar permisos durante la sesión. En los primeros minutos, ANTES de empezar el trabajo, pide de una vez todos los que puedas necesitar: ejecutar npm/node/python, instalar paquetes, git commit y push, consultar GitHub Actions y Pages, y republicar el artifact. Si alguno no se concede, no te quedes esperando: sigue con lo que no lo necesite y apúntalo en el resumen final.
+
+### Antes de empezar
+1. `git status` y `git fetch`. Si hay cambios sin commitear o commits locales sin subir, PARA y explica qué son antes de tocar nada. Si está limpio, `git pull`.
+2. Lee `ESTADO.md`, `DECISIONES.md` y `ARQUITECTURA.md` (al menos las secciones

@@ -504,8 +504,22 @@ El solver, el scramble y la vista 3D de un puzzle salen del mismo modelo: si un 
 ### Tests en paralelo
 `tests/paralelo.mjs` (`resolverEnParalelo`) reparte los casos de un test de solver entre worker_threads con una cola dinámica. El hilo principal genera los estados (con la misma semilla que antes) y comprueba cada solución; cada hilo (`tests/trabajador.mjs`) importa el módulo del puzzle, genera sus tablas y llama a `resolver`. Los ficheros de tests se ejecutan de uno en uno (`--test-concurrency=1`) para no tener más hilos que núcleos: varios solvers tienen límites de tiempo.
 
+### Tests independientes de la velocidad de la máquina
+Un límite en ms solo puede cambiar cuánto tarda un test, no si pasa (DECISIONES.md, «Sesión de mantenimiento»):
+- **App** (`tests/app.test.mjs`): `crearHasta(pendientes, detalle)` da la función `hasta(cond, ms)`; `ms` se
+  convierte en vueltas de 20 ms que solo cuentan si el hilo principal no estaba bloqueado y ningún Worker de
+  `instalarWorker` tiene peticiones sin responder (`window.__peticionesPendientes`). `instalarWorker` espera
+  (Atomics.wait) a que el bundle esté evaluado en worker_threads antes de devolver el Worker.
+- **Solvers**: los tests solo afirman lo que no depende del tiempo (resuelve, sin redundancias, cotas que se
+  cumplen aun con tiempo 0); los de bloqueos pasan `msDuro: Infinity`. El scramble del 3x3 usa presupuesto en
+  nodos (`nodosMax` de `resolverKociemba`).
+- **`conRelojLento(fn)`** (`tests/util.mjs`): ejecuta `fn` con un reloj que salta 1 s en cada lectura (máquina
+  «infinitamente lenta»). Úsalo en un test nuevo cuando un solver tenga límite de tiempo y el test afirme algo
+  de la calidad del resultado.
+
 ### Integración continua
 `.github/workflows/tests.yml`: `npm run tipos` y `npm run test:rapido` en cada push a `main` y en los PR, independiente de `pages.yml` (a mano se elige el nivel; `tipos` se ejecuta en todos).
+`.github/workflows/capturas.yml` (manual): construye, ejecuta los `scripts/comprobar-*.py` elegidos con el Chrome del runner y sube `docs/capturas/` como artifact (30 días). `docs/capturas/` no está en git.
 
 ## Plan para las próximas noches
 - Modo aprender en Megaminx (por capas) y 6x6/7x7 (reducción como el 5x5, más los centros oblicuos).

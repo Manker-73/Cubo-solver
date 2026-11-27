@@ -1,0 +1,65 @@
+# Comprobaciones en Chromium real (scripts/comprobar-*.py) y sus capturas, como artifact de la Action.
+# Política de capturas (sesión de mantenimiento, 27/11/2026; ver DECISIONES.md): docs/capturas/ ya NO
+# se sube al repositorio (está en .gitignore). Las capturas de cada ejecución se descargan desde
+# Actions → "Capturas (Chromium)" → la ejecución → Artifacts → "capturas" (se guardan 30 días).
+# Se lanza a mano (Run workflow) eligiendo qué comprobaciones ejecutar.
+name: Capturas (Chromium)
+
+on:
+  workflow_dispatch:
+    inputs:
+      comprobaciones:
+        description: 'Scripts (sin "comprobar-" ni ".py"), separados por espacios: diseno colocar aprender 3d bloqueos cambios fto primer-resolver'
+        default: diseno colocar
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  capturas:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Construir dist/index.html
+        run: npm run build
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # Playwright usa el Google Chrome que ya trae el runner (/usr/bin/google-chrome; ver CHROME en los scripts)
+      - name: Instalar Playwright y Pillow
+        run: pip install playwright pillow
+
+      - name: Comprobaciones
+        env:
+          COMPROBACIONES: ${{ inputs.comprobaciones }}
+        run: |
+          mkdir -p docs/capturas
+          fallos=""
+          for c in $COMPROBACIONES; do
+            echo "::group::comprobar-$c"
+            python3 "scripts/comprobar-$c.py" || fallos="$fallos $c"
+            echo "::endgroup::"
+          done
+          if [ -n "$fallos" ]; then echo "Fallan:$fallos"; exit 1; fi
+
+      - name: Subir las capturas
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: capturas
+          path: docs/capturas/
+          retention-days: 30
+          if-no-files-found: warn

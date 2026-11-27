@@ -182,7 +182,8 @@ export function inversaCubo(c) {
  *   profundidad de fase 1, y se devuelve la solución más corta encontrada
  *   traducida al estado original. Es la técnica de min2phase y acelera mucho
  *   la búsqueda de soluciones de 20 movimientos.
- * opciones: { objetivo (longitud con la que parar), msMax, maxLong,
+ * opciones: { objetivo (longitud con la que parar), msMax, nodosMax (presupuesto en nodos de la fase 1:
+ *   a diferencia de msMax, da el mismo resultado en cualquier máquina; lo usan los scrambles), maxLong,
  *   esLegal(m, k), alAvanzar(m, k) } — los dos últimos (opcionales) los usan los
  *   cubos vendados: esLegal dice si el giro m se puede hacer en la profundidad k
  *   (el estado de esa profundidad lo lleva quien llama) y alAvanzar avisa de que
@@ -196,6 +197,7 @@ export function resolverKociemba(entrada, opciones = {}) {
   }));
   const objetivo = opciones.objetivo ?? 20;
   const msMax = opciones.msMax ?? 1000;
+  const nodosMax = opciones.nodosMax ?? Infinity;
   let maxLong = opciones.maxLong ?? 30;
   const t0 = Date.now();
   let mejor = null;
@@ -270,7 +272,7 @@ export function resolverKociemba(entrada, opciones = {}) {
       }
       return false;
     }
-    if ((++nodos & 1023) === 0 && Date.now() - t0 > msMax && (mejor || esLegal)) { tiempoAgotado = true; return true; }
+    if ((++nodos & 1023) === 0 && (nodos > nodosMax || Date.now() - t0 > msMax) && (mejor || esLegal)) { tiempoAgotado = true; return true; }
     if (abortar) return true;
     for (let m = 0; m < N_MOV; m++) {
       const f = (m / 3) | 0;
@@ -299,7 +301,7 @@ export function resolverKociemba(entrada, opciones = {}) {
       if (dfs1(v.tw, v.fl, v.sl, n1, 0, ultimaInicial)) { fin = true; break; }
     }
   }
-  return mejor ? { movimientos: mejor.map((m) => NOMBRES_MOV[m]), tiempoAgotado, ms: Date.now() - t0 } : null;
+  return mejor ? { movimientos: mejor.map((m) => NOMBRES_MOV[m]), tiempoAgotado, nodos, ms: Date.now() - t0 } : null;
 }
 
 // ---------- Conversión pegatinas <-> cubies ----------

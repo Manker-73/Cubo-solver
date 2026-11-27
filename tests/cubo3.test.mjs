@@ -7,8 +7,8 @@ import { piezasCubo } from '../src/puzzles/cubo-comun.js';
 import * as K from '../src/puzzles/kociemba.js';
 import { crearModeloPiezas } from '../src/core/piezas.js';
 import { aplicarPerm } from '../src/core/perm.js';
-import { entero } from '../src/core/rng.js';
-import { CASOS, casosPor, probarScrambles, probarSolver, debeRechazar, guardarResultado } from './util.mjs';
+import { entero, rngConSemilla } from '../src/core/rng.js';
+import { CASOS, casosPor, probarScrambles, probarSolver, debeRechazar, guardarResultado, conRelojLento } from './util.mjs';
 
 const geo = geometriaNxN(3);
 
@@ -39,6 +39,17 @@ test('3x3: scrambles de estado aleatorio válidos y sin redundancias', () => {
   const r = probarScrambles(p, 31);
   assert.ok(r.longitudMax <= 22);
   guardarResultado('3x3', r);
+});
+
+// Sesión de mantenimiento (27/11/2026): el presupuesto del scramble es en nodos, no en ms. En una
+// «máquina muchísimo más lenta» (cada lectura del reloj avanza 1 s) salen exactamente los mismos
+// scrambles; antes, con 1 s de límite, ahí llegaban a 24 movimientos (y la cota de arriba, ≤ 22,
+// dependía de la velocidad).
+test('3x3: el scramble no depende de la velocidad de la máquina (reloj de máquina lenta: los mismos)', () => {
+  const n = casosPor(100, 30);
+  const generar = () => { const rng = rngConSemilla(31); return Array.from({ length: n }, () => p.generarScramble(rng)); };
+  const normal = generar();
+  assert.deepEqual(conRelojLento(generar), normal);
 });
 
 const rotarAzar = (e, i, rng) => {

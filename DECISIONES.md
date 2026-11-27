@@ -884,3 +884,52 @@ Simulaciones de cuboides sobre el 4x4 (`bloquesSinCortes`): **2x4x4** (sin los c
 - **Dos wings gemelas**: si las dos estaban colocadas al revés, Girar no podía arreglarlo (la otra disposición necesitaba la gemela, ya usada). Ahora Girar las intercambia.
 - **Elegir un bloque con un hueco ya elegido** lo intentaba poner ahí aunque no cupiera; ahora, si no cabe, el bloque queda elegido y se explica por qué.
 - (Tests) En jsdom los polígonos SVG no tienen `click()`: se manda el evento.
+
+# Sesión de mantenimiento: tests que dependían de la máquina y tamaño del repo (27/11/2026)
+
+## Regla
+Ningún test puede pasar en una máquina y fallar en otra por velocidad. Un límite en milisegundos solo puede
+cambiar *cuánto tarda* un test, no *si pasa*. Orden de preferencia: presupuesto en pasos (nodos, vueltas) →
+esperar a eventos → límite generoso solo donde es inevitable (y documentado aquí).
+
+## Qué dependía del tiempo y cómo queda
+| Test | Antes | Ahora |
+| :--- | :--- | :--- |
+| `tests/app.test.mjs`: todas las esperas (`hasta(cond, ms)`, 43 llamadas; las 3 de `test:rapido` que fallaban en este PC: «sin Worker, construye…», «cambiar rápidamente de puzzle (sin Worker)» y «modo aprender (sin WebGL)») | `ms` de reloj: el tiempo que el hilo principal pasaba generando tablas o resolviendo contaba | **Vueltas ociosas** (`crearHasta`): una vuelta de 20 ms solo cuenta si el hilo no estaba bloqueado (si lo está, el temporizador no salta) y ningún Worker tiene una petición sin responder. Se espera a la app lo que haga falta; solo cuenta el tiempo en que no hace nada |
+| Worker real de los tests (`instalarWorker`) | Arrancar = evaluar el bundle en worker_threads; si pasaba de 4 s (el ping de la app, `PING_MS`), la app se pasaba al hilo principal | El constructor espera (Atomics.wait) a que el código esté evaluado: el ping solo mide la ida y vuelta, como en un navegador. Cuenta las peticiones pendientes para `crearHasta` |
+| `cambiosRapidos` (con Worker) | `assert(secuencia < 1000 ms de reloj)` | Quitado: el ritmo lo fija el propio test (120 ms entre clics); medía la máquina |
+| `cambiosRapidos` | `assert(comprobaciones > 20)`, contando vueltas de un `setInterval` de 5 ms (menos cuanto más bloqueado el hilo) | `comprobaciones ≥ número de clics` (cada clic cambia el DOM y dispara el MutationObserver) |
+| reproductor del scramble (play en 2D) | dormir 1,3 s y mirar | esperar al primer paso con `hasta` |
+| `3x3: scrambles … ≤ 22` (y el scramble de la app) | Kociemba con 1 s de límite: con un reloj de máquina muy lenta salían hasta 24 movimientos | **Presupuesto en nodos** (`nodosMax` en `resolverKociemba`, `NODOS_SCRAMBLE_3X3 = 500.000` en `cubo3.js`): medido en 2.100 scrambles, mediana 837 nodos, máximo 221.865, ninguno > 21. Misma semilla → mismo scramble en cualquier máquina (test nuevo con reloj lento) |
+| `FTO: … ≤ 40 giros` (`tiempoMax: 300`) | Dependía de cuántas orientaciones daba tiempo a probar | Sin cambios en el solver: con reloj de máquina muy lenta, máximo 31 (media 28,0) en 100 casos. Test nuevo que lo comprueba con `conRelojLento` |
+| Bloqueos: «0 sin resolver» (3x3, NxN y grandes) | El solver se rinde a los `msDuro` (≥ 30 s): en una máquina 30 veces más lenta habría fallos | Los tests pasan `msDuro: Infinity`: la calidad la sigue marcando `msMax` (y la solución se comprueba giro a giro), pero el test nunca falla por no llegar a tiempo |
+| «bloqueos grandes: el scramble de la app del 5x5 de 16 bloques» | Acepta «resuelto» o «no a tiempo» | Sin cambios (pasa en los dos casos) |
+| Square-1, Megaminx, 2x2, Pyraminx, Skewb, NxN | — | No dependen: con tiempo 0 devuelven igualmente una solución (sus tests ya lo usan) o son óptimos/sin límite |
+
+**Límites que quedan (generosos e inevitables)**: los `{ timeout }` de `node:test` (10–180 min por test) son una
+red de seguridad contra cuelgues, con margen amplio sobre lo medido con la CPU cargada (p. ej. «4x4 y 5x5
+vendados»: 91 s frente a 10 min; «colocar piezas»: 102 s frente a 15 min); los tests sin `timeout` no tienen límite. `PING_MS = 4 s` de la app
+es comportamiento del producto (un Worker que no responde se abandona), no del test.
+
+**`conRelojLento(fn)`** (`tests/util.mjs`): ejecuta `fn` con un reloj que avanza 1 s más en cada lectura
+(`performance.now` y `Date.now`): todo presupuesto en ms se agota en cuanto se mira. Es la «máquina infinitamente
+lenta» para comprobar que un resultado no depende de la velocidad. (Para el módulo de bloqueos ya existía
+`fijarRelojBloqueos`.)
+
+**Descartado**: sustituir el reloj de todos los solvers por un reloj de pasos. Cada solver mira el reloj cada
+256–4096 nodos de coste muy distinto: un único «ms por lectura» cambiaría lo que hacen en los tests respecto a
+la app. Se ha hecho solo donde el resultado del test dependía de ello (scramble del 3x3).
+
+## Capturas y tamaño del repositorio
+- Medido al empezar: `.git` 61 MB (pack 51,7 MiB + 8 MiB sueltos), 118 commits; `docs/capturas/` 47 MB en
+  disco, 411 ficheros. En el historial, las capturas son **56 MB de ~60 MB** (507 versiones de JPG/JSON:
+  cada ejecución de un `comprobar-*.py` añadía o reescribía decenas de capturas).
+- **Política**: `docs/capturas/` deja de estar en git (`.gitignore`; `git rm --cached`, los ficheros siguen en
+  local). Los scripts siguen escribiendo ahí y sobrescriben (no acumulan). Las capturas de una versión se
+  obtienen con la Action manual **«Capturas (Chromium)»** (`.github/workflows/capturas.yml`): construye, ejecuta
+  los `comprobar-*.py` elegidos con el Chrome del runner y sube `docs/capturas/` como artifact (30 días). Así el
+  repositorio deja de crecer por las capturas.
+- **No se ha reescrito el historial** (pendiente de decisión del dueño): los 56 MB siguen en commits antiguos y
+  cada clon los descarga. Quitarlos del historial (`git filter-repo --path docs/capturas --invert-paths`, y
+  `git push --force` de `main`) dejaría el repositorio en unos 5–8 MB, pero cambia los hashes de todos los
+  commits: cualquier copia o clon existente tendría que volver a clonarse.

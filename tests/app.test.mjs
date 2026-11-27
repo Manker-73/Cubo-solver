@@ -16,6 +16,35 @@ import { rngConSemilla } from '../src/core/rng.js';
 
 const raiz = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const espera = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// ---------- Esperas que no dependen de la velocidad de la máquina (sesión de mantenimiento, 27/11/2026) ----------
+// Antes, `hasta(cond, ms)` fallaba si la condición no se cumplía en `ms` milisegundos de reloj: en un PC
+// lento (o con la CPU cargada) las tablas generadas en el hilo principal o en el Worker se comían ese
+// tiempo y el test fallaba sin que la app hiciera nada mal. Ahora el presupuesto se cuenta en VUELTAS
+// OCIOSAS de INTERVALO ms: una vuelta solo cuenta si (a) el hilo principal no estaba bloqueado
+// calculando (si lo está, el temporizador no salta y la vuelta no ocurre) y (b) ningún Worker
+// (worker_threads) tiene una petición sin responder. Es decir: se espera a los eventos de la app el
+// tiempo que haga falta y solo se cuenta el tiempo en que la app no está haciendo nada. En una máquina
+// lenta cada vuelta dura lo mismo o más, nunca menos: el presupuesto nunca se queda corto por velocidad.
+const INTERVALO = 20;
+/**
+ * @param {() => number} pendientes peticiones a un Worker aún sin respuesta (trabajo en marcha)
+ * @param {() => string} detalle texto añadido al error (p. ej. los mensajes de la app)
+ */
+function crearHasta(pendientes = () => 0, detalle = () => '') {
+  return async (cond, ms = 30000) => {
+    const vueltas = Math.ceil(ms / INTERVALO);
+    let ociosas = 0;
+    while (!cond()) {
+      if (ociosas >= vueltas) throw new Error('tiempo agotado (sin actividad de la app)' + detalle());
+      await espera(INTERVALO);
+      if (!pendientes()) ociosas++;
+    }
+  };
+}
+/** Peticiones sin responder de los Workers de instalarWorker en esa ventana (0 si no los hay). */
+const pendientesDe = (win) => () => (win.__peticionesPendientes ? win.__peticionesPendientes() : 0);
+
 let html = null;
 function construir() {
   if (!html) {
@@ -51,10 +80,7 @@ async function abrir(t, { beforeParse, url = 'https://localhost/#/wca', esperarH
   const w = dom.window;
   w.addEventListener('error', (e) => errores.push(e.message));
   const doc = w.document;
-  const hasta = async (cond, ms = 30000) => {
-    const t0 = Date.now();
-    while (!cond()) { if (Date.now() - t0 > ms) throw new Error('tiempo agotado'); await espera(40); }
-  };
+  const hasta = crearHasta(pendientesDe(w), () => ': ' + (doc.getElementById('mensajes')?.textContent || ''));
   if (esperarHerramienta) await hasta(() => doc.getElementById('scramble').textContent.length > 0 && !doc.getElementById('scramble').classList.contains('generando'));
   return { w, doc, hasta, errores };
 }
@@ -183,7 +209,8 @@ test('app: sin WebGL (jsdom), todo en 2D; el reproductor del scramble recorre lo
   // play en 2D: avanza solo
   doc.getElementById('s-inicio').click();
   doc.getElementById('s-play').click();
-  await espera(1300);
+  // (antes: dormir 1,3 s y mirar; ahora se espera al primer paso, con presupuesto de vueltas ociosas)
+  await ctx.hasta(() => parseInt(doc.getElementById('paso-scramble').textContent, 10) >= 1, 1300).catch(() => {});
   assert.ok(parseInt(doc.getElementById('paso-scramble').textContent, 10) >= 1, 'el play avanza: ' + doc.getElementById('paso-scramble').textContent);
   doc.getElementById('s-play').click();
   assert.equal(doc.getElementById('s-play').textContent, '▶');
@@ -416,20 +443,34 @@ function instalarWorker(window, registro) {
   let n = 0;
   window.Blob = class { constructor(partes) { this.texto = partes.join(''); } };
   window.URL.createObjectURL = (b) => { const u = `blob:prueba/${++n}`; blobs.set(u, b.texto); return u; };
+  const vivos = new Set();
+  // para crearHasta: mientras un Worker calcula, la espera no gasta presupuesto
+  window.__peticionesPendientes = () => { let n = 0; for (const x of vivos) n += x.pendientes.size; return n; };
   window.Worker = class {
     constructor(url) {
       const codigo = blobs.get(url);
-      const shim = `const { parentPort } = require('node:worker_threads');
+      const shim = `const { parentPort, workerData } = require('node:worker_threads');
         globalThis.self = globalThis;
         self.postMessage = (m) => parentPort.postMessage(m);
         parentPort.on('message', (m) => self.onmessage && self.onmessage({ data: m }));\n`;
-      this.w = new NodeWorker(shim + codigo, { eval: true });
-      this.w.on('message', (m) => { registro.respuestas++; if (this.onmessage) this.onmessage({ data: m }); });
-      this.w.on('error', (e) => this.onerror && this.onerror({ message: e.message }));
+      // Al terminar de evaluar el código del Worker, avisa al hilo principal (ver abajo).
+      const fin = '\n;{ const a = new Int32Array(workerData); Atomics.store(a, 0, 1); Atomics.notify(a, 0); }\n';
+      const listo = new Int32Array(new SharedArrayBuffer(4));
+      this.pendientes = new Set();
+      this.w = new NodeWorker(shim + codigo + fin, { eval: true, workerData: listo.buffer });
+      this.w.on('message', (m) => { registro.respuestas++; if (m && m.id != null) this.pendientes.delete(m.id); if (this.onmessage) this.onmessage({ data: m }); });
+      this.w.on('error', (e) => { this.pendientes.clear(); if (this.onerror) this.onerror({ message: e.message }); });
+      // En un navegador el Worker arranca en paralelo y el ping de la app (PING_MS = 4 s) solo mide
+      // la ida y vuelta. Aquí arrancar es evaluar el bundle entero en worker_threads, que en una
+      // máquina lenta o cargada puede pasar de 4 s: el constructor espera (bloqueando, como si
+      // arrancar fuera instantáneo para la app) a que el código esté evaluado. Así el test no pasa
+      // a «hilo principal» por lentitud de la máquina. (2 min: solo por si el Worker no llega a arrancar.)
+      Atomics.wait(listo, 0, 0, 120000);
       registro.workers.push(this);
+      vivos.add(this);
     }
-    postMessage(m) { registro.peticiones.push(m.op); this.w.postMessage(m); }
-    terminate() { this.w.terminate(); }
+    postMessage(m) { registro.peticiones.push(m.op); if (m && m.id != null) this.pendientes.add(m.id); this.w.postMessage(m); }
+    terminate() { vivos.delete(this); this.pendientes.clear(); this.w.terminate(); }
   };
 }
 
@@ -526,16 +567,18 @@ const normal = (doc, svg) => { const d = doc.createElement('div'); d.innerHTML =
 async function cambiosRapidos(ctx, secuencia, { conWorker = true } = {}) {
   const { w, doc, hasta } = ctx;
   const v = vigilar(w, doc);
-  const t0 = Date.now();
+  // El ritmo de los clics lo fija el test (120 ms entre clics con Worker; sin Worker, las tablas de los
+  // scrambles bloquean el hilo y por eso van casi sin pausa). Antes se comprobaba además que la
+  // secuencia durase menos de 1 s de reloj: eso medía la máquina, no la app (sesión de mantenimiento).
   for (const n of secuencia) { chipDe(doc, n).click(); await espera(conWorker ? 120 : 20); }
-  // sin Worker, las tablas de los scrambles bloquean el hilo (por eso los cambios van casi sin pausa)
-  if (conWorker) assert.ok(Date.now() - t0 < 1000, `los cambios se hacen en menos de un segundo (${Date.now() - t0} ms)`);
   const final = porNombre(secuencia[secuencia.length - 1]);
   await hasta(() => !generando(doc), 60000);
   await espera(200);
   v.parar();
   assert.deepEqual(v.fallos.slice(0, 5), [], 'los dos paneles muestran siempre el mismo puzzle');
-  assert.ok(v.n() > 20);
+  // el vigilante ha mirado de verdad: cada clic cambia el DOM y dispara el MutationObserver (antes, «> 20»
+  // comprobaciones, que contaba también las vueltas del setInterval de 5 ms: menos cuanto más se bloquea el hilo)
+  assert.ok(v.n() >= secuencia.length, `comprobaciones: ${v.n()}`);
   assert.equal(doc.getElementById('panel-scramble').dataset.puzzle, final.id);
   // el scramble mostrado es de ese puzzle: se aplica con su notación y es su vista previa
   const movs = final.parsear(doc.getElementById('scramble').textContent);
@@ -677,10 +720,8 @@ async function abrirSinEsperar(t, ctl) {
       win.addEventListener('unhandledrejection', (e) => errores.push(String(e.reason && e.reason.message)));
     } });
   const doc = dom.window.document;
-  const hasta = async (cond, ms = 15000) => {
-    const t0 = Date.now();
-    while (!cond()) { if (Date.now() - t0 > ms) throw new Error('tiempo agotado: ' + doc.getElementById('mensajes').textContent); await espera(20); }
-  };
+  // (Worker simulado: sus retrasos son temporizadores fijos, no cálculo; cuentan como espera ociosa)
+  const hasta = crearHasta(() => 0, () => ': ' + doc.getElementById('mensajes').textContent);
   return { w: dom.window, doc, hasta, errores };
 }
 

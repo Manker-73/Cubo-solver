@@ -151,11 +151,23 @@ function cuboAPegatinas(c) {
   return modelo.aColores([{ perm: c.cp, ori: c.co }, { perm: c.ep, ori: c.eo }], RESUELTO);
 }
 
+/**
+ * Presupuesto de la búsqueda del scramble en nodos de la fase 1, no en milisegundos (sesión de
+ * mantenimiento, 27/11/2026): con la misma semilla sale el mismo scramble en cualquier máquina, y
+ * su longitud no depende de lo rápida que sea. Medido en 2.100 scrambles: mediana 837 nodos hasta
+ * llegar a ≤ 21, máximo 221.865, ninguno por encima de 21. El tope es más del doble del máximo; si
+ * se alcanzara, se devuelve la mejor encontrada (igual en todas las máquinas).
+ */
+export const NODOS_SCRAMBLE_3X3 = 500_000;
+/** Nodos de la última búsqueda de generarScramble (para medir el presupuesto). */
+export const DIAG_SCRAMBLE = { nodos: 0 };
+
 function generarScramble(rng = rngSeguro(), opciones = {}) {
   inicializarKociemba();
   for (;;) {
     const c = cuboAleatorio(rng);
-    const r = resolverKociemba(variantes(cuboAPegatinas(c), c), { objetivo: opciones.objetivo ?? 21, msMax: opciones.msMax ?? 1000 });
+    const r = resolverKociemba(variantes(cuboAPegatinas(c), c), { objetivo: opciones.objetivo ?? 21, msMax: opciones.msMax ?? Infinity, nodosMax: opciones.nodosMax ?? NODOS_SCRAMBLE_3X3 });
+    DIAG_SCRAMBLE.nodos = r.nodos;
     if (r.movimientos.length < 2) continue; // como TNoodle: mínimo 2 movimientos
     return r.movimientos.slice().reverse().map(b.invertirMovimiento);
   }

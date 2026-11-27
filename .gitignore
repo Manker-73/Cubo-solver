@@ -6,3 +6,7 @@ copia-repo.bundle.b64.txt
 tests/.resultados-parciales/
 .tmp/
 repomix-output.xml
+
+# Capturas de scripts/comprobar-*.py: se generan en local (se sobrescriben) y en la Action
+# "Capturas (Chromium)" como artifact; no se suben al repositorio (ver DECISIONES.md).
+docs/capturas/

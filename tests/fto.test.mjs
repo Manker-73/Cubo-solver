@@ -14,7 +14,7 @@ import { piezasAleatorias, simplificar, tablas } from '../src/puzzles/fto-solver
 import { aplicarPerm, paridad } from '../src/core/perm.js';
 import { dot, cruz, res } from '../src/core/geometria.js';
 import { rngConSemilla, entero } from '../src/core/rng.js';
-import { probarScrambles, probarSolver, debeRechazar, guardarResultado, casosPor } from './util.mjs';
+import { probarScrambles, probarSolver, debeRechazar, guardarResultado, casosPor, conRelojLento } from './util.mjs';
 
 const CASOS_SCR = casosPor(1000, 100, 'CASOS_FTO');
 const CASOS_SOL = casosPor(1000, 100, 'CASOS_FTO');
@@ -217,6 +217,15 @@ test(`FTO: el solver resuelve el 100 % (${CASOS_SOL} casos, puzzle reorientado a
   const r = probarSolver(p, { semilla: 83, transformar: rotarAzar, opciones: { tiempoMax: 300 }, n: CASOS_SOL });
   assert.ok(r.longitudMaxSolucion <= 40, `solución demasiado larga: ${r.longitudMaxSolucion}`);
   guardarResultado('fto', { ...r, cocienteFrenteACota: +(r.longitudMediaSolucion / 21).toFixed(2) });
+});
+
+// Sesión de mantenimiento (27/11/2026): la cota de 40 no depende de la velocidad. Con un reloj de
+// «máquina muchísimo más lenta» (cada lectura avanza 1 s: cada orientación se corta en cuanto puede)
+// se devuelve una de las primeras soluciones; medido en 100 casos: máximo 31, media 28,0.
+test('FTO: en una máquina muchísimo más lenta (reloj que salta 1 s) resuelve y sigue ≤ 40 giros', () => {
+  const r = conRelojLento(() => probarSolver(p, { semilla: 84, transformar: rotarAzar, opciones: { tiempoMax: 300 }, n: casosPor(20, 5) }));
+  assert.match(r.resueltos, /\(100\.0%\)/);
+  assert.ok(r.longitudMaxSolucion <= 40, `solución demasiado larga: ${r.longitudMaxSolucion}`);
 });
 
 test('FTO: estados imposibles rechazados con mensajes claros (uno por restricción)', () => {

@@ -115,3 +115,17 @@ export function debeRechazar(puzzle, estado, texto) {
   assert.equal(r.ok, false, 'el solver también debe rechazarlo');
   return todo;
 }
+
+/**
+ * Ejecuta `fn` (síncrona) como en una máquina muchísimo más lenta: cada lectura del reloj
+ * (performance.now y Date.now) avanza además `saltoMs` ms. Todo presupuesto en milisegundos se
+ * agota en cuanto se mira. Sirve para comprobar que el resultado de un test no depende de lo
+ * rápida que sea la máquina (sesión de mantenimiento, 27/11/2026; ver DECISIONES.md).
+ */
+export function conRelojLento(fn, saltoMs = 1000) {
+  const pn = performance.now, dn = Date.now;
+  let k = 0;
+  performance.now = () => pn.call(performance) + saltoMs * ++k;
+  Date.now = () => dn() + saltoMs * ++k;
+  try { return fn(); } finally { performance.now = pn; Date.now = dn; }
+}
