@@ -29,6 +29,7 @@ Antes de diseñar cambios estructurales, tomar decisiones técnicas o planificar
   * **Cubos NxN (`nxn*.js` —incluido `nxn-colocar.js`: generadores y nombres de tipos para colocar piezas—, `cubo-comun.js`, `cubo2.js`, `cubo3.js`, `cubo3-bloqueos.js`, `cubo-grande.js`)**: Soporte de 2x2 a 7x7, scrambles WCA sin redundancias, orientación libre, bloqueos NxN y detección de estados imposibles.
   * **Kociemba (`kociemba.js`)**: Solver en dos fases para 3x3.
   * **Poliedros y otros WCA**: `pyraminx.js`, `skewb.js`, `megaminx*.js`, `square1.js` / `square1-motor.js` (solver en 2 fases + detección de formas/paridades) y `fto*.js` (*Face-Turning Octahedron*, 72 pegatinas, cota inferior de 21 giros).
+  * **Cuboides (`cuboide.js`, `cuboide-geo.js`, `cuboide-grupo.js`, `cuboide-solver.js`)** (noche 15): modelo genérico `crearCuboide(a, b, c)` que deduce geometría, giros legales (90° solo en capas cuadradas), rotaciones, piezas, órbitas y restricciones (Schreier–Sims); solver óptimo con tabla exacta o IDA* con bases de patrones. Registrados 3x3x1 Floppy, 3x3x2 Domino y 2x2x3 Tower (categoría `cuboids`).
 
 * **`src/aprender/` — Guiones de enseñanza interactiva**
   * `guion.js`, `algoritmos.js`, `motor-cubo.js`, `objetivos-cubo.js`: Motor de lecciones paso a paso y validación de objetivos.
