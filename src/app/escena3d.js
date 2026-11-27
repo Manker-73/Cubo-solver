@@ -8,6 +8,7 @@ const ENCOGER = 0.9;      // tamaño de la pegatina respecto a su hueco (el rest
 const ELEVAR = 0.006;     // separación de la pegatina sobre el cuerpo (fracción del radio)
 export const COLOR_CUERPO = [0.07, 0.07, 0.08];
 export const COLOR_SIN_PINTAR = [0.54, 0.56, 0.61];
+export const COLOR_HUECO_METAL = [0.25, 0.3, 0.42];
 
 export function hexARgb(hex) {
   const h = hex.replace('#', '');
@@ -97,7 +98,8 @@ export function crearEscena3D(paleta) {
       let v = 0;
       for (const t of tri) {
         const p = geometria.pegatinas[t.k];
-        const c = t.cuerpo ? COLOR_CUERPO : (rgb[colores[t.k]] || COLOR_SIN_PINTAR);
+        // (shape mods, noche 16: con la luz metálica el gris de siempre parece plata; el hueco vacío, más oscuro)
+        const c = t.cuerpo ? COLOR_CUERPO : (rgb[colores[t.k]] || (geometria.material === 'metal' ? COLOR_HUECO_METAL : COLOR_SIN_PINTAR));
         const r = resaltadas ? (resaltadas.has(t.k) ? 1 : 0) : 1;
         for (const q of t.v) {
           pos.set(q, v * 3); nor.set(p.normal, v * 3); col.set(c, v * 3);

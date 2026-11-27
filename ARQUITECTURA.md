@@ -57,6 +57,9 @@ src/
     cuboide-geo.js  cuboides: caja troceada por los planos entre capas, giros de capa (90° solo en sección cuadrada), rotaciones, piezas, 3D
     cuboide-grupo.js  cuboides: grupo de los giros de búsqueda (Schreier–Sims), colocaciones, órbitas, restricciones ℤ₂, identificación
     cuboide-solver.js cuboides: solver óptimo (tabla exacta por BFS o IDA* con bases de patrones) desde el resuelto y sus rotaciones del grupo
+    shapemod.js     SHAPE MODS (noche 16): crearShapeMod({ id, nombre, cortes }) = puzzle completo (estado por piezas de kociemba.js + centros que se ven; marcas; validador; solver; 3D y 2D; adaptador de «Colocar piezas»)
+    shapemod-geo.js   shape mods: poliedros convexos, piezas = celda del mecanismo ∩ cuerpo, rotaciones desde el estado, periodos de los centros, encajes
+    shapemod-centros.js shape mods: algoritmos puros de centros (buscados y comprobados) y Dijkstra de la fase de centros
   aprender/       modo aprender: soluciones por métodos humanos, explicadas por etapas
     guion.js          resultado común: etapas con objetivo, bloques con texto, algoritmo y piezas
     motor-cubo.js     cubos 2x2/3x3: piezas por colores, IDA* con tablas de 1–3 piezas, búsqueda de algoritmos (macros)
@@ -86,6 +89,8 @@ tests/            node --test (npm test; niveles: ver "Tests" más abajo)
   diseno.test.mjs rutas de las secciones y contraste ≥ 4,5:1 de los colores de los dos temas
   humo.test.mjs   prueba de humo de cada puzzle del registro, huellas de los giros, vendado y modo aprender
   colocar.test.mjs  colocar piezas: ida y vuelta (WCA, vendados y cuboides), rechazos y piezas iguales
+  shapemods.test.mjs shape mods: geometría (encajan y forman el cubo, forma y volumen tras giros, medidas del Mirror), centros visibles, grupo, forma de cubo, rechazos, scrambles exactos, solver reorientado, 3x3 de WCA sin cambios
+  kociemba-referencia.json  40 scrambles y soluciones del 3x3 de antes de los ganchos de kociemba.js (noche 16)
   cuboides.test.mjs cuboides: geometría y giros legales, grupo frente a Jaap, BFS completo, scrambles exactos y uniformes, solver óptimo (oráculo de colores), rechazos
   huellas.json    huellas (hash del estado) de cada giro básico y de una secuencia fija por puzzle
   aprender-comprobar.mjs  objetivos por etapa y comprobación de una solución del modo aprender (aprender y humo)
@@ -106,6 +111,7 @@ scripts/
   comprobar-bloqueos.py  cubo vendado en Chromium real (escritorio y móvil, con y sin 3D)
   comprobar-colocar.py   «Colocar piezas» en Chromium real (WCA y Bandaged 3x3/4x4; PUZZLES=cuboids; escritorio/móvil, oscuro/claro, 2D/3D)
   comprobar-cuboides.py  Cuboids en Chromium real: portada → cada cuboide → scramble → resolver → reproducir (8 combinaciones)
+  comprobar-shapemods.py Shape Mods en Chromium real: Mirror y Ghost: scramble, resolver, a mitad de giro, colocar (8 combinaciones, capturas)
   bfs-cuboide.mjs        BFS completo del 3x3x2 (406.425.600 posiciones, un byte cada una): número de Dios y distribución
   mezcla-bloqueos.mjs    cuánto hay que mezclar un cubo vendado con giros al azar (criterio de la longitud del scramble)
 ```
@@ -214,6 +220,30 @@ puzzle no necesita saber nada del Worker, pero su estado debe poder copiarse con
   `colocarPiezas` con las rotaciones entre los generadores; campo propio `cuboide` (geometría, grupo, solver, analizar…).
 - Límite conocido: con piezas que se ven iguales (centros de los lados del 3x3x4…) `identificar` lanza un error, y con n ≥ 4
   par quitar una capa cambia la métrica: son lo que falta para el 2x2x4 / 3x3x4 / 3x3x5 (anunciados en `PUZZLES_PRONTO`).
+
+### Shape mods (cómo está hecho, noche 16)
+- **Una definición por shape mod** en el registro: `crearShapeMod({ id, nombre, cortes, material })`, categoría `shapemods`.
+  `cortes = { corte, semilado, centro, ejes?, desfase? }`: planos del mecanismo a ±corte (iguales en los tres ejes: si
+  no, no giraría), cubo exterior de semilado dado con su centro (y, si está inclinado, sus ejes) en el marco del
+  mecanismo, y `desfase` = ángulos de las capas de abajo / medio / arriba alrededor de y en la forma de cubo (Ghost).
+  `cuboInclinado(arriba, giroMedio, centro)` (en `shapemod-geo.js`) da `ejes` y `centro` desde el eje de apilado.
+- `shapemod-geo.js` (numérico, sin @ts-check): pieza de cada hueco = caja grande recortada por los planos de su celda
+  y los del cuerpo (girado hacia atrás lo que gira su capa en la forma de cubo); `colocacion(estado)` da pieza y
+  rotación de cada hueco desde `cp, co, ep, eo, ct` (convención de kociemba.js); `periodos` (orientación visible de
+  cada centro por la simetría de su forma); `encajes()` (qué pieza y orientación deja en cada hueco la forma del
+  resuelto). Huecos 0–7 esquinas, 8–19 aristas, 20–25 centros, en el orden de kociemba.js.
+- `shapemod.js`: estado `{ cp, co, ep, eo, ct, cubo? }`; giros con `MOV_CUBO`; **marcas** (54 pegatinas + marcas de
+  orientación de los centros que se ven + la forma) con las permutaciones de los giros y de las 24 rotaciones
+  sacadas de la geometría; `normalizar` (marcas sujetadas de cualquier forma → estado de referencia y rotación Q);
+  validador (piezas que faltan o repetidas, centros imposibles, giro de esquinas, volteo de aristas, paridad y, si
+  todos los centros visibles tienen periodo par, la de los centros); `estaResuelto` = se ve como el cubo resuelto.
+  Solver: Kociemba (con `aceptar` y `filtroFase1` si hay centros que se ven) + `shapemod-centros.js`; la solución se
+  traduce a la orientación del usuario. 3D: cada cara de pieza es una pegatina (`material: 'metal'`), `giro3D` da
+  una parte (giro de cara) o dos (`A` / `A'` del Ghost). 2D: proyección del modelo 3D (dos vistas). «Colocar piezas»:
+  `colocarPiezas.adaptador` (puzzle cuyo estado son las marcas) y `desdeColocar`.
+- `kociemba.js`: ganchos opcionales `aceptar(sol)` y `filtroFase1(cam, n1)` en `resolverKociemba` (sin ellos, nada cambia).
+- Genérico nuevo: `colocarPiezas.{adaptador, desdeColocar, nombrePieza, miniatura}` (colocar.js / colocar-ui.js /
+  main.js), `avisoPintar` en los tipos, `Geometria3D.material` (shader de vista3d.js; hueco vacío más oscuro en escena3d.js).
 
 ### Megaminx (cómo está hecho)
 - `megaminx-geo.js`: el motor geométrico da las 132 pegatinas, la red (dos flores), los 48 giros de cara (`R`, `R'`, `R2`, `R2'`…), los de Pochmann (`R++`, `D--`, `U`) y las 60 rotaciones. `megaminx-piezas.js` agrupa las pegatinas en piezas por las capas en las que están y crea el modelo de piezas; los centros pintados dan la orientación (se reetiquetan los colores).
@@ -493,6 +523,7 @@ tal cual, se buscan las identidades de los centros sueltos que lo hacen alcanzab
 #/como-funciona       portada con el foco en «Cómo funciona»
 #/wca[/<id>]          WCA Puzzles: la herramienta con el selector (puzzles con categoria 'wca' + PUZZLES_PRONTO bloqueados)
 #/cuboids[/<id>]      Cuboids (noche 15): igual, con la categoria 'cuboids' (secciones de catálogo: CATALOGOS en secciones.js)
+#/shapemods[/<id>]    Shape Mods (noche 16): igual, con la categoria 'shapemods'
 #/bandaged[?puzzle=4x4|5x5][&bloqueos=…|&firma=…]   Bandaged Cubes: 3x3 (por defecto), 4x4 o 5x5 con «Tus bloques»
 #/<bloqueada o desconocida>  -> #/ (replaceState)
 #bloqueos=… #firma=… ?bloqueos=… ?firma=…  (enlaces antiguos) -> #/bandaged?…

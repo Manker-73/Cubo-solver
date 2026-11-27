@@ -45,7 +45,11 @@ PUZZLES = {
     'cub331': ('#/cuboids/3x3x1', '3x3x1 Floppy'),
     'cub332': ('#/cuboids/3x3x2', '3x3x2 Domino'),
     'cub223': ('#/cuboids/2x2x3', '2x2x3 Tower'),
+    # Shape Mods (noche 16): PUZZLES=shapemods, las 8 combinaciones de cada uno (estado como marcas)
+    'mirror': ('#/shapemods/mirror', 'Mirror Blocks'),
+    'ghost': ('#/shapemods/ghost', 'Ghost Cube'),
 }
+SHAPEMODS = ['mirror', 'ghost']
 CUBOIDS = ['cub331', 'cub332', 'cub223']
 RESTO = ['wca2', 'wca5', 'pyraminx', 'skewb', 'megaminx', 'fto', 'band5']
 
@@ -141,7 +145,7 @@ async def comprobar(b, puzzle, dispositivo, opts, tema, modo, errores, fallos, r
     if puzzle.startswith('band'):
         await pg.wait_for_function("/geometrías/.test(document.getElementById('bloq-analisis').textContent)", timeout=300000)
     await pulsar(pg, '#cargar', tactil)
-    objetivo = await pg.evaluate('window.cuboSolver.editor()')
+    objetivo = await pg.evaluate('window.cuboSolver.estadoColocar()')
     await pulsar(pg, '#resetear', tactil)
     await pulsar(pg, '#colocar-piezas', tactil)
     await pg.wait_for_selector('#colocar')
@@ -222,6 +226,7 @@ async def main():
     lista = os.environ.get('PUZZLES', 'wca3,band3,wca4,band4').split(',')
     if lista == ['resto']: lista = RESTO
     if lista == ['cuboids']: lista = CUBOIDS
+    if lista == ['shapemods']: lista = SHAPEMODS
     async with async_playwright() as p:
         b = await p.chromium.launch(executable_path=CHROME, args=['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'])
         for puzzle in lista:

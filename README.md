@@ -7,7 +7,8 @@ Aplicación web en un único HTML, sin servidor.
 - **WCA Puzzles** (`#/wca`, y `#/wca/<puzzle>` para abrir uno: `#/wca/megaminx`): scramble, editor, solucionador, vista 3D y modo aprender de 2x2–7x7, Pyraminx, Skewb, Square-1, Megaminx y FTO (Face-Turning Octahedron, oficial de la WCA desde el 2 de enero de 2027).
 - **Bandaged Cubes** (`#/bandaged`): el 3x3, el 4x4 y el 5x5 vendados con tus bloques, y las firmas de la comunidad (3x3).
 - **Cuboids** (`#/cuboids`, y `#/cuboids/<puzzle>`: `#/cuboids/3x3x2`; noche 15): 3x3x1 (Floppy), 3x3x2 (Domino) y 2x2x3 (Tower) con scramble de estado aleatorio, validador (pintando o colocando piezas), solución óptima y vista 3D; 2x2x4, 3x3x4 y 3x3x5, anunciados.
-- *Shape Mods* y *Others*: próximamente (se ven bloqueadas en la portada).
+- **Shape Mods** (`#/shapemods`, y `#/shapemods/<puzzle>`: `#/shapemods/ghost`; noche 16): Mirror Blocks y Ghost Cube (un 3x3 por dentro con otra forma por fuera, de un solo color) con scramble de estado aleatorio, validador colocando piezas (con su forma), solución y vista 3D; Fisher, Windmill y Axis, anunciados.
+- *Others*: próximamente (se ve bloqueada en la portada).
 
 Tema oscuro por defecto; el botón de la cabecera cambia a claro (y lo recuerda en el navegador). Funciona sin conexión: las fuentes van dentro del HTML y no se pide nada a la red.
 
@@ -99,6 +100,12 @@ En **Bandaged Cubes** (`#/bandaged`) eliges el cubo (3x3, 4x4 o 5x5) y, encima d
 - **Solución óptima** (cada giro cuenta 1: `U2` y `R2` también): 3x3x1 como mucho 8 giros (4,4 de media), 3x3x2 como mucho 18 (13,3), 2x2x3 como mucho 14 (9,7). Tablas en el navegador: instantáneas en el 3x3x1 y el 2x2x3, ~1–1,5 s la primera vez en el 3x3x2.
 - **Estados imposibles**: la app dice qué pieza falla: una esquina girada o una arista volteada (en estos puzzles la orientación de cada pieza la decide su posición; en el 3x3x1, las aristas se voltean pero nunca salen de su lado) o, en el 3x3x1, la paridad (dos esquinas intercambiadas exigen un número impar de aristas volteadas). En el 3x3x2 y el 2x2x3 cualquier permutación es posible.
 
+### Shape Mods: Mirror Blocks y Ghost Cube (noche 16)
+- **Son de un solo color**: las piezas se distinguen por su forma, así que no se pinta (tocar el puzzle lo explica). Para introducir el estado de tu puzzle, **«Colocar piezas»**: la bandeja enseña la forma de cada pieza; puedes sujetarlo de cualquier forma (los centros dicen cómo).
+- **Mirror Blocks**: notación del 3x3 sujetándolo con la capa más fina arriba (U), la más gruesa abajo (D), la segunda más fina a la izquierda (L), la tercera delante (F), la cuarta detrás (B) y la quinta a la derecha (R). Sus centros se ven igual girados, así que su orientación no cuenta: resuelto = forma de cubo con todas las piezas en su sitio. Solución de Kociemba (~20 giros).
+- **Ghost Cube**: resuelto es un 3x3 «a mitad de giro»: las capas de arriba y abajo de un eje (U y D en la notación) están giradas un ángulo cualquiera. Con la forma de cubo solo giran U y D; **`A`** alinea esas dos capas (entonces se puede girar cualquier cara, y deja de ser un cubo) y **`A'`** las devuelve a la forma de cubo. Las soluciones empiezan con `A` y acaban con `A'`. Los seis centros se ven girados (es como un supercubo): la solución los deja bien (~35 giros de media; la última parte son algoritmos que solo giran centros). «Colocar piezas» en el Ghost: con las capas alineadas.
+- Medidas y lo que se ha supuesto: DECISIONES.md («Noche 16»).
+
 ### Vista 3D
 - La vista previa del scramble y la reproducción de la solución se ven en **3D**, con los giros animados: arrastra con el ratón o el dedo para girar el puzzle (*Vista inicial* lo devuelve a su sitio). Los botones **2D / 3D** cambian entre el modelo 3D y la red plana.
 - Bajo la vista previa hay un reproductor del scramble: ⇤ lo deja resuelto, ▶ lo aplica movimiento a movimiento (velocidad ×1…×8, pausa, paso atrás). En el Megaminx, al acabar, el puzzle gira entero hasta la orientación de referencia, como indica la nota.
@@ -179,6 +186,7 @@ python3 scripts/comprobar-fto.py             # FTO: tiempos (CPU ×4) y recorrid
 python3 scripts/comprobar-colocar.py         # «Colocar piezas» en pantalla completa: WCA y Bandaged 3x3/4x4, escritorio/móvil, oscuro/claro, 2D/3D
 PUZZLES=cuboids python3 scripts/comprobar-colocar.py  # «Colocar piezas» en los tres cuboides, las 8 combinaciones
 python3 scripts/comprobar-cuboides.py        # Cuboids: portada → cada cuboide → scramble → resolver → reproducir (8 combinaciones)
+python3 scripts/comprobar-shapemods.py       # Shape Mods: Mirror y Ghost: scramble → resolver → a mitad de giro → final → colocar (8 combinaciones, capturas)
 ```
 
 **Capturas**: los scripts las escriben en `docs/capturas/` (se sobrescriben en cada ejecución). Esa carpeta

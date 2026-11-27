@@ -1556,3 +1556,78 @@ test('app: Cuboids (portada, rutas, 3x3x1 / 3x3x2 / 2x2x3: scramble, cargar, res
   assert.deepEqual(errores, []);
   w.close();
 });
+
+// ---------------------------------------------------------------------------
+// Shape Mods (noche 16): Mirror Blocks y Ghost Cube
+// ---------------------------------------------------------------------------
+import { obtenerPuzzle as puzzleDelRegistro } from '../src/puzzles/index.js';
+
+test('app: Shape Mods (portada, rutas, Mirror Blocks / Ghost Cube: scramble, cargar, resolver, reproducir y colocar piezas)', { timeout: 900000 }, async (t) => {
+  const ctx = await abrir(t, { url: 'https://localhost/', esperarHerramienta: false });
+  if (!ctx) return;
+  const { w, doc, hasta, errores } = ctx;
+  doc.querySelector('a.tarjeta-seccion[href="#/shapemods"]').click();
+  await herramientaLista(ctx, 'shapemods', 'mirror');
+  await esperaHash(ctx, /^#\/shapemods\/mirror$/);
+  assert.equal(doc.getElementById('t-seccion').textContent, 'Shape Mods');
+  assert.deepEqual([...doc.querySelectorAll('#selector .chip')].map((c) => c.textContent), ['Mirror Blocks', 'Ghost Cube']);
+  assert.ok(doc.querySelectorAll('#selector .chip-pronto').length >= 3);
+  assert.match(doc.getElementById('selector').textContent, /Fisher.*pronto/);
+  const MOVS = /^([URFDLB]['2]?|A'?)$/;
+  const toques = {};
+  for (const [id, nombre] of [['mirror', 'Mirror Blocks'], ['ghost', 'Ghost Cube']]) {
+    const p = puzzleDelRegistro(id);
+    chipDe(doc, nombre).click();
+    await herramientaLista(ctx, 'shapemods', id);
+    assert.equal(w.location.hash, `#/shapemods/${id}`);
+    doc.getElementById('nuevo').click();
+    await herramientaLista(ctx, 'shapemods', id);
+    await hasta(() => !doc.getElementById('cargar').disabled, 120000);
+    const scr = doc.getElementById('scramble').textContent.trim().split(/\s+/);
+    assert.ok(scr.length >= 10 && scr.every((m) => MOVS.test(m)), `${id}: ${scr.join(' ')}`);
+    if (id === 'ghost') { assert.equal(scr[0], 'A'); assert.equal(scr[scr.length - 1], "A'"); }
+    doc.getElementById('cargar').click();
+    // pintar no tiene sentido: tocar el puzzle lo explica
+    const peg = doc.querySelector('#vista-editor [data-i]');
+    if (peg) {
+      peg.dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
+      await hasta(() => /un solo color/.test(doc.getElementById('mensajes').textContent));
+    }
+    doc.getElementById('resolver').click();
+    await hasta(() => !doc.getElementById('solucion').hidden || doc.querySelector('#mensajes .mensaje.error'), 120000);
+    assert.equal(doc.querySelector('#mensajes .mensaje.error'), null, doc.getElementById('mensajes').textContent);
+    await reproducirHastaElFinal(ctx, id);
+    // colocar piezas: el estado del scramble (el Ghost, con las capas alineadas)
+    const e = await estadoDelScramble(ctx);
+    const objetivo = p.shapeMod.aMarcas(e);
+    if (p.shapeMod.posForma >= 0) objetivo[p.shapeMod.posForma] = -1;
+    const boton = doc.getElementById('colocar-piezas');
+    assert.equal(boton.hidden, false, `${id}: no está «Colocar piezas»`);
+    boton.click();
+    assert.ok(doc.getElementById('colocar'));
+    // la bandeja enseña la forma de cada pieza (miniatura SVG), no colores
+    assert.ok(doc.querySelectorAll('#colocar-bandeja .muestra-pieza.forma svg').length >= 20, `${id}: bandeja sin formas`);
+    const r = await colocarPulsando(ctx, objetivo);
+    toques[id] = r.toques;
+    assert.equal(doc.getElementById('colocar-mensaje').dataset.resultado, 'valido', `${id}: ${doc.getElementById('colocar-mensaje').textContent}`);
+    doc.getElementById('colocar-aplicar').click();
+    assert.equal(doc.getElementById('colocar'), null);
+    const ed = p.shapeMod.aMarcas(w.cuboSolver.editor());
+    if (p.shapeMod.posForma >= 0) ed[p.shapeMod.posForma] = -1;
+    assert.deepEqual(ed, objetivo, `${id}: el estado aplicado no es el colocado`);
+    doc.getElementById('resolver').click();
+    await hasta(() => !doc.getElementById('solucion').hidden || doc.querySelector('#mensajes .mensaje.error'), 120000);
+    assert.equal(doc.querySelector('#mensajes .mensaje.error'), null, doc.getElementById('mensajes').textContent);
+    await reproducirHastaElFinal(ctx, id);
+  }
+  console.log('  [toques en la app]', JSON.stringify(toques));
+  w.location.hash = '#/shapemods/nada';
+  await esperaHash(ctx, /^#\/shapemods\/ghost$/);
+  w.location.hash = '#/shapemods/3x3';
+  await esperaHash(ctx, /^#\/shapemods\/ghost$/);
+  w.location.hash = '#/wca/3x3';
+  await herramientaLista(ctx, 'wca', '3x3');
+  assert.ok(!chipDe(doc, 'Mirror Blocks'), 'los shape mods no salen en WCA Puzzles');
+  assert.deepEqual(errores, []);
+  w.close();
+});

@@ -168,6 +168,8 @@ export function crearShapeMod(def) {
   // pieza (hueco de casa) y pegatina de cada posición de pegatina
   const piezaDePos = [], pegDePos = [];
   CARAS_HUECO.forEach((cs, s) => cs.forEach((_, j) => { piezaDePos[offHueco[s] + j] = s; pegDePos[offHueco[s] + j] = j; }));
+  // (las marcas de orientación son del centro de su cara; no son una pegatina)
+  CARAS.forEach((_, fi) => { for (let k = 0; k < periodos[fi]; k++) if (offMarca[fi] >= 0) { piezaDePos[offMarca[fi] + k] = 20 + fi; pegDePos[offMarca[fi] + k] = -1; } });
   const nombrePieza = (k) => `${TIPO_HUECO[k] === 'centro' ? 'el centro' : TIPO_HUECO[k] === 'arista' ? 'la arista' : 'la esquina'} ${NOMBRE_HUECO[k]}`;
 
   /**
@@ -553,7 +555,7 @@ export function crearShapeMod(def) {
       const dx = iv * (W + 0.6);
       for (const c of caras) {
         const pts = c.q.puntos.map((p) => `${(punto(p, x) + dx).toFixed(3)},${(-punto(p, y)).toFixed(3)}`).join(' ');
-        const color = v.colores[c.k] < 0 ? sombrear('#8a8f9c', c.q.normal, z) : sombrear(material.hex, c.q.normal, z);
+        const color = v.colores[c.k] < 0 ? sombrear('#4a5670', c.q.normal, z) : sombrear(material.hex, c.q.normal, z);
         // data-i en todas (al tocar, el editor dice por qué no se pinta); «pegatina» solo en las editables
         const tocable = opciones.editable && c.q.indice != null;
         const editable = tocable && (!opciones.editables || opciones.editables.has(c.q.indice));
@@ -583,8 +585,8 @@ export function crearShapeMod(def) {
     const r = Math.max(...pts2.map((p) => Math.max(Math.abs(p[0]), Math.abs(p[1])))) * 1.12;
     const caras = pegs.filter((q) => punto(q.normal, z) > 1e-6).sort((a, b) => punto(a.centro, z) - punto(b.centro, z));
     const pol = caras.map((q) => `<polygon points="${q.puntos.map((p) => `${(punto(p, x) - punto(c, x)).toFixed(3)},${(-(punto(p, y) - punto(c, y))).toFixed(3)}`).join(' ')}" fill="${sombrear(material.hex, q.normal, z)}" stroke="#15161a" stroke-width="${(r * 0.04).toFixed(3)}" stroke-linejoin="round"/>`).join('');
-    // escala común: las piezas grandes se ven más grandes (radio del puzzle)
-    const R = G.radio * 0.62;
+    // cada pieza llena su miniatura (las pequeñas del Ghost Cube no se verían); su tamaño real se ve en el puzzle
+    const R = r;
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${-R} ${-R} ${2 * R} ${2 * R}" width="40" height="40">${pol}</svg>`;
   }
 

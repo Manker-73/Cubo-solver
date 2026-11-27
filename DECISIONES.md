@@ -1093,3 +1093,97 @@ bloqueada menos).
 - El `dist` de la noche 15 (db4ea5f), Pages y el artifact llevaban el amarillo arriba: se construyeron desde `main`,
   que ya tenía los dos commits (lo que no cambiaba el dist era solo una errata posterior en un comentario,
   «detrásgit», sin commitear). Este commit reconstruye el dist con el blanco arriba.
+
+# Noche 16: Shape Mods — Mirror Blocks y Ghost Cube (27/11/2026)
+
+## Modelo: un 3x3 por dentro, otro cuerpo por fuera
+- **Los planos de corte del mecanismo están siempre a la misma distancia en los tres ejes** (x, y, z = ±c). No es
+  una elección: tras un giro de 90° alrededor de x, los cortes de y pasan a z; si no coincidieran, el puzzle no
+  podría girar dos veces seguidas. Lo que cambia en un shape mod es el CUERPO (un cubo desplazado y, en el Ghost,
+  inclinado). Cada pieza = celda del mecanismo ∩ cuerpo: un poliedro convexo (intersección de semiespacios), que
+  `shapemod-geo.js` calcula recortando una caja grande plano a plano. Se calcula una vez y viaja con la pieza.
+- **Estado por piezas** = el de `kociemba.js` (`cp, co, ep, eo`, con su convención: la pegatina j de la pieza de la
+  posición i está en la pegatina (j + co) mod 3 de la posición) + `ct` (giro de cada centro, 0 si no se ve) y, en el
+  Ghost, `cubo` (forma de cubo o capas alineadas). El 3x3 de WCA no se toca. La rotación de cada pieza se deduce del
+  estado (llevando las direcciones de sus pegatinas a las de su hueco); `vista3d.test.mjs` comprueba con todos los
+  giros que la animación acaba exactamente donde dice el modelo.
+- **Entrada del usuario («marcas»)**: identidad de cada pegatina del 3x3 (54) + p marcas por centro con periodo
+  visible p ≥ 2 (+ la forma en el Ghost). Las permutaciones de los giros sobre las marcas salen de la geometría
+  (rotar huecos y direcciones), no se escriben a mano; los tests comprueban la ida y vuelta marcas ↔ piezas. Con
+  las marcas se valida un estado introducido con el puzzle sujetado de cualquier forma (los seis centros son
+  distintos: dicen la rotación) y la solución se traduce a la orientación del usuario.
+- «Colocar piezas» trabaja sobre un **puzzle adaptador** cuyo estado son las marcas (así `colocar.js` sirve tal
+  cual): ganchos genéricos nuevos `colocarPiezas.adaptador / desdeColocar / nombrePieza / miniatura` (la bandeja
+  enseña la forma de cada pieza). Como los centros no se mueven entre sí pero el usuario puede sujetarlo de
+  cualquier forma, los generadores incluyen las rotaciones x, y.
+
+## Geometría: fuentes y supuestos
+- **Mirror Blocks** (Hidetoshi Takeji, 2006): no he encontrado medidas en mm publicadas (Wikipedia y ruwix solo dicen
+  que cada pieza es un prisma rectangular distinto; speedsolving y twistypuzzles no se pudieron leer, 403). Usado:
+  tamaño 57 mm (la referencia de 3dcubesolver.com, «Mirror cube solver») y el **orden de grosores** de esa misma
+  página: de la capa más fina a la más gruesa U, L, F, B, R, D (opuestas suman 7 en el orden), con la capa del
+  medio de 19 mm (57/3, la de un 3x3: el mecanismo no cambia). **Supuesto**: pasos iguales entre grosores →
+  U 9,5 · L 12,67 · F 15,83 · B 22,17 · R 25,33 · D 28,5 mm (cuerpo desplazado (1/3, −1/2, −1/6) capas). Es lo único
+  que habría que medir en un Mirror físico; cambiarlo es una línea del registro.
+- **Ghost Cube** (Adam G. Cowan, 2008; Meffert's): ninguna fuente da medidas ni ángulos oficiales. Lo que sí dicen
+  varias fuentes independientes (ruwix, Eridian Shores, un blog de PSU): es un 3x3 normal con los ejes de giro
+  desplazados e inclinados, **el resuelto es un 3x3 «a mitad de giro»** (las capas de arriba y abajo de un eje
+  están giradas un ángulo cualquiera: para girar cualquier otra cara hay que alinearlas primero) y **la orientación
+  de los centros importa** («más bien un supercubo»). Medidas usadas: las de un modelo ajustado a una foto
+  (onexmac/ad, PR #163, «The Cubes 0.6.45»): eje de apilado (−0,607; 0,484; 0,63) en coordenadas del cubo (cerca de
+  una diagonal larga), giro de 63,3° de los otros dos ejes, centro del mecanismo desplazado (0,034; 0,075; −0,038)
+  semilados, capas de abajo / medio / arriba giradas −27,5° / 0 / 26,7°. **Supuestos**: (1) esos números (ajuste a
+  ojo, no del fabricante); (2) los planos de corte a 1/3 del semilado (proporciones de un 3x3; el modelo citado no
+  lo dice). Con ellos el resultado es coherente con lo publicado: piezas todas irregulares, una esquina es un
+  tetraedro, los centros llegan a 2–3 caras del cubo (Eridian Shores: «square-ish pieces with 2 to 3 colors»).
+- **Notación del Ghost**: la del 3x3 en el marco del mecanismo (U = el eje en el que está «a mitad de giro») y
+  `A` / `A'` = alinear las capas de arriba y abajo / volver a la forma de cubo. Con la forma de cubo solo giran U y
+  D. Las soluciones empiezan con `A` (si está en forma de cubo) y acaban con `A'`; los scrambles al revés.
+  «Colocar piezas» en el Ghost se hace con las capas alineadas.
+
+## Lo demostrado (tests/shapemods.test.mjs)
+- **Centros con orientación visible**: el menor giro de 90°·k que deja la forma del centro igual (comparando
+  poliedros). Mirror: ninguno (sus centros son prismas de base cuadrada de 19 × 19 mm: el corte es igual en los dos
+  ejes, ver arriba; da igual el grosor). Ghost: los seis, con los cuatro giros visibles (ninguna simetría).
+- **Grupo de estados distinguibles** (Schreier–Sims sobre las marcas, `grupo.js`): Mirror 43.252.003.274.489.856.000
+  (= 3x3; lo publicado: Wikipedia, mismo número de posiciones que el cubo de Rubik); Ghost
+  88.580.102.706.155.225.088.000 = 3x3 × 4⁶ / 2 (el del supercubo; para el Ghost no he encontrado cifra publicada).
+  La restricción nueva del Ghost: la suma de los giros de los centros (en cuartos) tiene la paridad de la
+  permutación de las esquinas (cada giro de cara cambia las dos). En el Mirror no hay ninguna nueva.
+- **Estados con la forma de cubo resuelto**: en cada hueco de esquina o arista solo encaja su pieza sin girar
+  (todas distintas; comparando poliedros); en los centros, las orientaciones que no se ven. Distinguibles: 1 en los
+  dos. Del mecanismo: 2.048 en el Mirror (4⁶ orientaciones de centros / 2 por la paridad) y 1 en el Ghost. Por eso
+  `estaResuelto` mira la forma: en el Mirror ignora `ct`, en el Ghost exige además la forma de cubo.
+
+## Solver
+- **Mirror**: Kociemba tal cual (los centros no se ven): ~20 giros.
+- **Ghost**: Kociemba + fase de centros. Primero busqué algoritmos puros de centros por meet-in-the-middle sobre
+  TODAS las secuencias de hasta 5 + 7 giros (621.649 estados de un lado): hay medias vueltas (dos centros en 10
+  giros, uno en 12, los cuatro de un ecuador en 12) pero **ningún giro de 90° puro en ≤ 12 giros**. Así que los
+  cuartos de vuelta los arregla Kociemba: con dos ganchos opcionales nuevos en `resolverKociemba` (`filtroFase1`: la
+  paridad de R, F, L, B se sabe tras la fase 1 porque la fase 2 solo los gira media vuelta; `aceptar`: la de U y D
+  al final) solo se aceptan soluciones que dejan cada centro a medias vueltas, y entre ellas la de menor total con
+  la fase de centros (Dijkstra sobre las 64 combinaciones de medias vueltas con los algoritmos y sus 24 conjugados).
+  Como el algoritmo de centros no mueve otras piezas, se inserta en el punto de la solución que más giros cancela.
+  Presupuesto: 150.000 nodos de la fase 1 (en nodos, no en ms: misma solución en cualquier máquina). Medido
+  (40 casos): 20.000 nodos → 39,9 giros de media; 150.000 → 35,5 (93 ms); 400.000 → 34,6 (177 ms). Sin el filtro
+  de la fase 1, lo mismo costaba ~1,3 s.
+- Lo que no se hizo (y por qué): una búsqueda de dos fases con los centros dentro (supercubo) daría ~25 giros, pero
+  exige otras tablas de poda y tocar el corazón de Kociemba; con los ganchos, `kociemba.js` no cambia para el 3x3.
+- Los ganchos no cambian nada sin ellos: `tests/kociemba-referencia.json` guarda 40 scrambles y soluciones del 3x3
+  de WCA de antes del cambio (semilla 16) y el test comprueba que salen idénticos.
+- Scramble de estado aleatorio: piezas al azar (con las paridades del 3x3) + centros visibles al azar respetando la
+  restricción → solución (presupuesto en nodos) → inversa; comprobado exacto en 200 casos por puzzle.
+
+## Vista 3D y 2D
+- Cada cara de cada pieza es una «pegatina» del modelo 3D (la escena dibuja el cuerpo negro y la cara encogida: así
+  los bordes de las piezas son líneas oscuras). Material `metal` (nuevo, opcional, solo lo usan los shape mods): luz
+  principal más fuerte, luz de relleno desde abajo a la izquierda y brillo especular, para que las caras de un mismo
+  color se distingan también a mitad de un giro. Plateado por defecto en los dos (los originales: Rubik's Mirror
+  Blocks plateado; el Ghost de Meffert's, plateado). Los huecos vacíos de «Colocar piezas», azul oscuro.
+- Las caras de corte de dos piezas vecinas coinciden: el «centro» de cada cara se mete un 0,1 % del radio hacia
+  dentro de su pieza para que la comparación de posiciones de los tests no las confunda.
+- **2D**: proyección del modelo 3D desde delante-arriba-derecha y desde detrás-abajo-izquierda (algoritmo del
+  pintor), con las mismas sombras. Una red desplegada no tiene sentido (las piezas sobresalen al mezclar), pero un
+  dibujo sí: sirve sin WebGL y para «Colocar piezas» en 2D.
+- Pintar está desactivado (`avisoPintar`, como en los vendados 4x4/5x5): de un solo color no hay nada que pintar.

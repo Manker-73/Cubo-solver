@@ -1479,6 +1479,14 @@ function iniciar() {
     resaltarPiezas: (cual, piezas, modo) => { const v = st.v3d[cual]; if (v) v.resaltarPiezas(piezas, modo); },
     estado: () => ({ msScramble: st.scramble ? msGeneracion.get(st.scramble) ?? null : null, seccion: st.seccion, tema: tema.actual(), puzzle: st.p && st.p.id, bloqueos: st.p && st.p.bloqueos ? st.p.bloqueos.length : 0, paso: st.paso, pasoScramble: st.pasoScramble, modo: { ...st.modo }, webgl: st.webgl }),
     editor: () => st.p.clonar(estadoMostrado()),
+    // estado del editor tal como lo da «Colocar piezas» (shape mods: marcas, con el Ghost alineado; noche 16)
+    estadoColocar: () => {
+      const p = st.p, e = p.clonar(estadoMostrado());
+      if (!p.shapeMod) return e;
+      const m = p.shapeMod.aMarcas(e);
+      if (p.shapeMod.posForma >= 0) m[p.shapeMod.posForma] = -1;
+      return m;
+    },
     resuelto: () => st.p.estaResuelto(estadoMostrado()),
     // (para las comprobaciones en Chromium: muestra un scramble concreto como si lo hubiera generado
     // la app; sesión «validador con muchas geometrías», el scramble del fallo)
