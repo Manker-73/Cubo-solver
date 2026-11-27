@@ -1,0 +1,100 @@
+{
+  "mirrorGrosoresMm": {
+    "U": 9.5,
+    "R": 25.33,
+    "F": 15.83,
+    "D": 28.5,
+    "L": 12.67,
+    "B": 22.17
+  },
+  "mirrorMedidasMm": [
+    "URF 25.33×9.5×15.83",
+    "UFL 12.67×9.5×15.83",
+    "ULB 12.67×9.5×22.17",
+    "UBR 25.33×9.5×22.17",
+    "DFR 25.33×28.5×15.83",
+    "DLF 12.67×28.5×15.83",
+    "DBL 12.67×28.5×22.17",
+    "DRB 25.33×28.5×22.17",
+    "UR 25.33×9.5×19",
+    "UF 19×9.5×15.83",
+    "UL 12.67×9.5×19",
+    "UB 19×9.5×22.17",
+    "DR 25.33×28.5×19",
+    "DF 19×28.5×15.83",
+    "DL 12.67×28.5×19",
+    "DB 19×28.5×22.17",
+    "FR 25.33×19×15.83",
+    "FL 12.67×19×15.83",
+    "BL 12.67×19×22.17",
+    "BR 25.33×19×22.17",
+    "U 19×9.5×19",
+    "R 25.33×19×19",
+    "F 19×19×15.83",
+    "D 19×28.5×19",
+    "L 12.67×19×19",
+    "B 19×19×22.17"
+  ],
+  "casos": 1000,
+  "fecha": "2026-11-27T16:37:35.951Z",
+  "mirror": {
+    "periodosCentros": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "ordenGrupo": "43252003274489856000",
+    "restriccionCentros": false
+  },
+  "ghost": {
+    "periodosCentros": [
+      4,
+      4,
+      4,
+      4,
+      4,
+      4
+    ],
+    "ordenGrupo": "88580102706155225088000",
+    "restriccionCentros": true
+  },
+  "mirrorFormaDeCubo": {
+    "distinguibles": 1,
+    "delMecanismo": 2048
+  },
+  "ghostFormaDeCubo": {
+    "distinguibles": 1,
+    "delMecanismo": 1
+  },
+  "mirrorSolver": {
+    "scrambles": 1000,
+    "longitudMedia": 20.75,
+    "longitudMin": 18,
+    "longitudMax": 22,
+    "msPorScramble": 18.87,
+    "resueltos": "1000/1000 (100.0%)",
+    "longitudMediaSolucion": 19.85,
+    "longitudMaxSolucion": 21,
+    "msMedioSolucion": 113.39,
+    "msMaxSolucion": 1001.2,
+    "msInicializacion": 733,
+    "scramblesExactos": 200
+  },
+  "ghostSolver": {
+    "scrambles": 1000,
+    "longitudMedia": 35.78,
+    "longitudMin": 24,
+    "longitudMax": 56,
+    "msPorScramble": 81.03,
+    "resueltos": "1000/1000 (100.0%)",
+    "longitudMediaSolucion": 36.08,
+    "longitudMaxSolucion": 56,
+    "msMedioSolucion": 82.74,
+    "msMaxSolucion": 343.1,
+    "msInicializacion": 733,
+    "scramblesExactos": 200
+  }
+}

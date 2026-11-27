@@ -1,6 +1,47 @@
-# Estado del proyecto (noche 15 — 27/11/2026)
+# Estado del proyecto (noche 16 — 27/11/2026)
 
-> Noche 16 (Shape Mods: Mirror Blocks y Ghost Cube): en curso.
+> Progreso de la noche 16 (Shape Mods): modelo genérico `crearShapeMod({ id, nombre, cortes })` (estado por piezas de kociemba.js + centros que se ven; la forma de cada pieza se calcula una vez) ✔ · geometría del Mirror Blocks (orden de grosores publicado, 57 mm) y del Ghost Cube (ajuste publicado a una foto; supuestos documentados) ✔ · centros con orientación visible deducidos de la simetría de su forma ✔ · grupo demostrado (Schreier–Sims) y estados con la forma de cubo ✔ · «resuelto» = se ve como el cubo resuelto ✔ · validador con un rechazo por restricción ✔ · «Colocar piezas» con la forma de cada pieza en la bandeja ✔ · pintar desactivado con mensaje ✔ · solver Kociemba + fase de centros (ganchos opcionales en kociemba.js; el 3x3 de WCA da exactamente las mismas soluciones) ✔ · scramble de estado aleatorio exacto ✔ · vista 3D con material metálico y 2D en proyección ✔ · sección Shape Mods disponible con `#/shapemods` y `#/shapemods/<id>`, «más pronto» Fisher / Windmill / Axis ✔ · 1000/1000 resueltos en los dos ✔ · Chromium real (8 combinaciones) sin errores ✔ · modo aprender de un shape mod ✘ (no se pidió).
+
+## Noche 16: Shape Mods (Mirror Blocks y Ghost Cube)
+
+Cómo se usa: README.md («Shape Mods»). Fuentes, supuestos, demostraciones y lo que no funcionó: DECISIONES.md («Noche 16»). Cómo está hecho: ARQUITECTURA.md («Shape mods»).
+
+### Qué hay
+- `src/puzzles/shapemod.js`, `shapemod-geo.js`, `shapemod-centros.js`; dos definiciones en el registro (categoría `shapemods`) y Fisher, Windmill y Axis anunciados en `PUZZLES_PRONTO`.
+- Genérico: ganchos opcionales `aceptar` y `filtroFase1` en `resolverKociemba`; `colocarPiezas.{adaptador, desdeColocar, nombrePieza, miniatura}`; `Geometria3D.material = 'metal'` (shader); `avisoPintar` en los tipos.
+- Tests: `tests/shapemods.test.mjs` (+ `tests/kociemba-referencia.json`), shape mods en `colocar`, `vista3d`, `registro`, `humo` (huellas nuevas + sabotaje comprobado: invertir R en el Mirror lo detecta), `diseno` y el test de la app «Shape Mods». Chromium: `scripts/comprobar-shapemods.py` y `PUZZLES=shapemods` en `comprobar-colocar.py`.
+
+### Grupo, centros y forma de cubo (demostrado en los tests)
+| | Centros con orientación visible | Restricción nueva | Estados distinguibles | Publicado | Con la forma de cubo resuelto |
+|---|---|---|---|---|---|
+| Mirror Blocks | ninguno (prismas de base cuadrada 19 × 19 mm) | ninguna | **43.252.003.274.489.856.000** | = 3x3 (Wikipedia) | 1 distinguible (2.048 del mecanismo: orientaciones de centros que no se ven) |
+| Ghost Cube | los seis, con sus 4 giros (sin simetría) | Σ giros de centros ≡ paridad de las esquinas (mod 2) | **88.580.102.706.155.225.088.000** (= 3x3 × 4⁶ / 2) | no encontrado (es el del supercubo) | 1 |
+
+### Resultados (`CASOS=1000 tests/shapemods.test.mjs`: 12/12 ✔; Node, un hilo)
+| | Scramble (giros: media, mín–máx) | Solución (media / máx) | Tiempo de solución (medio / máx) | Tablas | Scramble exacto |
+|---|---|---|---|---|---|
+| Mirror Blocks | 20,75 (18–22) | 19,85 / 21 | 113 ms / 1,0 s (límite de Kociemba, como el 3x3) | 0,73 s (las de Kociemba) | 200/200 |
+| Ghost Cube | 35,78 (24–56) | 36,08 / 56 | 83 ms / 343 ms | 0,73 s + < 5 ms (tabla de centros) | 200/200 |
+
+(El solver se prueba con el puzzle sujetado con una de las 24 rotaciones al azar; cada solución se aplica giro a giro.) Ninguna tabla nueva grande: el HTML pasa de 906 a 960 KB (+53 KB).
+- **Colocar piezas** (ida y vuelta con el puzzle girado al azar, 25 casos): Mirror 60,7 toques de media, Ghost 70,9. En la app (jsdom): 65 / 75. En Chromium: 57–64 / 66–77.
+- **Chromium real** (`npm run build`; Chrome instalado, WebGL por software):
+  - `python scripts/comprobar-shapemods.py`: 8/8 combinaciones (escritorio 1280 / móvil 390 táctil × oscuro / claro × 3D / 2D): portada → tarjeta Shape Mods → cada uno → Nuevo scramble → Cargar → (2D: tocar el puzzle dice por qué no se pinta) → Resolver (0,15–0,7 s desde el clic) → un paso animado → ⇥ → «Resuelto» → «Colocar piezas» con 26 miniaturas → Cancelar; 0 errores de consola, sin scroll horizontal.
+  - `PUZZLES=shapemods python scripts/comprobar-colocar.py`: 8/8 (las 4 combinaciones de cada uno), 0 errores. En el Ghost, móvil 2D, 1 de ~30 toques reales cayó en el hueco de al lado (caras diminutas o una pieza todavía mal puesta que sobresale) y el script lo repitió con la función de la interfaz.
+  - **Capturas revisadas** (docs/capturas/shapemods-*): resuelto, el Mirror es un cubo plateado con las costuras desplazadas (capa de arriba fina, de abajo gruesa) y el Ghost un cubo con costuras irregulares en todas sus caras, como el real; a mitad de un giro, las caras de la capa que gira se separan bien del resto por las líneas oscuras y la luz distinta de cada cara (también la alineación `A` del Ghost); mezclado, el Mirror es la figura escalonada típica y en 2D se ven las dos vistas con sombras; la bandeja de «Colocar piezas» enseña cada pieza con su forma, y los huecos vacíos se ven azul oscuro.
+- **Tests**: `npm run tipos` ✔. `test:humo` 54/55 en la primera pasada (el fallo: el test de rutas de `diseno` esperaba Shape Mods bloqueada; arreglado) y luego ✔. `test:solo 3d colocar registro`: 76/76 + 2/2 ✔. Test de la app «Shape Mods» ✔; «navegación entre secciones» ✔. 3x3 de WCA: 40/40 scrambles y soluciones idénticos a los de antes de los ganchos.
+
+### Qué comprobar con tus puzzles físicos
+- **Mirror Blocks — grosores**: he supuesto pasos iguales (U 9,5 · L 12,7 · F 15,8 · B 22,2 · R 25,3 · D 28,5 mm, en un cubo de 57 mm). Mide los seis centros de tu Mirror: si no se parecen, dímelo (es una línea del registro). Lo importante para que la app te sirva es el ORDEN: sujétalo con la capa más fina arriba, la más gruesa abajo, la segunda más fina a la izquierda y la tercera delante.
+- **Ghost Cube**: (1) que el resuelto es «a mitad de giro» (para girar R, F… primero hay que girar las capas de arriba y abajo); (2) el aspecto: compara la captura del resuelto con tu cubo — eje inclinado, desplazamiento y ángulos (−27,5° / 26,7°) vienen de un ajuste a una foto, y he supuesto los cortes a 1/3; (3) que los seis centros se ven girados (y si alguno no, dímelo: la app lo deduce de la forma).
+- En los dos: que `U` es horario mirando la capa de arriba, como en el 3x3.
+
+### Pendiente / limitaciones
+- Ghost Cube: medidas exactas (no publicadas); solución de ~36 giros (una búsqueda de dos fases con los centros dentro bajaría a ~25; ver DECISIONES.md).
+- «Colocar piezas» del Ghost se hace con las capas alineadas (no con la forma de cubo).
+- En móvil, en 2D, las caras muy pequeñas del Ghost cuestan de tocar; en 3D no.
+- Modo aprender de los shape mods: no hecho.
+
 
 > Progreso de la noche 15 (Cuboids): modelo genérico `crearCuboide(a, b, c)` (geometría, giros legales con 90° solo en capas de sección cuadrada, rotaciones que conservan la forma, piezas y órbitas deducidas) ✔ · notación de csTimer (alias de Jaap) ✔ · colores del cubo con las caras cuadradas arriba y abajo ✔ · grupo y posiciones demostrados (Schreier–Sims) = cifras de Jaap en los tres ✔ · número de Dios por BFS completo: 8, 18 y 14, con la distribución publicada exacta ✔ · validador con orientación libre y un rechazo por restricción ✔ · pintar y «Colocar piezas» en 2D/3D ✔ · solver óptimo (tabla exacta / IDA* con bases de patrones) 1000/1000 óptimas en los tres ✔ · scramble de estado aleatorio exacto y uniforme ✔ · vista 3D animada (`vista3d.test.mjs`) ✔ · sección Cuboids disponible con `#/cuboids` y `#/cuboids/<id>`, tarjeta con «más pronto» y anunciados 2x2x4/3x3x4/3x3x5 ✔ · prueba de humo de la app ✔ · Chromium real (escritorio/móvil, oscuro/claro, 2D/3D) sin errores ✔ · fallo previo del reproductor (⇥ durante una animación) arreglado ✔ · `comprobar-colocar.py` probaba siempre el tema oscuro: arreglado ✔ · modo aprender de un cuboide ✘ (no dio tiempo).
 
