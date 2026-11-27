@@ -458,6 +458,7 @@ html.colocando, html.colocando body { overflow: hidden; }
 .pieza-boton.puesta { opacity: 0.7; }
 .pieza-boton small { color: var(--tenue); font-family: var(--f-mono); }
 .muestra-pieza { display: inline-flex; gap: 2px; }
+.muestra-pieza.forma svg { width: 40px; height: 40px; display: block; }
 .muestra-pieza i { width: 16px; height: 16px; border-radius: 3px; border: 1px solid rgba(0, 0, 0, 0.45); display: inline-block; }
 .colocar-pie {
   display: flex; gap: 8px; padding: 8px 16px calc(8px + env(safe-area-inset-bottom, 0px));

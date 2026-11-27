@@ -14,7 +14,7 @@ import { pegatinasDePiezas } from '../core/modelo3d.js';
 const VS = `
 attribute vec3 a_pos; attribute vec3 a_nor; attribute vec3 a_col; attribute float a_parte; attribute float a_res;
 uniform mat4 u_proy; uniform mat3 u_vista; uniform mat3 u_rot1; uniform mat3 u_rot2;
-uniform float u_hayRes; uniform float u_modo;
+uniform float u_hayRes; uniform float u_modo; uniform float u_metal;
 varying vec3 v_col; varying float v_alfa;
 void main() {
   vec3 p = a_pos; vec3 n = a_nor;
@@ -22,8 +22,17 @@ void main() {
   else if (a_parte > 1.5) { p = u_rot2 * p; n = u_rot2 * n; }
   vec3 pv = u_vista * p; vec3 nv = normalize(u_vista * n);
   gl_Position = u_proy * vec4(pv, 1.0);
-  float luz = 0.70 + 0.26 * max(dot(nv, normalize(vec3(0.3, 0.75, 0.6))), 0.0) + 0.08 * max(nv.z, 0.0);
+  vec3 L = normalize(vec3(0.3, 0.75, 0.6));
+  float luz = 0.70 + 0.26 * max(dot(nv, L), 0.0) + 0.08 * max(nv.z, 0.0);
   vec3 c = a_col * luz;
+  if (u_metal > 0.5) {
+    // shape mods (noche 16): un solo color; la forma se ve por el contraste entre caras (luz principal,
+    // luz de relleno desde abajo a la izquierda y un brillo especular), no por los colores
+    float dif2 = max(dot(nv, normalize(vec3(-0.7, -0.35, 0.45))), 0.0);
+    luz = 0.26 + 0.66 * max(dot(nv, L), 0.0) + 0.2 * dif2 + 0.1 * max(nv.z, 0.0);
+    float esp = pow(max(dot(nv, normalize(L + vec3(0.0, 0.0, 1.0))), 0.0), 24.0) * step(0.2, a_col.g);
+    c = min(a_col * luz + vec3(0.5 * esp), vec3(1.0));
+  }
   v_alfa = 1.0;
   if (u_hayRes > 0.5) {
     if (a_res < 0.5) {
@@ -98,7 +107,7 @@ export function crearVista3D(contenedor, { paleta, alTocar, documento } = {}) {
 
   const loc = {};
   for (const a of ['a_pos', 'a_nor', 'a_col', 'a_parte', 'a_res']) loc[a] = gl.getAttribLocation(prog, a);
-  for (const u of ['u_proy', 'u_vista', 'u_rot1', 'u_rot2', 'u_hayRes', 'u_modo', 'u_pasada']) loc[u] = gl.getUniformLocation(prog, u);
+  for (const u of ['u_proy', 'u_vista', 'u_rot1', 'u_rot2', 'u_hayRes', 'u_modo', 'u_pasada', 'u_metal']) loc[u] = gl.getUniformLocation(prog, u);
   const bufs = {};
   for (const k of ['pos', 'nor', 'col', 'parte', 'res']) bufs[k] = gl.createBuffer();
   let nVert = 0, versionSubida = -1;
@@ -165,6 +174,7 @@ export function crearVista3D(contenedor, { paleta, alTocar, documento } = {}) {
     gl.uniformMatrix3fv(loc.u_rot2, false, gl3(rots[1] ? rot3(rots[1].eje, rots[1].angulo) : I));
     const res = escena.resaltado;
     gl.uniform1f(loc.u_hayRes, res ? 1 : 0);
+    gl.uniform1f(loc.u_metal, escena.geometria.material === 'metal' ? 1 : 0);
     gl.uniform1f(loc.u_modo, res && res.modo === 'transparencia' ? 1 : 0);
     gl.disable(gl.BLEND); gl.depthMask(true);
     gl.uniform1f(loc.u_pasada, 0);

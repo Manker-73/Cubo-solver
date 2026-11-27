@@ -152,6 +152,24 @@ for (const id of ['3x3x1', '3x3x2', '2x2x3']) {
   });
 }
 
+// Shape Mods (noche 16): se colocan piezas sobre el adaptador (estado = marcas); estados al azar (también los
+// centros que se ven) y sujetados de cualquier forma (una de las 24 rotaciones). Ghost Cube: con las capas alineadas.
+for (const id of ['mirror', 'ghost']) {
+  test(`colocar: ida y vuelta, Shape Mods ${id} (también sujetado de cualquier forma)`, { timeout: 600000 }, () => {
+    const p = wca(id);
+    const ad = p.colocarPiezas.adaptador;
+    const estados = (rng) => {
+      const e = p.shapeMod.estadoAleatorio(rng);
+      if ('cubo' in e) e.cubo = false;
+      const m = p.shapeMod.aMarcas(e);
+      if (p.shapeMod.posForma >= 0) m[p.shapeMod.posForma] = -1; // la forma no se coloca
+      return p.shapeMod.permutar(m, p.shapeMod.permRotacion(Math.floor(rng() * 24)));
+    };
+    const r = idaYVuelta(`Shape Mods ${id}`, ad, ad, estados, N_CASOS);
+    assert.ok(r.toquesMedia > 0);
+  });
+}
+
 const VENDADOS = [
   { nombre: 'vendado 3x3 pareja', crear: () => [puzzleConBloqueos(cubo3, EJEMPLOS_BLOQUEOS.find((x) => x.id === 'pareja').bloques), cubo3], n: N_CASOS },
   { nombre: 'vendado 3x3 varios', crear: () => [puzzleConBloqueos(cubo3, EJEMPLOS_BLOQUEOS.find((x) => x.id === 'varios').bloques), cubo3], n: N_CASOS },
@@ -177,16 +195,22 @@ test('colocar: modelo de cada puzzle (tipos, piezas fijas colocadas solas, Squar
     megaminx: { piezas: 62, solas: 12 }, fto: { piezas: 42, solas: 0 },
     // cuboides (noche 15): con las rotaciones como generadores (orientación libre) nada queda solo
     '3x3x1': { piezas: 9, solas: 0 }, '3x3x2': { piezas: 18, solas: 0 }, '2x2x3': { piezas: 12, solas: 0 },
+    // shape mods (noche 16): sobre su adaptador de marcas, con las rotaciones x, y entre los generadores
+    mirror: { piezas: 26, solas: 0 }, ghost: { piezas: 26, solas: 0 },
   };
-  for (const p of PUZZLES) {
+  for (let p of PUZZLES) {
     if (!esperado[p.id]) { assert.equal(p.colocarPiezas, undefined, `${p.id} no debería ofrecer colocar piezas`); continue; }
+    const id = p.id;
+    p = p.colocarPiezas.adaptador || p;
     const M = crearModeloColocar(p);
     const S = crearSesionColocar(M);
-    assert.equal(M.piezas.length, esperado[p.id].piezas, p.id);
-    assert.equal(S.autoRellenar().length, esperado[p.id].solas, `${p.id}: piezas fijas`);
+    assert.equal(M.piezas.length, esperado[id].piezas, id);
+    assert.equal(S.autoRellenar().length, esperado[id].solas, `${id}: piezas fijas`);
     // toda pegatina es de un hueco y todo hueco tiene al menos su propia pieza
-    assert.ok([...M.huecoDePegatina].every((h) => h >= 0), p.id);
-    M.piezas.forEach((pz, k) => assert.ok(M.opciones(k, k).length >= 1, `${p.id}: la pieza ${k} no cabe en su casa`));
+    // (salvo, en el Ghost Cube, la posición de la forma —capas alineadas o en forma de cubo—, que no es una pieza)
+    const forma = wca(id).shapeMod ? wca(id).shapeMod.posForma : -1;
+    assert.ok([...M.huecoDePegatina].every((h, i) => h >= 0 || i === forma), id);
+    M.piezas.forEach((pz, k) => assert.ok(M.opciones(k, k).length >= 1, `${id}: la pieza ${k} no cabe en su casa`));
     // la sesión vacía da un estado vacío y la llena (con la casa de cada pieza) el resuelto
     const S2 = crearSesionColocar(M);
     for (let h = 0; h < M.piezas.length; h++) if (!S2.colocada(h)) {
@@ -199,7 +223,7 @@ test('colocar: modelo de cada puzzle (tipos, piezas fijas colocadas solas, Squar
         S2.girar(h);
       }
     }
-    assert.ok(S2.completo(), p.id);
+    assert.ok(S2.completo(), id);
     assert.ok(p.estaResuelto(S2.estado()), `${p.id}: colocar cada pieza en su casa no da el resuelto`);
   }
 });

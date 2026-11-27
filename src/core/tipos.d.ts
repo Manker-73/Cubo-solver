@@ -210,6 +210,8 @@ export interface Geometria3D {
   camara: Camara3D;
   cortes?: Corte[];
   etiquetas?: Etiqueta3D[] | null;
+  /** (noche 16) 'metal': puzzle de un solo color (shape mods): luz con más contraste entre caras y brillo. */
+  material?: 'metal';
 }
 
 /** Lo que devuelve `vista3D`: la geometría (mismo objeto mientras no cambie la forma) y los colores. */
@@ -375,6 +377,8 @@ export interface DefinicionPuzzle<E> {
   soporteBloqueos?: SoporteBloqueos<E>;
   /** (Noche 14) Introducir el estado colocando piezas (src/core/colocar.js). */
   colocarPiezas?: ColocarPiezas;
+  /** Si pintar no tiene sentido (4x4/5x5 vendados, shape mods de un solo color): por qué (la interfaz lo dice al tocar). */
+  avisoPintar?: string;
   solucionSinBloqueos?(estado: E): { movimientos: Movimiento[]; optima: boolean } | null;
   ejemplosBloqueos?: EjemploBloqueos[];
 }
@@ -408,6 +412,16 @@ export interface ColocarPiezas {
   generadores: Movimiento[];
   /** Nombre (plural, singular) del tipo de una pieza por sus pegatinas en el resuelto; null = el genérico. */
   nombreTipo?(pegatinas: number[]): [string, string] | null;
+  /** (noche 16) Nombre de una pieza por sus pegatinas en el resuelto (si no, «tipo + colores»). */
+  nombrePieza?(pegatinas: number[]): string;
+  /** (noche 16) Miniatura SVG de una pieza (bandeja) por sus valores en el resuelto, en lugar de sus colores. */
+  miniatura?(valores: number[]): string;
+  /**
+   * (noche 16, shape mods) Puzzle sobre el que se colocan las piezas (estado = array de marcas), si el del
+   * puzzle no es un array de pegatinas; `desdeColocar` convierte su estado al del puzzle.
+   */
+  adaptador?: Puzzle<EstadoPegatinas>;
+  desdeColocar?(estado: EstadoPegatinas): unknown;
 }
 
 export interface PiezaColocar {
@@ -515,7 +529,7 @@ export interface SesionColocar {
 // ---------------------------------------------------------------------------
 
 /** Sección de la app en la que aparece un puzzle del registro. */
-export type Categoria = 'wca' | 'cuboids';
+export type Categoria = 'wca' | 'cuboids' | 'shapemods';
 
 export type PuzzleRegistrado = Puzzle<unknown> & { categoria: Categoria };
 

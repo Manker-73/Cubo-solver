@@ -32,6 +32,7 @@ import { crearVista3D } from './vista3d.js';
 
 /** ¿Se pueden colocar piezas en este puzzle? @param {Puzzle<unknown> | null | undefined} p */
 export function puedeColocar(p) {
+  if (p && p.colocarPiezas && p.colocarPiezas.adaptador) return puedeColocar(p.colocarPiezas.adaptador);
   return !!(p && p.colocarPiezas && p.vista3D && Array.isArray(p.estadoResuelto()));
 }
 
@@ -49,6 +50,8 @@ export function abrirColocar(doc, op) {
   const S = crearSesionColocar(M);
   const p = op.puzzle;
   const paleta = p.paleta;
+  const cpz = op.base.colocarPiezas;
+  const miniatura = cpz && cpz.miniatura ? cpz.miniatura.bind(cpz) : null;
   /** @type {'2d' | '3d'} */
   let modo = op.modo === '3d' && op.webgl ? '3d' : '2d';
   /** @type {Seleccion} */
@@ -290,7 +293,10 @@ export function abrirColocar(doc, op) {
     }
   }
   /** Muestra de colores de una pieza o grupo. @param {number[]} colores */
-  const muestra = (colores) => `<span class="muestra-pieza" aria-hidden="true">${colores.map((c) => `<i style="background:${paleta[c] ? paleta[c].hex : '#888'}"></i>`).join('')}</span>`;
+  const muestra = (colores) => (miniatura
+    // shape mods (noche 16): la forma de la pieza en lugar de sus colores
+    ? `<span class="muestra-pieza forma" aria-hidden="true">${miniatura(colores)}</span>`
+    : `<span class="muestra-pieza" aria-hidden="true">${colores.map((c) => `<i style="background:${paleta[c] ? paleta[c].hex : '#888'}"></i>`).join('')}</span>`);
 
   function pintarContexto() {
     const cont = $('colocar-contexto');

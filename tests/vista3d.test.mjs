@@ -25,6 +25,7 @@ function movimientosDe(p) {
   }
   if (p.geo) return Object.keys(p.geo.giros3D);
   if (p.cuboide) return Object.keys(p.cuboide.G.movimientos); // cuboides (noche 15): capas y rotaciones
+  if (p.shapeMod) return null; // shape mods (noche 16): dependen del estado (Ghost Cube: forma de cubo o alineado)
   return null; // Square-1: dependen del estado
 }
 
@@ -58,7 +59,8 @@ for (const p of PUZZLES) {
         }
       } else {
         for (let i = 0; i < 60; i++) {
-          const m = movSquare1(p, e, rng);
+          const legales = p.shapeMod ? p.shapeMod.movimientosLegales(e) : null;
+          const m = legales ? legales[entero(rng, legales.length)] : movSquare1(p, e, rng);
           const r = comprobarGiro3D(p, e, m);
           assert.equal(r, null, `${p.id}: ${m}: ${r}`);
           e = p.aplicarMovimiento(e, m);
@@ -260,7 +262,7 @@ test('3D: orientación de referencia del estado resuelto (colores por dirección
 });
 
 test('3D: piezas para resaltar (número de piezas y pegatinas de una pieza)', () => {
-  const esperado = { '2x2': 8, '3x3': 26, '4x4': 56, '5x5': 98, '6x6': 152, '7x7': 218, pyraminx: 14, skewb: 14, megaminx: 62, square1: 18, fto: 42, '3x3x1': 9, '3x3x2': 18, '2x2x3': 12 };
+  const esperado = { '2x2': 8, '3x3': 26, '4x4': 56, '5x5': 98, '6x6': 152, '7x7': 218, pyraminx: 14, skewb: 14, megaminx: 62, square1: 18, fto: 42, '3x3x1': 9, '3x3x2': 18, '2x2x3': 12, mirror: 26, ghost: 26 };
   for (const p of PUZZLES) {
     const v = p.vista3D(p.estadoResuelto());
     const piezas = new Set(v.geometria.pegatinas.map((q) => q.pieza));

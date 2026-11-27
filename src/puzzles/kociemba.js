@@ -188,6 +188,11 @@ export function inversaCubo(c) {
  *   cubos vendados: esLegal dice si el giro m se puede hacer en la profundidad k
  *   (el estado de esa profundidad lo lleva quien llama) y alAvanzar avisa de que
  *   se baja a la profundidad k + 1 con el giro m.
+ *   aceptar(movs) (opcional, noche 16: shape mods): recibe cada solución completa (índices de
+ *   NOMBRES_MOV, ya traducida) y, si devuelve false, se descarta y la búsqueda sigue.
+ *   filtroFase1(cam, n1) (opcional, noche 16): igual, con la fase 1 (cam[0..n1), índices sin traducir) antes de
+ *   buscar su fase 2 (lo que solo dependa de la fase 1 se descarta sin gastar la fase 2). Sin ellos, todo
+ *   igual que antes (el 3x3 de WCA da las mismas soluciones: tests/kociemba-referencia.json).
  */
 export function resolverKociemba(entrada, opciones = {}) {
   inicializarKociemba();
@@ -208,6 +213,8 @@ export function resolverKociemba(entrada, opciones = {}) {
   const cam = new Array(64);
   const esLegal = opciones.esLegal || null;
   const alAvanzar = opciones.alAvanzar || null;
+  const aceptar = opciones.aceptar || null;
+  const filtroFase1 = opciones.filtroFase1 || null;
   let abortar = false; // con esLegal: límite de tiempo estricto (puede no haber solución)
   // cara del giro anterior a la búsqueda (para no repetirla ni romper el orden de las opuestas)
   const ultimaInicial = opciones.ultimaInicial ?? -1;
@@ -248,6 +255,8 @@ export function resolverKociemba(entrada, opciones = {}) {
   }
 
   function alFinalFase1(n1) {
+    // (opcional, noche 16) descartar la fase 1 antes de buscar su fase 2 (cam = índices sin traducir)
+    if (filtroFase1 && !filtroFase1(cam, n1)) return false;
     // Calcula las coordenadas de fase 2 aplicando la fase 1 al cubo
     let c = actual.cubo;
     for (let i = 0; i < n1; i++) c = multiplicar(c, MOV_CUBO[cam[i]]);
@@ -256,7 +265,10 @@ export function resolverKociemba(entrada, opciones = {}) {
     const n2 = fase2(cp, ud, sp, maxLong - n1, n1, ultima);
     if (abortar) return true;
     if (n2 >= 0) {
-      mejor = traducir(cam.slice(0, n1 + n2), actual);
+      const sol = traducir(cam.slice(0, n1 + n2), actual);
+      // (opcional, noche 16) quien llama puede descartar soluciones: la búsqueda sigue como si no la hubiera
+      if (aceptar && !aceptar(sol)) return false;
+      mejor = sol;
       maxLong = n1 + n2 - 1;
       if (mejor.length <= objetivo) return true; // suficiente
     }

@@ -43,7 +43,12 @@ test('humo: huellas de los giros (un giro invertido o cambiado cambia la huella)
     const secuencia = (!ACTUALIZAR && guardadas[p.id] && guardadas[p.id].secuencia) || p.generarScramble(rngConSemilla(1));
     const basicos = !ACTUALIZAR && guardadas[p.id] ? Object.keys(guardadas[p.id].giros)
       : [...new Set([1, 2, 3, 4, 5].flatMap((k) => p.generarScramble(rngConSemilla(k))))].sort();
-    const giros = Object.fromEntries(basicos.map((m) => [m, huella(p.aplicarMovimiento(p.estadoResuelto(), m))]));
+    // (Ghost Cube, noche 16: desde la forma de cubo solo giran U, D y «A»; los demás, con las capas alineadas)
+    const inicio = (m) => {
+      const r = p.estadoResuelto();
+      return p.shapeMod && !p.shapeMod.movimientosLegales(r).includes(m) ? p.aplicarMovimiento(r, 'A') : r;
+    };
+    const giros = Object.fromEntries(basicos.map((m) => [m, huella(p.aplicarMovimiento(inicio(m), m))]));
     nuevas[p.id] = { secuencia, total: huella(p.aplicarSecuencia(p.estadoResuelto(), secuencia)), giros };
     if (ACTUALIZAR) continue;
     const g = guardadas[p.id];
@@ -58,7 +63,14 @@ for (const p of enHumo ? PUZZLES : []) {
   test(`humo: ${p.nombre}: scrambles, validador y solver`, () => {
     const s = probarScrambles(p, 1, 2);
     assert.equal(s.scrambles, 2);
-    if (p.capacidades.validar) {
+    if (p.capacidades.validar && p.shapeMod) {
+      // shape mods (noche 16): de un solo color, no se pinta; una esquina girada en su sitio no vale
+      const e = p.aplicarSecuencia(p.estadoResuelto(), p.generarScramble(rngConSemilla(3)));
+      assert.ok(p.validar(e).valido);
+      const g = p.clonar(e);
+      g.co[0] = (g.co[0] + 1) % 3;
+      assert.equal(p.validar(g).valido, false, `${p.nombre}: el validador acepta una esquina girada`);
+    } else if (p.capacidades.validar) {
       // una pegatina pintada de otro color: los colores ya no cuadran
       const e = p.aplicarSecuencia(p.estadoResuelto(), p.generarScramble(rngConSemilla(3)));
       assert.ok(p.validar(e).valido);

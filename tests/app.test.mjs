@@ -1176,13 +1176,15 @@ test('app: navegación entre secciones (portada, WCA Puzzles con #/wca/<id>, Ban
   assert.equal(w.cuboSolver.estado().seccion, 'portada');
   assert.match(doc.querySelector('.heroe h1').textContent, /Mezcla\. Comprueba\. Resuelve\. Aprende\./);
   const tarjetas = [...doc.querySelectorAll('#secciones-disponibles a.tarjeta-seccion')];
-  assert.deepEqual(tarjetas.map((a) => a.getAttribute('href')), ['#/wca', '#/bandaged', '#/cuboids']);
-  assert.deepEqual(tarjetas.map((a) => a.querySelector('.nombre').textContent), ['WCA Puzzles', 'Bandaged Cubes', 'Cuboids']);
+  assert.deepEqual(tarjetas.map((a) => a.getAttribute('href')), ['#/wca', '#/bandaged', '#/shapemods', '#/cuboids']);
+  assert.deepEqual(tarjetas.map((a) => a.querySelector('.nombre').textContent), ['WCA Puzzles', 'Bandaged Cubes', 'Shape Mods', 'Cuboids']);
   // Cuboids (noche 15): los tres disponibles y «más pronto» para los siguientes
-  assert.match(tarjetas[2].textContent, /3x3x1.*3x3x2.*2x2x3.*más pronto/);
+  assert.match(tarjetas[3].textContent, /3x3x1.*3x3x2.*2x2x3.*más pronto/);
+  // Shape Mods (noche 16): los dos disponibles y «más pronto»
+  assert.match(tarjetas[2].textContent, /Mirror.*Ghost.*más pronto/);
   // Bloqueadas: ni enlaces ni botones ni enfocables; con candado y "Próximamente"
   const bloq = [...doc.querySelectorAll('#secciones-bloqueadas .tarjeta-bloqueada')];
-  assert.deepEqual(bloq.map((x) => x.querySelector('.nombre').textContent), ['Shape Mods', 'Others']);
+  assert.deepEqual(bloq.map((x) => x.querySelector('.nombre').textContent), ['Others']);
   for (const x of bloq) {
     assert.equal(x.querySelector('a, button, [tabindex], [href]'), null, 'una sección bloqueada no es un enlace');
     assert.match(x.textContent, /Próximamente/);
@@ -1252,7 +1254,7 @@ test('app: navegación entre secciones (portada, WCA Puzzles con #/wca/<id>, Ban
   await herramientaLista(ctx, 'bandaged', '3x3');
   assert.deepEqual(ordenPaneles(doc), ['panel-bloqueos', 'panel-resolver', 'panel-scramble']);
   // Secciones bloqueadas o desconocidas por URL: vuelven a la portada
-  for (const h of ['#/shape-mods', '#/others', '#/shape-mods/mirror', '#/nada', '#algo']) {
+  for (const h of ['#/others', '#/others/clover', '#/shape-mods', '#/nada', '#algo']) {
     w.location.hash = '#/wca/3x3';
     await herramientaLista(ctx, 'wca', '3x3');
     w.location.hash = h;

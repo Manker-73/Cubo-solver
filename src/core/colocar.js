@@ -61,7 +61,9 @@ export function crearModeloColocar(puzzle, opciones = {}) {
     color[q.indice] = v.colores[k];
     const clave = String(q.pieza);
     if (!porPieza.has(clave)) porPieza.set(clave, []);
-    /** @type {number[]} */ (porPieza.get(clave)).push(q.indice);
+    // (una pieza con varias caras de la misma pegatina —shape mods— la cuenta una vez)
+    const l = /** @type {number[]} */ (porPieza.get(clave));
+    if (!l.includes(q.indice)) l.push(q.indice);
   });
   const tuplas = [...porPieza.values()];
   const huecoDePegatina = new Int16Array(n).fill(-1);
@@ -147,7 +149,7 @@ export function crearModeloColocar(puzzle, opciones = {}) {
     colores: t.map((i) => color[i]),
     grupo: -1,
     bloque: bloqueDe[k],
-    nombre: `${tipos[tipoDe[k]].singular} ${t.map((i) => nombreColor(color[i])).join('-')}`,
+    nombre: cp.nombrePieza ? cp.nombrePieza(t) : `${tipos[tipoDe[k]].singular} ${t.map((i) => nombreColor(color[i])).join('-')}`,
   }));
   // grupos de la bandeja: piezas sueltas del mismo tipo y los mismos colores
   /** @type {GrupoColocar[]} */

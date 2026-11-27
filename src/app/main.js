@@ -266,14 +266,17 @@ function pintarBotonColocar() {
 }
 function abrirEditorColocar() {
   const p = st.p;
-  const base = baseDe(p) || p;
+  // shape mods (noche 16): se colocan piezas sobre un puzzle adaptador (estado = marcas) y al aplicar se
+  // convierte al estado por piezas del puzzle
+  const adaptador = p.colocarPiezas && p.colocarPiezas.adaptador;
+  const base = adaptador || baseDe(p) || p;
   if (!puedeColocar(base) || editorColocar) return;
   repSol.cancelar();
   const bloques = p.bloqueos && p.piezasDeBloques ? p.piezasDeBloques().map((b) => ({ nombre: b.piezas.join('+'), pegatinas: b.pegatinas })) : [];
   const rotaciones = bloques.length && base.soporteBloqueos ? base.soporteBloqueos.rotaciones : [];
   const sel = st.sel;
   editorColocar = abrirColocar(document, {
-    puzzle: p,
+    puzzle: adaptador || p,
     base,
     bloques,
     rotaciones,
@@ -287,7 +290,7 @@ function abrirEditorColocar() {
       recordar();
       quitarSolucion();
       st.seleccion = null;
-      st.editor = p.clonar(estado);
+      st.editor = p.clonar(adaptador ? p.colocarPiezas.desdeColocar(estado) : estado);
       st.secuenciaEditor = null;
       st.editorCargado = null;
       limpiarMensajes();

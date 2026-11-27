@@ -42,6 +42,9 @@ const EXTRAS = {
   '3x3x1': ['cuboide'],
   '3x3x2': ['cuboide'],
   '2x2x3': ['cuboide'],
+  // shape mods (noche 16): geometría, conversiones (marcas ↔ piezas), movimientos legales y scramble con el estado
+  mirror: ['shapeMod'],
+  ghost: ['shapeMod'],
 };
 /** Campos de `p` que no son de la interfaz ni están permitidos. */
 const camposDesconocidos = (p, extras = EXTRAS[p.id] || []) => Object.keys(p).filter((k) => !CAMPOS_INTERFAZ.has(k) && !extras.includes(k));

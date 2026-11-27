@@ -1,5 +1,6 @@
 // @ts-check
-// Secciones de la app y navegación por hash (#/, #/wca, #/wca/<id>, #/bandaged, #/cuboids, #/cuboids/<id>).
+// Secciones de la app y navegación por hash (#/, #/wca, #/wca/<id>, #/bandaged, #/cuboids, #/cuboids/<id>,
+// #/shapemods, #/shapemods/<id>).
 //
 // SECCIONES es la única lista: la portada pinta una tarjeta por sección y el router
 // solo deja entrar en las 'disponible'. Añadir una sección o desbloquearla es
@@ -14,7 +15,7 @@
 export const SECCIONES = [
   { id: 'wca', nombre: 'WCA Puzzles', descripcion: '2x2–7x7 · Pyraminx · Skewb · Square-1 · Megaminx · FTO', descripcionCorta: '2x2–7x7 · Pyraminx · Skewb · Square-1 · Megaminx · FTO', estado: 'disponible', estilo: 'acento' },
   { id: 'bandaged', nombre: 'Bandaged Cubes', descripcion: '3x3, 4x4 y 5x5 con tus bloques · firmas de la comunidad', descripcionCorta: '3x3–5x5 con tus bloques', estado: 'disponible', estilo: 'suave' },
-  { id: 'shape-mods', nombre: 'Shape Mods', descripcion: 'Mirror, Axis, Fisher…', estado: 'bloqueada' },
+  { id: 'shapemods', nombre: 'Shape Mods', descripcion: 'Mirror Blocks · Ghost Cube · más pronto (Fisher, Windmill, Axis…)', descripcionCorta: 'Mirror · Ghost · más pronto', estado: 'disponible', estilo: 'suave' },
   { id: 'cuboids', nombre: 'Cuboids', descripcion: '3x3x1 Floppy · 3x3x2 Domino · 2x2x3 Tower · más pronto', descripcionCorta: '3x3x1 · 3x3x2 · 2x2x3 · más pronto', estado: 'disponible', estilo: 'suave' },
   { id: 'others', nombre: 'Others', descripcion: 'Clover Cube, Kilominx…', estado: 'bloqueada' },
 ];
@@ -23,11 +24,12 @@ export const SECCIONES = [
 export const INTRO_SECCION = {
   wca: 'Scrambles oficiales, validador de estados y solucionador de los puzzles de la WCA, con la solución animada en 3D y el modo aprender.',
   cuboids: 'Cuboides: puzzles con forma de prisma cuyas caras no cuadradas solo giran media vuelta. Scramble de estado aleatorio, validador (pintando o colocando piezas) y solución óptima, en 2D y 3D.',
+  shapemods: 'Shape mods: un 3x3 por dentro con otra forma por fuera y de un solo color; las piezas se distinguen por su forma. Scramble de estado aleatorio, validador (colocando piezas, con su forma) y solución, en 2D y 3D.',
   bandaged: 'Un 3x3, 4x4 o 5x5 con piezas pegadas entre sí: crea tus bloques tocando el cubo, carga ejemplos (o firmas de la comunidad en el 3x3), y obtén scrambles y soluciones con giros legales.',
 };
 
 /** Secciones de catálogo: un selector con los puzzles del registro de su `categoria` (#/<id>/<puzzle>). */
-export const CATALOGOS = ['wca', 'cuboids'];
+export const CATALOGOS = ['wca', 'cuboids', 'shapemods'];
 
 /** @param {string} id @returns {Seccion | null} */
 export const seccion = (id) => SECCIONES.find((s) => s.id === id) || null;
@@ -40,6 +42,7 @@ export const disponible = (id) => !!seccion(id) && /** @type {Seccion} */ (secci
  *   #/como-funciona       -> { seccion: 'portada', ancla: 'como-funciona' }
  *   #/wca, #/wca/<id>     -> { seccion: 'wca', puzzle: id | null }
  *   #/cuboids, #/cuboids/<id> -> { seccion: 'cuboids', puzzle: id | null } (noche 15)
+ *   #/shapemods, #/shapemods/<id> -> { seccion: 'shapemods', puzzle: id | null } (noche 16)
  *   #/bandaged[?bloqueos=…|?firma=…] -> { seccion: 'bandaged', consulta }
  *   #/bandaged?puzzle=4x4[&bloqueos=…] -> { seccion: 'bandaged', consulta, puzzle: '4x4' } (noche 13;
  *                         sin puzzle, el 3x3: los enlaces de antes siguen igual)
