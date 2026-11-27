@@ -50,6 +50,7 @@ PUZZLES = {
     'ghost': ('#/shapemods/ghost', 'Ghost Cube'),
 }
 SHAPEMODS = ['mirror', 'ghost']
+REPETIDOS = [0]  # toques 2D que cayeron en otro hueco y se repitieron (ver tocar_pegatina)
 CUBOIDS = ['cub331', 'cub332', 'cub223']
 RESTO = ['wca2', 'wca5', 'pyraminx', 'skewb', 'megaminx', 'fto', 'band5']
 
@@ -84,7 +85,26 @@ async def colocar(pg, objetivo, modo, tactil, fallos, clave, capturar):
         nonlocal toques
         toques += 1
         if modo == '2d':
-            await pulsar(pg, f'#colocar-2d [data-i="{i}"]', tactil)
+            # (shape mods: el dibujo 2D tiene varias caras por hueco, unas detrás de otras: se toca una que se vea
+            # de cualquier pegatina de ese hueco; si no se ve ninguna, el evento va al polígono)
+            await pg.wait_for_timeout(150)  # (la vista se repinta al acabar la validación: el punto, después)
+            r = await pg.evaluate('''(i) => { const M = window.cuboSolver.colocar().modelo; const h = M.huecoDePegatina[i];
+              const els = M.pegatinasHueco(h).flatMap((j) => [...document.querySelectorAll(`#colocar-2d [data-i="${j}"]`)]);
+              for (const el of els) { const r = el.getBoundingClientRect();
+                for (const [fx, fy] of [[0.5, 0.5], [0.35, 0.5], [0.65, 0.5], [0.5, 0.35], [0.5, 0.65]]) {
+                  const de = document.elementFromPoint(r.left + r.width * fx, r.top + r.height * fy);
+                  if (de && M.huecoDePegatina[+de.getAttribute('data-i')] === h && de.closest('#colocar-2d')) return { x: r.left + r.width * fx, y: r.top + r.height * fy }; } }
+              return null; }''', i)
+            if r:
+                if tactil: await pg.touchscreen.tap(r['x'], r['y'])
+                else: await pg.mouse.click(r['x'], r['y'])
+                # si el toque cayó en otro hueco (shape mods en 2D: caras diminutas, o una pieza mal puesta que
+                # sobresale sobre el hueco de al lado), se repite con la función de la interfaz y se cuenta
+                otro = await pg.evaluate('''(i) => { const ed = window.cuboSolver.colocar(); const h = ed.modelo.huecoDePegatina[i]; const s = ed.seleccion();
+                  if (s && s.tipo === 'hueco' && s.h === h) return false; ed.tocar(i); return true; }''', i)
+                if otro: REPETIDOS[0] += 1
+            else:
+                await pg.evaluate('''(i) => document.querySelector(`#colocar-2d [data-i="${i}"]`).dispatchEvent(new MouseEvent('click', { bubbles: true }))''', i)
         else:
             # la misma función que llama el modelo 3D al tocar una pegatina
             await pg.evaluate('(i) => window.cuboSolver.colocar().tocar(i)', i)
@@ -214,7 +234,8 @@ async def comprobar(b, puzzle, dispositivo, opts, tema, modo, errores, fallos, r
         if capturas_todas:
             await pg.screenshot(path=f'{OUT}/editor-piezas-{puzzle}-{dispositivo}-{tema}-{modo}-resuelto.jpg', quality=70, type='jpeg')
     n = await pg.evaluate("document.querySelectorAll('#movs li').length")
-    resumen[clave] = {'toques': toques, 'giros': n, 's': round(time.time() - t0, 1)}
+    resumen[clave] = {'toques': toques, 'giros': n, 's': round(time.time() - t0, 1), 'toquesRepetidos': REPETIDOS[0]}
+    REPETIDOS[0] = 0
     print(clave, resumen[clave], flush=True)
     await ctx.close()
 
