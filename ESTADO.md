@@ -1,5 +1,7 @@
 # Estado del proyecto (noche 15 — 27/11/2026)
 
+> Noche 16 (Shape Mods: Mirror Blocks y Ghost Cube): en curso.
+
 > Progreso de la noche 15 (Cuboids): modelo genérico `crearCuboide(a, b, c)` (geometría, giros legales con 90° solo en capas de sección cuadrada, rotaciones que conservan la forma, piezas y órbitas deducidas) ✔ · notación de csTimer (alias de Jaap) ✔ · colores del cubo con las caras cuadradas arriba y abajo ✔ · grupo y posiciones demostrados (Schreier–Sims) = cifras de Jaap en los tres ✔ · número de Dios por BFS completo: 8, 18 y 14, con la distribución publicada exacta ✔ · validador con orientación libre y un rechazo por restricción ✔ · pintar y «Colocar piezas» en 2D/3D ✔ · solver óptimo (tabla exacta / IDA* con bases de patrones) 1000/1000 óptimas en los tres ✔ · scramble de estado aleatorio exacto y uniforme ✔ · vista 3D animada (`vista3d.test.mjs`) ✔ · sección Cuboids disponible con `#/cuboids` y `#/cuboids/<id>`, tarjeta con «más pronto» y anunciados 2x2x4/3x3x4/3x3x5 ✔ · prueba de humo de la app ✔ · Chromium real (escritorio/móvil, oscuro/claro, 2D/3D) sin errores ✔ · fallo previo del reproductor (⇥ durante una animación) arreglado ✔ · `comprobar-colocar.py` probaba siempre el tema oscuro: arreglado ✔ · modo aprender de un cuboide ✘ (no dio tiempo).
 
 ## Noche 15: Cuboids (3x3x1 Floppy, 3x3x2 Domino, 2x2x3 Tower)
