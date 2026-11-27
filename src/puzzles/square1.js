@@ -27,8 +27,8 @@ import {
 // color más oscuro de los dos posibles delante; con el corte según 12c1 los
 // dos frentes posibles son el azul y el verde, así que el frente es el azul.
 export const PALETA = [
-  { nombre: 'blanco', hex: '#f4f4f4' },
   { nombre: 'amarillo', hex: '#ffd60a' },
+  { nombre: 'blanco', hex: '#f4f4f4' },
   { nombre: 'naranja', hex: '#f77f00' },
   { nombre: 'azul', hex: '#1d5ad8' },
   { nombre: 'rojo', hex: '#d62828' },
