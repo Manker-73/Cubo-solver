@@ -8,22 +8,15 @@ export const raiz = path.join(path.dirname(fileURLToPath(import.meta.url)), '..'
 // (con "strict" añadiría "use strict" al IIFE y cambiaría lo que se ejecuta): se le pasa uno vacío.
 const tsconfigRaw = '{}';
 
-/** Código del Web Worker empaquetado (texto). */
-export async function construirWorker() {
+/**
+ * Código de la app (texto): un solo script para la página y el Web Worker (src/app/entrada.js).
+ * Sin trozos (`splitting`), los import() de entrada.js quedan dentro del mismo fichero, cada uno envuelto
+ * en una función que solo se ejecuta al pedirlo (la página no ejecuta el Worker y al revés).
+ */
+export async function construirApp() {
   const r = await build({
-    entryPoints: [path.join(raiz, 'src/app/worker.js')],
+    entryPoints: [path.join(raiz, 'src/app/entrada.js')],
     bundle: true, format: 'iife', minify: true, target: ['es2020'], write: false, legalComments: 'none', tsconfigRaw,
   });
-  return r.outputFiles[0].text;
-}
-
-/** Código de la app con el del Worker incrustado como texto. */
-export async function construirApp() {
-  const codigoWorker = await construirWorker();
-  const r = await build({
-    entryPoints: [path.join(raiz, 'src/app/main.js')],
-    bundle: true, format: 'iife', minify: true, target: ['es2020'], write: false, legalComments: 'none',
-    define: { __CODIGO_WORKER__: JSON.stringify(codigoWorker) }, tsconfigRaw,
-  });
-  return { app: r.outputFiles[0].text, worker: codigoWorker };
+  return { app: r.outputFiles[0].text };
 }

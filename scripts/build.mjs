@@ -1,7 +1,7 @@
 // Construye la app en un único HTML autocontenido:
 //   dist/index.html    -> documento completo (abrir con doble clic, sin servidor)
 //   dist/artifact.html -> el mismo contenido sin <html>/<head>/<body> (para publicarlo como artifact)
-//   El Web Worker se empaqueta aparte y va incrustado como texto: la app lo crea desde un blob.
+//   El Web Worker es el mismo script (src/app/entrada.js): la app lo crea desde un blob con el texto del script.
 import fs from 'node:fs';
 import path from 'node:path';
 import { construirApp, raiz } from './construir.mjs';
@@ -45,4 +45,4 @@ ${cuerpo.slice(corte)}
 `;
 fs.writeFileSync(path.join(raiz, 'dist/index.html'), completo);
 const kb = (n) => (n / 1024).toFixed(1) + ' KB';
-console.log(`dist/index.html: ${kb(Buffer.byteLength(completo))} (fuentes: ${kb(Buffer.byteLength(fuentes))}; JS de la app con el Worker: ${kb(Buffer.byteLength(js))}; CSS: ${kb(Buffer.byteLength(css))})`);
+console.log(`dist/index.html: ${kb(Buffer.byteLength(completo))} (fuentes: ${kb(Buffer.byteLength(fuentes))}; JS (página y Worker): ${kb(Buffer.byteLength(js))}; CSS: ${kb(Buffer.byteLength(css))})`);

@@ -13,9 +13,6 @@ import { SECCIONES, INTRO_SECCION, CATALOGOS, seccion as datosSeccion, leerRuta,
 import { crearTema } from './tema.js';
 import { abrirColocar, puedeColocar } from './colocar-ui.js';
 
-/* global __CODIGO_WORKER__ */
-const CODIGO_WORKER = typeof __CODIGO_WORKER__ !== 'undefined' ? __CODIGO_WORKER__ : null;
-
 const $ = (id) => document.getElementById(id);
 
 const st = {
@@ -1415,9 +1412,13 @@ function aplicarRuta({ navegacion = false } = {}) {
 }
 
 // ---------- Arranque ----------
-function iniciar() {
+/**
+ * Arranca la interfaz (lo llama entrada.js).
+ * @param {{ codigoWorker?: string | null }} [opciones] código del Worker (el del propio script); sin él, todo en el hilo principal
+ */
+export function iniciar({ codigoWorker = null } = {}) {
   motor = crearMotor({
-    codigoWorker: CODIGO_WORKER,
+    codigoWorker,
     alCambiarModo: (modo, motivo) => {
       const el = $('modo-calculo');
       if (!el) return;
@@ -1508,5 +1509,3 @@ function iniciar() {
   vigilarResolverFijo();
   aplicarRuta();
 }
-
-iniciar();

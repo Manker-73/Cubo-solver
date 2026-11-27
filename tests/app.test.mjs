@@ -45,6 +45,12 @@ function crearHasta(pendientes = () => 0, detalle = () => '') {
 /** Peticiones sin responder de los Workers de instalarWorker en esa ventana (0 si no los hay). */
 const pendientesDe = (win) => () => (win.__peticionesPendientes ? win.__peticionesPendientes() : 0);
 
+// La interfaz arranca en una microtarea justo después del script (src/app/entrada.js la carga con import();
+// sesión «carga más rápida»). En un navegador nada puede pasar entre el final del script y esa microtarea,
+// pero el constructor de JSDOM devuelve el control antes de vaciarlas: los tests esperan a que se vacíen
+// (un temporizador de 0 ms corre después de todas) antes de su primera acción, como un usuario real.
+const trasArrancar = () => espera(0);
+
 let html = null;
 function construir() {
   if (!html) {
@@ -79,6 +85,7 @@ async function abrir(t, { beforeParse, url = 'https://localhost/#/wca', esperarH
   const dom = new JSDOM(construir(), { runScripts: 'dangerously', pretendToBeVisual: true, url, beforeParse: (win) => { cryptoConSemilla(win); if (beforeParse) beforeParse(win); }, virtualConsole: vc });
   const w = dom.window;
   w.addEventListener('error', (e) => errores.push(e.message));
+  await trasArrancar();
   const doc = w.document;
   const hasta = crearHasta(pendientesDe(w), () => ': ' + (doc.getElementById('mensajes')?.textContent || ''));
   if (esperarHerramienta) await hasta(() => doc.getElementById('scramble').textContent.length > 0 && !doc.getElementById('scramble').classList.contains('generando'));
@@ -449,6 +456,7 @@ function instalarWorker(window, registro) {
   window.Worker = class {
     constructor(url) {
       const codigo = blobs.get(url);
+      if (registro.codigos) registro.codigos.push(codigo);
       const shim = `const { parentPort, workerData } = require('node:worker_threads');
         globalThis.self = globalThis;
         self.postMessage = (m) => parentPort.postMessage(m);
@@ -495,6 +503,30 @@ test('app: con Web Worker (código empaquetado real en worker_threads)', async (
   } finally {
     reg.workers.forEach((x) => x.terminate());
     w.close();
+  }
+});
+
+test('build: el código de los solvers va una sola vez y el Worker es el mismo script que la página', async (t) => {
+  // Sesión «carga más rápida»: antes el HTML llevaba el código del Worker otra vez entero, como texto
+  // (136 de los 376 KB descargados). Ahora la página crea el Worker con el texto de su propio script.
+  const html = construir();
+  const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => m[1]).filter((x) => x.length > 10000);
+  assert.equal(scripts.length, 1, 'un solo script con el código');
+  // (textos ASCII: los que llevan tildes van escapados en el bundle)
+  for (const txt of ['Puzzle desconocido', 'el Worker no responde', 'Operaci\\xF3n desconocida']) {
+    assert.equal(html.split(txt).length - 1, 1, `«${txt}» aparece una sola vez en el HTML`);
+  }
+  const reg = { workers: [], peticiones: [], respuestas: 0, codigos: [] };
+  const ctx = await abrir(t, { beforeParse: (win) => instalarWorker(win, reg) });
+  if (!ctx) return;
+  try {
+    assert.match(ctx.doc.getElementById('modo-calculo').textContent, /Web Worker/);
+    assert.equal(reg.codigos.length, 2, 'dos Workers');
+    for (const c of reg.codigos) assert.equal(c, scripts[0], 'el Worker ejecuta el texto del propio script');
+    assert.deepEqual(ctx.errores, []);
+  } finally {
+    reg.workers.forEach((x) => x.terminate());
+    ctx.w.close();
   }
 });
 
@@ -720,6 +752,7 @@ async function abrirSinEsperar(t, ctl) {
       win.addEventListener('error', (e) => errores.push(e.message));
       win.addEventListener('unhandledrejection', (e) => errores.push(String(e.reason && e.reason.message)));
     } });
+  await trasArrancar();
   const doc = dom.window.document;
   // (Worker simulado: sus retrasos son temporizadores fijos, no cálculo; cuentan como espera ociosa)
   const hasta = crearHasta(() => 0, () => ': ' + doc.getElementById('mensajes').textContent);

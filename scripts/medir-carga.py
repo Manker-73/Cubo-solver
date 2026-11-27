@@ -1,6 +1,8 @@
 # Medición repetible de la carga de la app en Chromium real (Python + Playwright + Chrome).
 #   npm run build && python scripts/medir-carga.py [--dir dist] [--reps 5] [--etiqueta base] [--salida f.json]
 #                                                       [--comp gzip|brotli|nada] [--traza] [--solo fast3g-x4]
+# Varias versiones a la vez (intercaladas, para comparar con la misma carga de fondo de la máquina):
+#   python scripts/medir-carga.py --dir antes --etiqueta antes --dir dist --etiqueta despues --salida f.json
 # Sirve el directorio con scripts/servidor-pages.mjs (gzip nivel 6, max-age=600 y ETag, como GitHub Pages) y, para cada
 # condición (red Fast 3G / Slow 3G de DevTools × CPU ×1 / ×4), repite N veces con un contexto nuevo (caché vacía):
 #   1. portada fría (#/), 2. portada con caché (otra pestaña del mismo contexto), 3. 3x3 en frío (#/wca/3x3).
@@ -125,50 +127,63 @@ def mediana(xs):
 
 async def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('--dir', default='dist'); ap.add_argument('--reps', type=int, default=5)
-    ap.add_argument('--etiqueta', default='base'); ap.add_argument('--salida'); ap.add_argument('--comp', default='gzip')
-    ap.add_argument('--puerto', default='8765'); ap.add_argument('--traza', action='store_true'); ap.add_argument('--solo')
+    ap.add_argument('--dir', action='append', help='directorio servido (se puede repetir: las versiones se miden intercaladas)')
+    ap.add_argument('--etiqueta', action='append', help='nombre de cada --dir (mismo orden)')
+    ap.add_argument('--reps', type=int, default=5); ap.add_argument('--salida'); ap.add_argument('--comp', default='gzip')
+    ap.add_argument('--puerto', type=int, default=8765); ap.add_argument('--traza', action='store_true'); ap.add_argument('--solo')
     ap.add_argument('--pagina', default='index.html'); ap.add_argument('--reps-traza', type=int, default=5)
     a = ap.parse_args()
-    srv = subprocess.Popen(['node', os.path.join(RAIZ, 'scripts/servidor-pages.mjs'), os.path.join(RAIZ, a.dir), a.puerto, a.comp], stdout=subprocess.PIPE)
-    srv.stdout.readline()
-    base = f'http://127.0.0.1:{a.puerto}/' + ('' if a.pagina == 'index.html' else a.pagina)
-    todo = {'etiqueta': a.etiqueta, 'dir': a.dir, 'comp': a.comp, 'reps': a.reps, 'condiciones': {}}
+    dirs = a.dir or ['dist']
+    etiquetas = a.etiqueta or [os.path.basename(os.path.normpath(d)) for d in dirs]
+    assert len(etiquetas) == len(dirs), 'una --etiqueta por cada --dir'
+    servidores, bases = [], []
+    for k, d in enumerate(dirs):
+        srv = subprocess.Popen(['node', os.path.join(RAIZ, 'scripts/servidor-pages.mjs'), os.path.join(RAIZ, d), str(a.puerto + k), a.comp], stdout=subprocess.PIPE)
+        srv.stdout.readline()
+        servidores.append(srv)
+        bases.append(f'http://127.0.0.1:{a.puerto + k}/' + ('' if a.pagina == 'index.html' else a.pagina))
+    todo = {e: {'etiqueta': e, 'dir': d, 'comp': a.comp, 'reps': a.reps, 'condiciones': {}} for e, d in zip(etiquetas, dirs)}
     try:
         async with async_playwright() as p:
             b = await p.chromium.launch(executable_path=CHROME, args=['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'])
             if a.traza:
-                todo['traza'] = {}
                 for c in (1, 4):
-                    ts = [await traza(b, base, c) for _ in range(a.reps_traza)]
-                    todo['traza'][f'cpu{c}'] = {k: round(statistics.median([t.get(k, 0) for t in ts]), 1) for k in sorted({k for t in ts for k in t})}
-                print('traza', json.dumps(todo['traza'], ensure_ascii=False), flush=True)
+                    ts = {e: [] for e in etiquetas}
+                    for _ in range(a.reps_traza):
+                        for e, base in zip(etiquetas, bases): ts[e].append(await traza(b, base, c))
+                    for e in etiquetas:
+                        todo[e].setdefault('traza', {})[f'cpu{c}'] = {k: round(statistics.median([t.get(k, 0) for t in ts[e]]), 1) for k in sorted({k for t in ts[e] for k in t})}
+                for e in etiquetas: print(e, 'traza', json.dumps(todo[e]['traza'], ensure_ascii=False), flush=True)
             for red, cpu in CONDICIONES:
                 clave = f'{red}-x{cpu}'
                 if a.solo and a.solo != clave: continue
-                reps = {'fria': [], 'cache': [], 'wca3x3': []}
+                reps = {e: {'fria': [], 'cache': [], 'wca3x3': []} for e in etiquetas}
                 for i in range(a.reps):
-                    ctx = await b.new_context(viewport={'width': 390, 'height': 844}, device_scale_factor=2, is_mobile=True, has_touch=True)
-                    await ctx.add_init_script(SONDA)
-                    reps['fria'].append(await cargar(ctx, base + '#/', red, cpu, False))
-                    reps['cache'].append(await cargar(ctx, base + '#/', red, cpu, False))
-                    await ctx.close()
-                    ctx = await b.new_context(viewport={'width': 390, 'height': 844}, device_scale_factor=2, is_mobile=True, has_touch=True)
-                    await ctx.add_init_script(SONDA)
-                    reps['wca3x3'].append(await cargar(ctx, base + '#/wca/3x3', red, cpu, True))
-                    await ctx.close()
-                med = {}
-                for k, rs in reps.items():
-                    med[k] = {'fcp': mediana([r['fcp'] for r in rs]), 'portada': mediana([r['portada'] for r in rs]),
-                              'usable': mediana([r['usable'] for r in rs]), 'kb': round(statistics.median([r['transfer'] for r in rs]) / 1024, 1)}
-                    if k == 'wca3x3': med[k]['listo3x3'] = mediana([r['listo'] for r in rs])
-                errs = sorted({e for rs in reps.values() for r in rs for e in r['errores']})
-                todo['condiciones'][clave] = {'medianas': med, 'repeticiones': reps, 'errores': errs}
-                print(clave, json.dumps(med), ('ERRORES ' + str(errs)) if errs else '', flush=True)
+                    # intercaladas: en cada repetición, una carga de cada versión (la carga de fondo de la máquina
+                    # afecta a todas por igual)
+                    for e, base in zip(etiquetas, bases):
+                        ctx = await b.new_context(viewport={'width': 390, 'height': 844}, device_scale_factor=2, is_mobile=True, has_touch=True)
+                        await ctx.add_init_script(SONDA)
+                        reps[e]['fria'].append(await cargar(ctx, base + '#/', red, cpu, False))
+                        reps[e]['cache'].append(await cargar(ctx, base + '#/', red, cpu, False))
+                        await ctx.close()
+                        ctx = await b.new_context(viewport={'width': 390, 'height': 844}, device_scale_factor=2, is_mobile=True, has_touch=True)
+                        await ctx.add_init_script(SONDA)
+                        reps[e]['wca3x3'].append(await cargar(ctx, base + '#/wca/3x3', red, cpu, True))
+                        await ctx.close()
+                for e in etiquetas:
+                    med = {}
+                    for k, rs in reps[e].items():
+                        med[k] = {'fcp': mediana([r['fcp'] for r in rs]), 'portada': mediana([r['portada'] for r in rs]),
+                                  'usable': mediana([r['usable'] for r in rs]), 'kb': round(statistics.median([r['transfer'] for r in rs]) / 1024, 1)}
+                        if k == 'wca3x3': med[k]['listo3x3'] = mediana([r['listo'] for r in rs])
+                    errs = sorted({x for rs in reps[e].values() for r in rs for x in r['errores']})
+                    todo[e]['condiciones'][clave] = {'medianas': med, 'repeticiones': reps[e], 'errores': errs}
+                    print(e, clave, json.dumps(med), ('ERRORES ' + str(errs)) if errs else '', flush=True)
             await b.close()
     finally:
-        srv.terminate()
+        for srv in servidores: srv.terminate()
     if a.salida:
-        with open(a.salida, 'w', encoding='utf-8') as f: json.dump(todo, f, ensure_ascii=False, indent=1)
+        with open(a.salida, 'w', encoding='utf-8') as f: json.dump(todo if len(etiquetas) > 1 else todo[etiquetas[0]], f, ensure_ascii=False, indent=1)
 
 asyncio.run(main())

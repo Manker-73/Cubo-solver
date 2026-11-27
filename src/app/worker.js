@@ -1,6 +1,6 @@
-// Punto de entrada del Web Worker. scripts/build.mjs lo empaqueta aparte y lo
-// incrusta como texto en la app; la app crea el Worker desde un blob, así que
-// sigue siendo un único HTML sin servidor.
+// Lado del Web Worker. El Worker ejecuta el mismo script que la página (src/app/entrada.js), creado
+// desde un blob con su texto, así que sigue siendo un único HTML sin servidor; entrada.js carga este
+// módulo cuando no hay `document`.
 
 import { atender } from './servicio.js';
 
