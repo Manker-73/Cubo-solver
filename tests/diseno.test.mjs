@@ -22,6 +22,10 @@ test('diseño: rutas de las secciones (leerRuta / hashDe)', () => {
   assert.deepEqual(leerRuta('#/cuboids/3x3x2', ''), { seccion: 'cuboids', puzzle: '3x3x2' });
   assert.equal(hashDe({ seccion: 'cuboids', puzzle: '2x2x3' }), '#/cuboids/2x2x3');
   assert.equal(hashDe({ seccion: 'cuboids' }), '#/cuboids');
+  // Shape Mods (noche 16)
+  assert.deepEqual(leerRuta('#/shapemods', ''), { seccion: 'shapemods', puzzle: null });
+  assert.deepEqual(leerRuta('#/shapemods/ghost', ''), { seccion: 'shapemods', puzzle: 'ghost' });
+  assert.equal(hashDe({ seccion: 'shapemods', puzzle: 'mirror' }), '#/shapemods/mirror');
   assert.deepEqual(leerRuta('#/bandaged?bloqueos=UFR.UF', ''), { seccion: 'bandaged', consulta: 'bloqueos=UFR.UF' });
   // enlaces antiguos
   assert.deepEqual(leerRuta('#bloqueos=U.UF-DB.DBL', ''), { seccion: 'bandaged', consulta: 'bloqueos=U.UF-DB.DBL', antigua: true });
@@ -36,7 +40,7 @@ test('diseño: rutas de las secciones (leerRuta / hashDe)', () => {
   assert.deepEqual(leerRuta('#/nada', ''), { seccion: 'portada', redirigir: true });
   assert.deepEqual(leerRuta('#algo', ''), { seccion: 'portada', redirigir: true });
   // ida y vuelta
-  for (const r of [{ seccion: 'portada' }, { seccion: 'wca', puzzle: '3x3' }, { seccion: 'cuboids', puzzle: '3x3x1' }, { seccion: 'bandaged', consulta: 'bloqueos=UFR.UF' }]) {
+  for (const r of [{ seccion: 'portada' }, { seccion: 'wca', puzzle: '3x3' }, { seccion: 'cuboids', puzzle: '3x3x1' }, { seccion: 'shapemods', puzzle: 'ghost' }, { seccion: 'bandaged', consulta: 'bloqueos=UFR.UF' }]) {
     const h = hashDe(r);
     const v = leerRuta(h, '');
     assert.equal(v.seccion, r.seccion, h);
@@ -45,7 +49,7 @@ test('diseño: rutas de las secciones (leerRuta / hashDe)', () => {
   }
   // la lista de secciones: ids únicos y las disponibles (Cuboids desde la noche 15)
   assert.equal(new Set(SECCIONES.map((s) => s.id)).size, SECCIONES.length);
-  assert.deepEqual(SECCIONES.filter((s) => s.estado === 'disponible').map((s) => s.id), ['wca', 'bandaged', 'cuboids']);
+  assert.deepEqual(SECCIONES.filter((s) => s.estado === 'disponible').map((s) => s.id), ['wca', 'bandaged', 'shapemods', 'cuboids']);
   assert.ok(SECCIONES.every((s) => ['disponible', 'bloqueada'].includes(s.estado)));
 });
 
