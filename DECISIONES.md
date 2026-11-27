@@ -1073,3 +1073,23 @@ bloqueada menos).
 - **`scripts/comprobar-colocar.py` (noche 14) nunca probó el tema claro**: guardaba `light`/`dark` en
   `cubo-solver:tema`, pero la app solo entiende `claro`/`oscuro` y se quedaba en oscuro (las capturas «light» eran
   oscuras). Corregido, con una comprobación de `data-theme`; repetido para WCA 3x3 y Bandaged 3x3 (ESTADO.md).
+
+## Colores del Square-1 (27/11/2026, commits 400faca y f57aa71 deshechos)
+- **Qué hacía la reordenación**: en `square1.js` los índices de `PALETA` son caras: 0 = arriba, 1 = abajo y
+  `LADOS = [4, 5, 2, 3]` = frente, derecha, detrás, izquierda. Antes: arriba blanco, abajo amarillo, frente azul,
+  derecha naranja, detrás verde, izquierda rojo. `400faca` cambió los cuatro laterales (frente rojo, derecha verde,
+  detrás naranja, izquierda azul) con el blanco arriba: eso es el esquema **especular** (la esquina de arriba-frente-
+  derecha pasaba a blanco-rojo-verde en el sentido contrario al del cubo). `f57aa71` cambió además arriba y abajo:
+  amarillo arriba, blanco abajo, rojo delante, verde a la derecha, naranja detrás, azul a la izquierda. Eso vuelve a
+  ser el esquema occidental de siempre, **girado**: es exactamente la otra orientación que permite la 12c1 (dar la
+  vuelta al puzzle sobre el eje de las dos superficies pequeñas de la capa del medio).
+- **Regulación 4d3** (texto oficial, `thewca/wca-regulations`): «Square-1 is scrambled starting with the darker color
+  on front (out of the 2 possible scrambling orientations)». No fija el color de arriba ni hay un esquema de colores
+  obligatorio (3a3 solo pide un color distinto por cara). Con este esquema, los frentes posibles según 12c1 son azul o
+  verde (blanco arriba) y rojo o naranja (amarillo arriba); el más oscuro es el **azul**: blanco arriba, azul delante.
+  La orientación de la reordenación (rojo delante) no es la de 4d3, así que se deja la WCA por defecto y se deshacen
+  los dos commits. Si un Square-1 físico tiene otro esquema, lo correcto es una opción de colores por puzzle (pendiente
+  en ESTADO.md), no cambiar el de referencia.
+- El `dist` de la noche 15 (db4ea5f), Pages y el artifact llevaban el amarillo arriba: se construyeron desde `main`,
+  que ya tenía los dos commits (lo que no cambiaba el dist era solo una errata posterior en un comentario,
+  «detrásgit», sin commitear). Este commit reconstruye el dist con el blanco arriba.

@@ -23,16 +23,24 @@ import {
 } from './square1-motor.js';
 
 // ---------- Colores ----------
-// Esquema occidental con el blanco arriba. Regulación 4d3: se mezcla con el
-// color más oscuro de los dos posibles delante; con el corte según 12c1 los
-// dos frentes posibles son el azul y el verde, así que el frente es el azul.
+// Esquema occidental (blanco–amarillo, verde–azul, rojo–naranja) en la orientación de mezcla de la
+// WCA. La Regulación 4d3 no fija qué color va arriba: «Square-1 is scrambled starting with the darker
+// color on front (out of the 2 possible scrambling orientations)». Las orientaciones posibles son las
+// que dejan una de las dos superficies pequeñas de la capa del medio a la izquierda del frente (12c1).
+// En este modelo: blanco arriba con el azul delante (o el verde, con y2), o, dándole la vuelta al
+// puzzle sobre el eje de esas superficies, amarillo arriba con el rojo delante (o el naranja). De los
+// frentes posibles, el más oscuro es el azul: blanco arriba, azul delante, naranja a la derecha.
+// (Noche 15: se probó amarillo arriba y rojo delante —la otra orientación de 12c1, mismo esquema— y se
+// deshizo: no es la de 4d3. Ver DECISIONES.md, «Colores del Square-1».)
+// Los índices de PALETA son las caras: 0 = arriba (U), 1 = abajo (D) y LADOS = frente, derecha, detrás,
+// izquierda. Cambiar el orden de PALETA cambia qué color tiene cada cara en el resuelto.
 export const PALETA = [
-  { nombre: 'amarillo', hex: '#ffd60a' },
   { nombre: 'blanco', hex: '#f4f4f4' },
-  { nombre: 'naranja', hex: '#f77f00' },
-  { nombre: 'azul', hex: '#1d5ad8' },
+  { nombre: 'amarillo', hex: '#ffd60a' },
+  { nombre: 'verde', hex: '#2a9d4b' },
   { nombre: 'rojo', hex: '#d62828' },
-  { nombre: 'verde', hex: '#2a9d4b' }, 
+  { nombre: 'azul', hex: '#1d5ad8' },
+  { nombre: 'naranja', hex: '#f77f00' },
 ];
 const U = 0, D = 1;
 const LADOS = [4, 5, 2, 3]; // frente, derecha, detrás, izquierda

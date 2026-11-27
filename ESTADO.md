@@ -42,6 +42,7 @@ Las tres distribuciones de distancias coinciden **exactamente** con las de Jaap 
 - **2x2x3**: los scrambles y soluciones nunca mueven la arista del medio de atrás a la izquierda (BL); `L2` y `B2` se aceptan al escribir.
 
 ### Pendiente / limitaciones
+- **Opción de colores personalizados por puzzle, guardada en el navegador** (para un puzzle físico con otro esquema; p. ej. un Square-1 sujetado con el amarillo arriba). El de referencia sigue siendo el de la WCA (DECISIONES.md, «Colores del Square-1»).
 - 2x2x4, 3x3x4, 3x3x5 (anunciados): falta que `identificar` admita piezas que se ven iguales (centros de los lados) y que el solver normalice la rotación cuando hay ejes de 4+ capas pares (quitar una capa ya no conserva la métrica). Ver DECISIONES.md.
 - Modo aprender de los cuboides: no hecho.
 - El scramble del 3x3x1 puede ser de 1 giro (2 %): estado aleatorio sin longitud mínima.
