@@ -65,10 +65,11 @@ Antes de diseñar cambios estructurales, tomar decisiones técnicas o planificar
 
 ## Flujo de Verificación
 Antes de dar por finalizada cualquier modificación:
-1. **Tests en Node.js**: Ejecutar la suite de pruebas (`node scripts/tests.mjs` o los scripts definidos en `package.json`) y comprobar que no haya regresiones respecto a `tests/resultados/*.json` ni `tests/huellas.json`.
+1. **Tests en Node.js**: en local, `npm run test:humo` y `npm run test:solo -- <área>` de lo que se haya tocado, sin regresiones respecto a `tests/resultados/*.json` ni `tests/huellas.json`. **No lances `test:rapido` en local** (en este portátil tarda más de 15 min): lo ejecuta la Action «Tests (rápido)» en cada push y su resultado es la comprobación limpia. La suite completa (`npm test`) se lanza en GitHub (Actions → «Tests (rápido)» → Run workflow → nivel `completo`) si se tocaron solvers, modelos o bloqueos.
    * **Ningún test puede depender de la velocidad de la máquina**: nada de esperas o aserciones en milisegundos de reloj. En la app, `hasta(cond, ms)` (vueltas ociosas, no reloj); en solvers con límite de tiempo, afirmar solo lo que se cumple aun sin tiempo (comprobarlo con `conRelojLento` de `tests/util.mjs`) o usar presupuestos en nodos. Ver DECISIONES.md («Sesión de mantenimiento»).
-2. **Comprobaciones visuales / E2E (Python)**: Si se modifica la UI, WebGL (`src/app/`), bloqueos o el modo Aprender (`src/aprender/`), ejecutar los scripts pertinentes en `scripts/comprobar-*.py` (`comprobar-3d.py`, `comprobar-aprender.py`, `comprobar-bloqueos.py`, `comprobar-diseno.py`, etc.).
-3. **Build autónomo**: Ejecutar el empaquetado (`node scripts/construir.mjs` / `node scripts/build.mjs` según `package.json`) y verificar que `dist/index.html` y `dist/artifact.html` se generen sin errores.
+2. **Tipos**: `npm run tipos` limpio, sin `any` ni `@ts-ignore` sin un comentario que lo justifique.
+3. **Comprobaciones visuales / E2E (Python)**: Si se modifica la UI, WebGL (`src/app/`), bloqueos o el modo Aprender (`src/aprender/`), ejecutar los scripts pertinentes en `scripts/comprobar-*.py` (`comprobar-3d.py`, `comprobar-aprender.py`, `comprobar-bloqueos.py`, `comprobar-diseno.py`, etc.): escritorio y móvil, oscuro y claro, sin errores de consola ni scroll horizontal.
+4. **Build autónomo**: Ejecutar el empaquetado (`node scripts/construir.mjs` / `node scripts/build.mjs` según `package.json`) y verificar que `dist/index.html` y `dist/artifact.html` se generen sin errores.
 
 ---
 
@@ -81,11 +82,27 @@ Nadie estará esperando para aprobar permisos durante la sesión. En los primero
 ### Antes de empezar
 1. `git status` y `git fetch`. Si hay cambios sin commitear o commits locales sin subir, PARA y explica qué son antes de tocar nada. Si está limpio, `git pull`.
 2. Lee `ESTADO.md`, `DECISIONES.md` y `ARQUITECTURA.md` (al menos las secciones relacionadas con el objetivo de la noche).
+3. `npm run test:humo` como referencia de partida.
+4. Si la sesión anterior dejó pendiente el resultado de una Action o de la suite completa, compruébalo y anótalo en `ESTADO.md`. Si falló, arréglalo antes de seguir.
+5. Un primer commit pequeño (p. ej. "ESTADO: empieza la noche N") y push, para confirmar que se puede subir.
+
+### Durante la sesión
+- Trabaja por orden de prioridad del prompt. Si no da tiempo a todo, deja lo hecho funcionando y escribe qué falta.
+- Commit y push tras cada hito: nunca dejes trabajo importante solo en local.
+- Mientras trabajas, usa `npm run test:solo -- <área>` para lo que estés tocando y `npm run test:humo` tras cada hito.
+- No esperes respuestas del usuario: toma la decisión más razonable y documéntala en `DECISIONES.md`. Excepción: algo irreversible o destructivo (reescribir el historial de git, borrar ramas o datos, cambiar el formato de enlaces o datos guardados de los usuarios). Ahí, prepara todo, explica la decisión y PARA.
+- Si el usuario tiene cambios propios en el repo (te lo dirá), no los mezcles con los tuyos: van en commits aparte y no se tocan sin preguntar.
+- Restricciones de grupos (paridades, orientaciones, tamaño): se demuestran con `src/core/grupo.js` / `schreier.js` y se comprueban empíricamente, nunca se suponen. Las cifras se contrastan con las publicadas cuando existan.
+- Tests nuevos: los de solver aplican cada solución movimiento a movimiento. Para cada arreglo, un test que falle antes y pase después. Para puzzles o giros nuevos, huellas en `tests/huellas.json` (el diff solo debe traer las nuevas) y una prueba de sabotaje (invertir un giro y comprobar que `test:humo` lo detecta; deshacerlo).
+- Mide el tamaño de `dist/index.html` y el tiempo de las tablas nuevas (escritorio y móvil con CPU ×4). Avisa si el HTML crece mucho o si alguna tabla supera ~20 MB o ~10 s en móvil.
+
+### Si la sesión se corta (límite de uso, reinicio)
+Al reanudar: `git status` y `git log` (local y `origin/main`), push de lo que falte, comprobar lo que esté a medias (`npm run tipos`, `npm run test:solo -- <área>`), relanzar lo que estuviera corriendo en segundo plano si hace falta, y seguir con el siguiente objetivo por orden de prioridad.
 
 ### Al terminar
-1. **Verificación completa**: el «Flujo de verificación» de arriba (tests, tipos con `npm run tipos`, comprobaciones en Chromium si se tocó la UI y build). Si un test falla, arréglalo o explica por qué en el resumen; nunca lo des por bueno.
-2. **Documentación**: `ESTADO.md` (sección de la noche con lo hecho, resultados medidos y pendiente, y la línea de progreso al principio), `DECISIONES.md` (decisiones, fuentes y lo que no funcionó), `ARQUITECTURA.md` y `README.md` si cambian, y este `CLAUDE.md` si cambia la estructura de archivos.
+1. **Verificación completa**: el «Flujo de verificación» de arriba. Si un test falla, arréglalo o explica por qué en el resumen; nunca lo des por bueno.
+2. **Documentación**: `ESTADO.md` (sección de la noche con lo hecho, resultados medidos y pendiente, y la línea de progreso con ✔/✘ al principio), `DECISIONES.md` (decisiones, fuentes y lo que no funcionó), `ARQUITECTURA.md` y `README.md` si cambian, y este `CLAUDE.md` si cambia la estructura de archivos o las reglas.
 3. **Commits**: con mensajes en español; los cambios ajenos al objetivo de la noche van en commits aparte. No commitees capturas (`docs/capturas/`) ni ficheros a medias de una ejecución cortada.
-4. **Push y comprobación limpia**: `git push` y espera a la Action «Tests (rápido)» y al despliegue de Pages. Anota el resultado de la Action en `ESTADO.md` (commit aparte) y vuelve a subirlo.
-5. **Artifact**: republica `dist/artifact.html` en el mismo artifact de siempre (misma URL) después de comprobar que el build es el del último commit.
-6. **Resumen final**: lo que pida el prompt de la noche, más el estado de `main` (commits), el resultado de la Action y de Pages, el enlace del artifact, los permisos que no se concedieron y lo que queda pendiente. Si algo no se hizo o no se verificó, dilo claramente.
+4. **Push y comprobación limpia**: `git push` y espera a la Action «Tests (rápido)» y al despliegue de Pages (si `gh` no está instalado, usa la API pública de GitHub). Anota el resultado de la Action en `ESTADO.md` (commit aparte) y vuelve a subirlo.
+5. **Artifact**: si el bundle cambió, republica `dist/artifact.html` en el mismo artifact de siempre (misma URL) después de comprobar que el build es el del último commit.
+6. **Resumen final** en español: lo que pida el prompt de la noche, más el estado de `main` (commits), el resultado de la Action y de Pages, el enlace del artifact, los permisos que no se concedieron, lo que queda pendiente y lo que tiene que comprobar el usuario con sus puzzles físicos. Si algo no se hizo o no se verificó, dilo claramente.
