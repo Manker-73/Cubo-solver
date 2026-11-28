@@ -1,10 +1,69 @@
 # Estado del proyecto (noche 16 — 27/11/2026)
 
-> Sesión «carga más rápida» (27/11/2026): empieza. Partida: `test:humo` 55/55 ✔.
+> Progreso de la sesión «carga más rápida» (27–28/11/2026): a · la página y el Worker son el mismo script ✔ · c · registro perezoso, sin Proxy (nada se construye en la portada, ni en la página ni en los Workers) ✔ · primer uso de un puzzle sin esperar dos construcciones seguidas ✔ (3x3 igual que antes; los rápidos, +30–70 ms) · b · fuentes solo con los caracteres que se usan ✔ (Inter con el eje entero: limitarlo cambiaba el suavizado ✘) · e2 · la portada no comprueba WebGL ni lee la maquetación ✔ · mismo aspecto píxel a píxel ✔ · cuatro entornos en Chromium (Pages, artifact, file://, sin Worker; 16 combinaciones) ✔ · **portada con Fast 3G y CPU ×4: 4,04 → 2,15 s; 376 → 231 KB** · build en varios ficheros (d) ✘ (para la noche de la PWA).
 
-> Investigación de carga (27/11/2026, sin cambios en la app): main descarga 376 KB (gzip; Pages no sirve brotli) y la portada tarda 4,2 s en un móvil con Fast 3G y CPU ×4; el texto del Worker duplica el 98,5 % del script y el registro construye los 16 puzzles al cargar. Prototipos medidos (rama `investigacion/carga`): Worker sin duplicar + registro perezoso + fuentes → 223 KB y 2,3 s, en un solo HTML. **Decisión pendiente**: informe en `docs/investigacion-carga.md`, resumen en DECISIONES.md. Medir: `python scripts/medir-carga.py`. Action «Tests (rápido)» ✔ y Pages ✔ (c221dc7).
+> Investigación de carga (27/11/2026, sin cambios en la app): main descarga 376 KB (gzip; Pages no sirve brotli) y la portada tarda 4,2 s en un móvil con Fast 3G y CPU ×4; el texto del Worker duplica el 98,5 % del script y el registro construye los 16 puzzles al cargar. Prototipos medidos (rama `investigacion/carga`): Worker sin duplicar + registro perezoso + fuentes → 223 KB y 2,3 s, en un solo HTML. **Decidido y hecho** en la sesión «carga más rápida» (abajo); informe en `docs/investigacion-carga.md`, resumen en DECISIONES.md. Medir: `python scripts/medir-carga.py`. Action «Tests (rápido)» ✔ y Pages ✔ (c221dc7).
 
 > Progreso de la noche 16 (Shape Mods): modelo genérico `crearShapeMod({ id, nombre, cortes })` (estado por piezas de kociemba.js + centros que se ven; la forma de cada pieza se calcula una vez) ✔ · geometría del Mirror Blocks (orden de grosores publicado, 57 mm) y del Ghost Cube (ajuste publicado a una foto; supuestos documentados) ✔ · centros con orientación visible deducidos de la simetría de su forma ✔ · grupo demostrado (Schreier–Sims) y estados con la forma de cubo ✔ · «resuelto» = se ve como el cubo resuelto ✔ · validador con un rechazo por restricción ✔ · «Colocar piezas» con la forma de cada pieza en la bandeja ✔ · pintar desactivado con mensaje ✔ · solver Kociemba + fase de centros (ganchos opcionales en kociemba.js; el 3x3 de WCA da exactamente las mismas soluciones) ✔ · scramble de estado aleatorio exacto ✔ · vista 3D con material metálico y 2D en proyección ✔ · sección Shape Mods disponible con `#/shapemods` y `#/shapemods/<id>`, «más pronto» Fisher / Windmill / Axis ✔ · 1000/1000 resueltos en los dos ✔ · Chromium real (8 combinaciones) sin errores ✔ · modo aprender de un shape mod ✘ (no se pidió).
+
+## Sesión: carga más rápida (Worker sin duplicar, registro perezoso, fuentes, e2)
+
+Por qué y cómo: DECISIONES.md («Sesión: carga más rápida»); cómo está hecho: ARQUITECTURA.md («Carga»). Partida:
+`test:humo` 55/55 ✔. Commits: f47820d (a), ac0f8ae (c), e415f28 (ajuste del primer uso), 1ba67de (scripts),
+e13ff64 (b), 9e98f19 (e2).
+
+### Lo medido (Chromium real, móvil 390 px, mediana de 5; las cinco versiones intercaladas: `docs/carga/final.json`)
+| Paso | KB (gzip) | Portada Fast 3G ×4 | con caché | Fast 3G ×1 | Slow 3G ×4 | Slow 3G ×1 | Predicho (KB · portada · caché) |
+|---|---|---|---|---|---|---|---|
+| main | 376,0 | 4,04 s | 2,29 s | 3,12 s | 11,07 s | 10,02 s | 376 · 4,16 · 2,08 |
+| + a · Worker sin duplicar | 242,1 | 3,02 s | 1,81 s | 2,23 s | 7,99 s | 7,22 s | 242 · 3,40 · 2,13 |
+| + c · registro perezoso | 243,2 | 2,34 s | 1,05 s | 2,09 s | 7,36 s | 7,11 s | — |
+| + b · fuentes | 231,3 | 2,30 s | 1,09 s | 2,00 s | 7,00 s | 6,84 s | 223 · 2,27 · 1,29 (a+b+c) |
+| + e2 · sin WebGL ni maquetación en la portada | **231,4** | **2,15 s** | 1,18 s | 1,99 s | 7,07 s | 6,82 s | 223 · 2,24 · 1,54 |
+
+- Igual o mejor que lo predicho en tiempo; 8 KB más que lo predicho porque Inter conserva el eje de peso entero (ver
+  abajo). Con caché, las diferencias entre c, b y e2 están dentro del ruido (±0,1 s).
+- Cada paso se midió también contra el anterior al terminarlo (`docs/carga/1-a.json`, `2-c.json`): a 4,51 → 3,35 s,
+  c 3,41 → 2,44 s (Fast 3G ×4).
+- HTML sin comprimir: 937 → 570 KB.
+
+### Primer uso de un puzzle (de elegirlo a ver su scramble; `scripts/medir-primer-uso.py`, `docs/carga/primer-uso.json`)
+| | main ×1 | c ×1 | final ×1 | main ×4 | c ×4 | final ×4 |
+|---|---|---|---|---|---|---|
+| 3x3 | 1452 ms | 1442 ms | 1422 ms | 1405 ms | 1391 ms | 1424 ms |
+| 7x7 | 114 ms | 161 ms | 157 ms | 319 ms | 386 ms | 392 ms |
+| Megaminx | 118 ms | 147 ms | 156 ms | 390 ms | 391 ms | 458 ms |
+| 4x4 vendado | 108 ms | 139 ms | 157 ms | 359 ms | 335 ms | 400 ms |
+
+- El 3x3 (lo que se abre al entrar en WCA) tarda lo mismo. Los rápidos, 30–70 ms más: construirlos en la página,
+  que antes se pagaba al cargar. Con c tal cual era peor (3x3 ×4 1,44 s frente a 1,30; 4x4 vendado 0,41 frente a
+  0,28 s): la página construía y solo entonces pedía el scramble. Arreglado pidiéndolo a la vez (e415f28).
+
+### Fuentes (b)
+- Woff2: 60 → 48 KB (Inter 35,2 → 28,6; Bricolage 17,0 → 13,5; JetBrains 7,7 → 6,0); en el HTML, 78,5 → 63,0 KB.
+- `scripts/comprobar-fuentes.py comparar` antes/después (portada, los 11 de WCA, 3 Cuboids, 2 Shape Mods, Bandaged
+  3x3/4x4/5x5, una solución con su reproductor, Colocar piezas y el modo aprender de 3x3 CFOP y principiantes,
+  2x2 Ortega, 4x4, Pyraminx, Skewb y Square-1; escritorio y móvil, oscuro y claro = 116 capturas): **ningún texto
+  cambia**; 101 idénticas, 3 con el tiempo medido de la solución (ahora se tapa) y 12 con diferencias de ±1 en
+  bordes de botones redondeados. Comparando el mismo HTML consigo mismo salen 8 así: es ruido del navegador.
+- Limitar el eje de Inter a 400–600 (20,2 KB) cambiaba el suavizado de algunas letras (~150 píxeles por pantalla):
+  descartado.
+
+### Comprobado
+- `test:humo` 59/59 ✔ tras cada paso; `tests/app.test.mjs` entero 31/31 ✔; `npm run tipos` ✔; registro, vista3d,
+  colocar, cuboides y shapemods ✔ (tras c); huellas sin cambios.
+- Tests nuevos: el código de los solvers va una vez en el HTML; importar el registro no construye nada; cada entrada
+  coincide con su puzzle; cada puzzle se construye una vez; la portada no construye ningún puzzle (página y
+  Workers) y al entrar en el 3x3 solo se construye ese; el scramble del primer uso se pide antes de construir en la
+  página; la portada no crea contextos WebGL. Los que fallan sin su cambio: comprobado.
+- Chromium real, `scripts/comprobar-entornos.py` (`docs/carga/entornos-final.log`): GitHub Pages (servidor local
+  con las cabeceras de Pages), artifact (iframe con sandbox y otro origen), file:// y sin Worker; escritorio y
+  móvil, oscuro y claro: portada → 3x3, Bandaged, 2x2x3, Mirror → scramble → resolver → reproducir hasta resuelto.
+  16/16 sin errores de consola ni scroll horizontal; con Worker en los tres primeros y en el hilo principal sin él.
+
+### Pendiente
+- d (varios ficheros para Pages, con service worker): con la PWA.
+- Maquetar la portada sigue siendo lo que más pesa en la CPU del móvil (~0,6 s ×4).
 
 ## Noche 16: Shape Mods (Mirror Blocks y Ghost Cube)
 

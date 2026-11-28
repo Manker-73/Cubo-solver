@@ -25,7 +25,7 @@ Antes de diseñar cambios estructurales, tomar decisiones técnicas o planificar
   * `colocar.js`: «Colocar piezas» genérico (noche 14): huecos, órbitas de cada pieza, bandeja por grupos de piezas iguales, bloques rígidos y la sesión con las acciones del usuario.
 
 * **`src/puzzles/` — Implementación de motores y solvers por puzle**
-  * `index.js`, `tpr4.js`, `vendado.js`: Registro central de puzles y variantes *bandaged*.
+  * `index.js`, `tpr4.js`, `vendado.js`: Registro central de puzles y variantes *bandaged*. El registro es **perezoso** (sesión «carga más rápida»): cada entrada da `id`, `nombre`, `categoria`, `costeScramble`, `capacidades` y `crear()` (con `import()`), y el puzzle se construye la primera vez que se pide con `cargarPuzzle(id)`, en la página y en el Worker. Nada debe construir puzzles al cargar la página (lo comprueban `tests/registro.test.mjs` y `tests/app.test.mjs`).
   * **Cubos NxN (`nxn*.js` —incluido `nxn-colocar.js`: generadores y nombres de tipos para colocar piezas—, `cubo-comun.js`, `cubo2.js`, `cubo3.js`, `cubo3-bloqueos.js`, `cubo-grande.js`)**: Soporte de 2x2 a 7x7, scrambles WCA sin redundancias, orientación libre, bloqueos NxN y detección de estados imposibles.
   * **Kociemba (`kociemba.js`)**: Solver en dos fases para 3x3.
   * **Poliedros y otros WCA**: `pyraminx.js`, `skewb.js`, `megaminx*.js`, `square1.js` / `square1-motor.js` (solver en 2 fases + detección de formas/paridades) y `fto*.js` (*Face-Turning Octahedron*, 72 pegatinas, cota inferior de 21 giros).
@@ -40,12 +40,14 @@ Antes de diseñar cambios estructurales, tomar decisiones técnicas o planificar
   * `main.js`, `motor.js`, `secciones.js`, `reproductor.js`, `bloqueos-ui.js`, `servicio.js`, `tema.js`, `plantilla.html`, `estilos.css`: Lógica de aplicación, controles, temas claro/oscuro y UI de bloqueos.
   * `colocar-ui.js`: editor «Colocar piezas» en pantalla completa (puzzle vacío 2D/3D, bandeja, Girar / Siguiente posición, validación en vivo).
   * `vista3d.js`, `escena3d.js`: Motor WebGL nativo a 60 FPS con animaciones de giro, resaltado con transparencia y pintado interactivo.
+  * `entrada.js`: punto de entrada del bundle para la página y el Worker (un solo script: la página crea el Worker desde su propio texto, `document.currentScript`).
   * `worker.js`: Web Worker dedicado para tablas de poda y búsquedas IDA* sin bloquear el hilo principal.
   * `fuentes/`: Tipografías `.woff2` locales incrustadas en el build.
 
 * **`scripts/`, `tests/` y `docs/` — Build, verificación y capturas**
   * `scripts/build.mjs`, `scripts/construir.mjs`, `scripts/fuentes.sh`: Empaquetado autónomo en `dist/index.html` y `dist/artifact.html`.
   * `scripts/tests.mjs`, `scripts/bench.mjs`, `tests/*.test.mjs`, `tests/resultados/*.json`: Tests unitarios, de integración y benchmarks en Node.js con resultados de referencia (*golden files*).
+  * `scripts/medir-carga.py`, `scripts/medir-primer-uso.py`: tiempos de carga de la portada y del primer uso de un puzzle en Chromium real (red y CPU simuladas).
   * `scripts/comprobar-*.py`: Scripts de comprobación visual y funcional en Python / Playwright (generan capturas y reportes en `docs/capturas/`, que **no se sube a git**: está en `.gitignore`; las capturas de una versión salen como artifact de la Action manual «Capturas (Chromium)», `.github/workflows/capturas.yml`). No añadas capturas al repositorio salvo una concreta que la documentación necesite.
 
 ---

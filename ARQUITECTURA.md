@@ -79,7 +79,8 @@ src/
     main.js         interfaz (solo usa la interfaz común): secciones, herramienta, navegación
     motor.js        dos Web Workers (principal: tablas del solver, validar, resolver; fondo: scrambles) con cola por prioridades (o el hilo principal si no hay)
     servicio.js     tablas, scrambles, validación y búsquedas (lo usan el Worker y el hilo principal)
-    worker.js       punto de entrada del Worker
+    entrada.js      punto de entrada del bundle, en la página Y en el Worker (sesión «carga más rápida»): en la página lee su propio texto (document.currentScript) para crear el Worker desde un blob y carga main.js; en el Worker carga worker.js
+    worker.js       lo que hace el Worker: responde a las peticiones con servicio.js
     escena3d.js     escena 3D sin WebGL: triángulos, colores, giro en curso, resaltado, selección por rayo
     vista3d.js      dibujo con WebGL (sin librerías), girar con ratón/dedo, animaciones, tocar para pintar
     reproductor.js  reproductor de una secuencia (scramble o solución): pasos animados, atrás, play/pausa
@@ -102,7 +103,7 @@ scripts/
   fuentes.sh      regenera los subconjuntos de src/app/fuentes/ (fonttools)
   comprobar-fto.py     FTO en Chromium real: tiempos (escritorio y CPU ×4) y recorrido desde la portada en 4 modos (capturas fto-*.jpg)
   comprobar-diseno.py  rediseño en Chromium real: portada, WCA (3x3 en 3D) y Bandaged, escritorio/móvil, oscuro/claro, sin red
-  construir.mjs   empaquetado con esbuild (el Worker va incrustado como texto y se crea desde un blob)
+  construir.mjs   empaquetado con esbuild: un solo script (src/app/entrada.js) para la página y el Worker; el código de los solvers va una vez
   bench.mjs       benchmark de todos los solvers (npm run bench)
   tests.mjs       lanzador de los tests por niveles (test:humo, test:rapido, test:solo)
   comprobar-3d.py comprobación en Chromium real de la vista 3D (Playwright; capturas y FPS en docs/capturas/)
@@ -169,7 +170,7 @@ Estas dos tablas están, como tipos, en `src/core/tipos.d.ts` (`DefinicionPuzzle
 ## Cómo añadir un puzzle
 
 1. Crear `src/puzzles/mipuzzle.js` que exporte `definirPuzzle({...})`, con `// @ts-check` en la primera línea (ver "Tipos").
-2. Añadir una línea en `src/puzzles/index.js` (y, si tiene campos propios, a `EXTRAS` en `tests/registro.test.mjs`).
+2. Añadir su entrada en `REGISTRO` (`src/puzzles/index.js`): `id`, `nombre`, `costeScramble`, `capacidades` y `crear: async () => (await import('./mipuzzle.js')).default` (el registro es perezoso: ver «Carga»). `tests/registro.test.mjs` comprueba que la entrada dice lo mismo que el puzzle construido. Si tiene campos propios, añadirlos a `EXTRAS` en ese test.
 3. Crear `tests/mipuzzle.test.mjs` usando `probarScrambles`, `probarSolver` y `debeRechazar` de `tests/util.mjs`.
 4. `npm run tipos` (menos de 1 s) y `npm run test:solo -- <área>`.
 
@@ -540,8 +541,36 @@ tal cual, se buscan las identidades de los centros sueltos que lo hacen alcanzab
 - (Desde la noche 11, al entrar en una sección con herramienta; en la portada no se elige ninguno.) El puzzle inicial se elige **al momento**, sin esperar a que los Workers respondan al ping (las peticiones esperan en la cola del motor). Los botones que necesitan un puzzle (*Resetear*, *Cargar*, *Resolver*, *Nuevo scramble*, *Copiar*) empiezan desactivados en el HTML y `seleccionar` los activa.
 - *Resolver* nunca ignora un clic: si las tablas del puzzle no están, muestra "Generando tablas… X s · la solución aparecerá al terminar." (el tiempo desde que empezaron a generarse; `asegurarTablas` comparte una sola petición y un solo aviso por puzzle) y la solución aparece sola al terminar.
 
+## Carga: un solo script y registro perezoso (sesión «carga más rápida», 27–28/11/2026)
+Medido y razonado en `docs/investigacion-carga.md` y DECISIONES.md; cómo medirlo: `scripts/medir-carga.py` (portada, red
+y CPU simuladas) y `scripts/medir-primer-uso.py` (de elegir un puzzle a ver su scramble).
+- **Un solo script para la página y el Worker** (`src/app/entrada.js`). En la página, `document.currentScript.textContent`
+  (síncrono, al empezar el script) es el código del Worker: `motor.js` crea el Worker desde un blob con ese texto. Si no
+  se puede leer (un `<script src>` externo), `codigoWorker` es null y el motor calcula en el hilo principal, como sin
+  Worker. En el Worker (`typeof document === 'undefined'`) solo se carga `worker.js`. Con `import()` dinámico y sin
+  *code splitting*, esbuild deja cada lado en una función que solo se ejecuta si se llama: cada hilo ejecuta lo suyo.
+- **Registro perezoso** (`src/puzzles/index.js`): `REGISTRO` son entradas con lo que necesitan la portada, los
+  selectores y las precargas (`id`, `nombre`, `categoria`, `costeScramble`, `capacidades`) y `crear()`, que importa el
+  módulo del puzzle (`import()`) y lo construye. `cargarPuzzle(id)` (asíncrona, memoizada: dos peticiones a la vez
+  comparten una construcción) lo construye la primera vez; `puzzleCargado(id)` lo da sin esperar si ya está;
+  `existePuzzle(id)`; `puzzlesConstruidos()`; `todosLosPuzzles()` (tests y scripts). `BANDAGED = [{ url, id }]`:
+  `vendado-4x4` y `vendado-5x5` se construyen con su base (`cargarPuzzle('4x4')`) al pedirlos. Sin `Proxy`.
+- `servicio.js`: `atender(msg)` es asíncrona (construye el puzzle de la petición si hace falta); `op: 'construidos'`
+  devuelve `puzzlesConstruidos()` (para los tests: `cuboSolver.construidos()` y `cuboSolver.construidosWorkers()`).
+- `main.js`: la portada no construye ningún puzzle ni comprueba WebGL (`st.webgl` se calcula la primera vez que se
+  pregunta, al abrir un puzzle) ni lee la maquetación (`vigilarResolverFijo` usa `ResizeObserver`). `seleccionar(id)`
+  espera a `cargarPuzzle` la primera vez; `turnoSeleccion` descarta la construcción si mientras tanto se eligió otro.
+- **Fuentes**: Inter variable (eje entero: limitarlo cambiaba el suavizado), Bricolage Grotesque 800 y JetBrains
+  Mono 500; todas solo con ASCII, el español y los signos de la interfaz (`scripts/fuentes.sh`;
+  `scripts/comprobar-fuentes.py` saca el inventario de lo que se usa y compara capturas píxel a píxel).
+- Lo comprueban: `tests/registro.test.mjs` (importar el registro no construye nada; cada entrada coincide con su puzzle;
+  cada puzzle se construye una vez) y `tests/app.test.mjs` (el código va una vez; la portada no construye ningún puzzle,
+  ni en la página ni en los Workers, y al entrar en el 3x3 solo se construye ese; la portada no crea contextos WebGL).
+  En Chromium real, `scripts/comprobar-entornos.py`: Pages, artifact (iframe con sandbox y otro origen), file:// y sin
+  Worker.
+
 ## Interfaz: cambio de puzzle, scrambles precargados y Workers
-- **Al elegir un puzzle, los dos paneles cambian a la vez, en el mismo instante** (`seleccionar` es síncrona hasta ahí): el de resolver, y el del scramble con su etiqueta y, si no hay uno precargado, el puzzle nuevo resuelto y "Generando scramble…" (copiar, cargar y el reproductor del scramble desactivados). Las tablas del solver se piden después y no retrasan el scramble.
+- **Al elegir un puzzle, los dos paneles cambian a la vez, en el mismo instante** (`seleccionar` es síncrona hasta ahí, salvo la primera vez que se usa ese puzzle: antes espera a construirlo con `cargarPuzzle`, ver «Carga»): el de resolver, y el del scramble con su etiqueta y, si no hay uno precargado, el puzzle nuevo resuelto y "Generando scramble…" (copiar, cargar y el reproductor del scramble desactivados). Las tablas del solver se piden después y no retrasan el scramble.
 - **Precargas** (`st.precargados`: un scramble listo por puzzle). Al mostrar uno se pide el siguiente de ese puzzle (prioridad media) y los de los demás puzzles (prioridad baja), de menor a mayor `costeScramble`. Sin Worker, solo los que no necesitan tablas. En el móvil (`(max-width: 700px), (pointer: coarse)`), los de más de 500 ms (Square-1 y 3x3) no se precargan hasta que el usuario elige ese puzzle una vez. Las tablas del solver (las grandes del 6x6/7x7, por ejemplo) nunca se precargan: se generan al elegir el puzzle.
 - **Respuestas obsoletas**: cada petición lleva un `id` (`motor.pedir(...).id`); `st.gen` cambia en cada selección o "Nuevo scramble" y `st.sel` en cada selección. Una respuesta de otra generación no se muestra; si es un scramble, se guarda como precargado de su puzzle. Lo mismo con "Resolver" y con las tablas (el aviso solo se actualiza si sigue siendo el mismo puzzle).
 - **Motor** (`motor.js`): dos Workers con el mismo código. Cada uno hace una tarea cada vez y la cola está en el hilo principal, ordenada por prioridad (alta = lo que pide el usuario, media = el siguiente del puzzle actual, baja = precargas). El **principal** hace lo que necesita las tablas del solver (inicializar, validar, resolver) y nunca recibe precargas. El **de fondo** hace los scrambles; una precarga solo se le envía si está libre y no espera nada más urgente, y si está ocupado con una precarga cuando el usuario pide un scramble, ese scramble va al principal si está libre. `subirPrioridad(id)` sube una precarga en cola cuando el usuario la necesita. Si un Worker falla, lo pendiente se rehace en el otro; si fallan los dos, en el hilo principal.

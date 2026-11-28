@@ -187,6 +187,10 @@ python3 scripts/comprobar-colocar.py         # «Colocar piezas» en pantalla co
 PUZZLES=cuboids python3 scripts/comprobar-colocar.py  # «Colocar piezas» en los tres cuboides, las 8 combinaciones
 python3 scripts/comprobar-cuboides.py        # Cuboids: portada → cada cuboide → scramble → resolver → reproducir (8 combinaciones)
 python3 scripts/comprobar-shapemods.py       # Shape Mods: Mirror y Ghost: scramble → resolver → a mitad de giro → final → colocar (8 combinaciones, capturas)
+python3 scripts/comprobar-entornos.py        # GitHub Pages, artifact (iframe con sandbox), file:// y sin Worker: portada → un puzzle por sección → scramble → resolver → reproducir
+python3 scripts/comprobar-fuentes.py inventario   # pesos y caracteres de cada fuente que se ven; «comparar A B»: capturas píxel a píxel de dos builds
+python3 scripts/medir-carga.py               # KB y tiempo de la portada (Fast/Slow 3G, CPU ×1/×4, con y sin caché); varias versiones intercaladas con --dir/--etiqueta
+python3 scripts/medir-primer-uso.py          # de elegir un puzzle (3x3, 7x7, Megaminx, 4x4 vendado) a ver su scramble
 ```
 
 **Capturas**: los scripts las escriben en `docs/capturas/` (se sobrescriben en cada ejecución). Esa carpeta

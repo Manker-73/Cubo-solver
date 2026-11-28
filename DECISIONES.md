@@ -1188,7 +1188,7 @@ bloqueada menos).
   dibujo sí: sirve sin WebGL y para «Colocar piezas» en 2D.
 - Pintar está desactivado (`avisoPintar`, como en los vendados 4x4/5x5): de un solo color no hay nada que pintar.
 
-# Investigación: tamaño y carga de la app (27/11/2026) — DECISIÓN PENDIENTE
+# Investigación: tamaño y carga de la app (27/11/2026) — decidido: a, c y b hechos (ver «Sesión: carga más rápida»)
 
 Informe completo, con método, cifras y cómo reproducirlo: `docs/investigacion-carga.md`; prototipos en la rama
 `investigacion/carga` (no fusionada). main no cambia de comportamiento (solo se añaden `scripts/medir-carga.py` y
@@ -1225,3 +1225,85 @@ Informe completo, con método, cifras y cómo reproducirlo: `docs/investigacion-
 - **Descartado**: evaluación diferida del código por secciones dentro del HTML (parsear no es el problema; lo que
   costaba era ejecutar, y lo arregla c), terser (1–3 %), cambiar de alojamiento solo por brotli.
 - Pendiente de investigar: **maquetar** la portada (~0,12 s ×1, ~0,6 s ×4) es lo siguiente que más pesa.
+
+# Sesión: carga más rápida (27–28/11/2026) — Worker sin duplicar, registro perezoso, fuentes, e2
+
+Lo que recomendó la investigación (arriba), hecho en main paso a paso, con un commit y una medición por paso
+(`scripts/medir-carga.py`, versiones intercaladas: ver «Medir con la máquina cargada»). Cifras: ESTADO.md.
+
+## a · La página y el Worker son el mismo script
+- `src/app/entrada.js` es el punto de entrada de los dos. En la página, `document.currentScript.textContent` se lee
+  al empezar (síncrono: después ya no vale) y es el código con el que `motor.js` crea el Worker desde un blob. En el
+  Worker (`typeof document === 'undefined'`) se carga `worker.js`. Con `import()` y sin *code splitting*, esbuild
+  deja cada lado en una función que solo se ejecuta si se llama: el Worker no ejecuta la interfaz y la página no
+  ejecuta `worker.js`.
+- Por qué funciona en todas partes: GitHub Pages, file:// y el artifact sirven el HTML con el script en línea (el
+  artifact lo mete en un iframe con sandbox y otro origen; los blobs siguen valiendo). Si `currentScript` no está o
+  es un `<script src>` (no es el caso de ningún build), `codigoWorker` es null y se calcula en el hilo principal,
+  como sin Worker. Comprobado en Chromium con `scripts/comprobar-entornos.py` (los cuatro entornos).
+- Test: el código de los solvers va una sola vez en el HTML y el Worker se crea con el mismo texto que el script.
+
+## c · Registro perezoso (sin Proxy)
+- `REGISTRO` son entradas con lo que necesitan la portada, los selectores y las precargas (id, nombre, categoría,
+  coste del scramble, capacidades) y `crear()`, que hace `import()` del módulo del puzzle. Importar estático no
+  basta: el código de nivel superior de los módulos (geometrías, tablas de piezas, la comprobación de los
+  algoritmos de OLL/PLL…) se ejecutaría igual al cargar (medido en Node: ~170 ms con todo, 115 ms sin construir,
+  33 ms solo con las fábricas). Por eso `cargarPuzzle` es asíncrona.
+- Sin `Proxy` (lo pidió el prompt): `puzzleCargado(id)` da el puzzle ya construido y la app lo usa así después de
+  `await cargarPuzzle(id)` en `seleccionar`; `servicio.js` (Worker o hilo principal) hace lo mismo con cada
+  petición, y `atender` pasó a ser asíncrona.
+- Carreras: `seleccionar` lleva un turno; si mientras se construía se eligió otro puzzle, la construcción se
+  descarta (queda hecha para la próxima vez).
+- Tests que cambiaron de forma (y siguen comprobando lo mismo):
+  - Los que recorrían `PUZZLES` (lista de puzzles construidos) ahora usan `await todosLosPuzzles()` (los construye
+    todos, en el mismo orden) o `cargarPuzzle(id)`; las aserciones no cambian.
+  - En `app.test.mjs`, la interfaz arranca en una microtarea (por el `import()` de entrada.js): después de crear
+    la ventana de jsdom se cede una vuelta (`trasArrancar`) antes de mirar el DOM. «Etiqueta del tipo de scramble» y
+    «respuesta tardía» hacían clic en un chip y miraban el resultado en la misma vuelta; la primera vez que se elige
+    un puzzle ahora hay que esperar a construirlo (microtareas), así que vacían las microtareas
+    (`vaciarMicrotareas`, sin reloj) antes de mirar. Lo que comprueban («al momento», sin esperar al Worker) sigue
+    igual: con el puzzle ya construido no hay ninguna espera.
+  - Nuevos: importar el registro no construye nada; cada entrada dice lo mismo que su puzzle construido; cada
+    puzzle se construye una vez; la portada no construye ningún puzzle (página y Workers, `op: 'construidos'`) y al
+    entrar en el 3x3 solo se construye ese.
+- Mismos scrambles y soluciones con la misma semilla: el orden de las peticiones al Worker no cambia y las huellas
+  (`tests/huellas.json`) y las referencias de los solvers no se tocaron.
+
+## c (ajuste) · Primer uso de un puzzle
+- Medido (`scripts/medir-primer-uso.py`, de elegirlo a ver su scramble): con c tal cual, la primera vez la página
+  construía el puzzle y SOLO ENTONCES pedía el scramble al Worker, que lo construía otra vez: el 3x3 con CPU ×4
+  pasaba de 1,30 a 1,44 s y el 4x4 vendado de 0,28 a 0,41 s.
+- Arreglo: si el puzzle no tiene bloques, el scramble se pide al Worker en cuanto se elige (la misma petición que
+  haría `nuevoScramble`, que la encuentra en camino; mismo orden, mismos scrambles), y los dos lo construyen a la vez.
+- Lo que no funcionó: pedir a los Workers un `op: 'construir'` aparte. Los ocupaba, y la petición del scramble, que
+  esperaba en la cola del motor, solo se enviaba cuando el hilo principal quedaba libre, es decir, después de que
+  la página acabara de construir: más lento (3x3 ×4: 1,57 s). Se quitó.
+- Lo que queda: los puzzles rápidos (7x7, Megaminx, 4x4 vendado) tardan 30–50 ms más con CPU ×1 y hasta ~70 ms más
+  con ×4 la primera vez (construirlos en la página, que antes se hacía al cargar). Por debajo de lo que se nota y muy por
+  debajo de lo que se gana en la portada (~1 s con ×4). El 3x3 tarda lo mismo que en main.
+
+## b · Fuentes
+- Inventario de lo que se ve de verdad (`scripts/comprobar-fuentes.py inventario`, todas las pantallas): Inter 400,
+  500 y 600 (la cursiva de 400 es sintética), Bricolage Grotesque 800 y JetBrains Mono 500 (y 400, que se dibuja con
+  la única cara, la de 500). Bricolage y JetBrains ya eran un fichero de un peso.
+- Caracteres: de todo Latin-1 a ASCII + el español en las dos cajas + los signos de la interfaz (lista en
+  `scripts/fuentes.sh`).
+- **Inter se deja con el eje de peso entero (100–900)**. Limitarlo a 400–600 (`fontTools.varLib.instancer`) la
+  dejaba en 20 KB en vez de 29 KB, pero recalcula las variaciones con redondeo: el suavizado de algunas letras
+  cambiaba (~150 píxeles por pantalla; a la vista, igual). Se pidió el mismo aspecto, y se comprobó píxel a píxel
+  (`scripts/comprobar-fuentes.py comparar`, ver ESTADO), así que solo se recorta el juego de caracteres.
+
+## e2 · La portada no comprueba WebGL ni lee la maquetación
+- `st.webgl` se calcula la primera vez que se pregunta (al abrir un puzzle con vista 3D); el aviso «3D no
+  disponible» solo se decide con un puzzle a la vista. `vigilarResolverFijo` deja que el `ResizeObserver` haga la
+  primera medida (después de maquetar) en vez de leer `offsetHeight` al arrancar, que forzaba una maquetación.
+- Test: en la portada no se llama a `getContext`; al abrir el 3x3 sí (y en jsdom, sin WebGL, sale el aviso). La
+  espera hasta que el arranque termina es por condición (el motor sabe dónde calcula) y vaciando tareas, sin reloj.
+
+## Medir con la máquina cargada
+- Las primeras mediciones de la sesión salían más lentas que las de la investigación con el mismo HTML (4,9 frente
+  a 4,2 s) porque el portátil tenía otras aplicaciones abiertas. `medir-carga.py` y `medir-primer-uso.py` aceptan
+  varias versiones (`--dir … --etiqueta …`) y las miden intercaladas (una repetición de cada una por turno): las
+  comparaciones son justas aunque el ruido cambie. Las tablas comparan cada paso con el anterior medido a la vez.
+- Los scripts fallan si su servidor no arranca (un puerto ocupado por un servidor de otra medición servía otra
+  versión sin avisar).
