@@ -139,7 +139,8 @@ async def main():
     servidores, bases = [], []
     for k, d in enumerate(dirs):
         srv = subprocess.Popen(['node', os.path.join(RAIZ, 'scripts/servidor-pages.mjs'), os.path.join(RAIZ, d), str(a.puerto + k), a.comp], stdout=subprocess.PIPE)
-        srv.stdout.readline()
+        # si el puerto está ocupado (un servidor de otra medición), se mediría otra versión sin saberlo
+        assert b'sirviendo' in srv.stdout.readline(), f'no arranca el servidor en {a.puerto + k} (¿puerto ocupado?)'
         servidores.append(srv)
         bases.append(f'http://127.0.0.1:{a.puerto + k}/' + ('' if a.pagina == 'index.html' else a.pagina))
     todo = {e: {'etiqueta': e, 'dir': d, 'comp': a.comp, 'reps': a.reps, 'condiciones': {}} for e, d in zip(etiquetas, dirs)}

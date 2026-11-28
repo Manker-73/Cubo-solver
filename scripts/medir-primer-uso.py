@@ -55,7 +55,8 @@ async def main():
     srvs, bases = [], []
     for k, d in enumerate(dirs):
         s = subprocess.Popen(['node', os.path.join(RAIZ, 'scripts/servidor-pages.mjs'), os.path.join(RAIZ, d), str(a.puerto + k)], stdout=subprocess.PIPE)
-        s.stdout.readline(); srvs.append(s); bases.append(f'http://127.0.0.1:{a.puerto + k}/')
+        assert b'sirviendo' in s.stdout.readline(), f'no arranca el servidor en {a.puerto + k} (¿puerto ocupado?)'
+        srvs.append(s); bases.append(f'http://127.0.0.1:{a.puerto + k}/')
     res = {e: {} for e in etiquetas}
     try:
         async with async_playwright() as p:

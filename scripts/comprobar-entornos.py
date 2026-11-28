@@ -133,7 +133,7 @@ async def main():
     solo = os.environ.get('SOLO')
     entornos = (os.environ.get('ENTORNOS') or 'pages,file,artifact,sinworker').split(',')
     srv = subprocess.Popen(['node', os.path.join(RAIZ, 'scripts/servidor-pages.mjs'), DIST, str(P_PAGES)], stdout=subprocess.PIPE)
-    srv.stdout.readline()
+    assert b'sirviendo' in srv.stdout.readline(), f'no arranca el servidor en {P_PAGES} (¿puerto ocupado?)'
     servir_artifact()
     fallos, resumen = [], {}
     try:
