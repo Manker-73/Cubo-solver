@@ -1713,3 +1713,31 @@ test('app: la portada no construye ningún puzzle (página y Workers); al entrar
     w.close();
   }
 });
+
+test('app: la portada no crea ningún contexto WebGL (se comprueba al abrir un puzzle)', async (t) => {
+  // sesión «carga más rápida» (e2): saber si hay WebGL cuesta crear un contexto; la portada no lo necesita
+  const llamadas = [];
+  const ctx = await abrir(t, {
+    url: 'https://localhost/', esperarHerramienta: false,
+    beforeParse: (win) => {
+      const original = win.HTMLCanvasElement.prototype.getContext;
+      win.HTMLCanvasElement.prototype.getContext = function (...a) { llamadas.push(a[0]); return original.apply(this, a); };
+    },
+  });
+  if (!ctx) return;
+  const { w, doc, errores } = ctx;
+  await ctx.hasta(() => doc.querySelector('a.tarjeta-seccion'));
+  // el arranque ha terminado cuando el motor sabe dónde calcula (los Workers han respondido o se ha
+  // pasado al hilo principal); luego se vacían las microtareas y una vuelta de tareas (sin esperar reloj)
+  await ctx.hasta(() => doc.getElementById('modo-calculo').dataset.modo);
+  await vaciarMicrotareas();
+  await espera(0);
+  assert.deepEqual(llamadas, [], 'ningún getContext en la portada');
+  w.location.hash = '#/wca/3x3';
+  await herramientaLista(ctx, 'wca', '3x3');
+  assert.ok(llamadas.includes('webgl'), 'al abrir un puzzle se comprueba si hay WebGL');
+  // jsdom no tiene WebGL: todo en 2D y el aviso a la vista
+  assert.equal(doc.getElementById('sin-3d').hidden, false);
+  assert.deepEqual(errores, []);
+  w.close();
+});

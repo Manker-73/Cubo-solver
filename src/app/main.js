@@ -51,7 +51,11 @@ const st = {
   listos: new Set(), // puzzles con las tablas ya generadas (donde se calcula)
   historial: [],     // estados anteriores del editor (Deshacer)
   // Vista 3D
-  webgl: false,      // hay WebGL (si no, todo en 2D)
+  // Hay WebGL (si no, todo en 2D). Se comprueba la primera vez que hace falta, no al cargar: crear un
+  // contexto WebGL cuesta y la portada no lo necesita (sesión «carga más rápida»). `false` si se pierde.
+  webglComprobado: /** @type {boolean | null} */ (null),
+  get webgl() { if (this.webglComprobado === null) this.webglComprobado = hayWebGL(document); return this.webglComprobado; },
+  set webgl(v) { this.webglComprobado = v; },
   modo: { previa: '3d', edicion: '2d', solucion: '3d' }, // 2D o 3D en cada sitio (se recuerda)
   v3d: { previa: null, editor: null },
   pasoScramble: 0,   // paso del reproductor del scramble (n = scramble aplicado)
@@ -94,7 +98,7 @@ const ocupado = () => !!st.ocupado && !!st.p && st.ocupado === claveP(st.p);
 
 // ---------- Vista 3D ----------
 function usar3D(cual) {
-  if (!st.webgl || !st.p || !st.p.vista3D) return false;
+  if (!st.p || !st.p.vista3D || !st.webgl) return false;
   if (cual === 'previa') return st.modo.previa === '3d';
   return (st.sol ? st.modo.solucion : st.modo.edicion) === '3d';
 }
@@ -118,14 +122,14 @@ function vista3D(cual) {
 }
 function guardarModos() { try { localStorage.setItem('cubo-solver:modo3d', JSON.stringify(st.modo)); } catch { /* */ } }
 function pintarModos() {
-  const tiene = st.webgl && st.p && !!st.p.vista3D;
+  const tiene = !!st.p && !!st.p.vista3D && st.webgl;
   for (const [id, cual] of [['modo-previa', 'previa'], ['modo-editor', 'editor']]) {
     const g = $(id);
     g.hidden = !tiene;
     const activo = usar3D(cual) ? '3d' : '2d';
     for (const b of g.querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.modo === activo));
   }
-  $('sin-3d').hidden = st.webgl;
+  $('sin-3d').hidden = !st.p || st.webgl; // (sin puzzle, como en la portada, no hace falta saberlo)
   $('centrar-previa').hidden = !usar3D('previa');
   $('centrar-editor').hidden = !usar3D('editor');
 }
@@ -1363,9 +1367,11 @@ function ordenarPaneles(seccion) {
 function vigilarResolverFijo() {
   const panel = $('panel-resolver');
   const mirar = () => panel.classList.toggle('cabe', panel.offsetHeight + 32 <= window.innerHeight);
-  if (typeof ResizeObserver === 'function') new ResizeObserver(mirar).observe(panel);
   window.addEventListener('resize', mirar);
-  mirar();
+  // El ResizeObserver lo mide al observarlo y cada vez que cambia de tamaño, después de maquetar (sin forzar
+  // una maquetación al arrancar; sesión «carga más rápida»). Sin él, se mide ya.
+  if (typeof ResizeObserver === 'function') new ResizeObserver(mirar).observe(panel);
+  else mirar();
 }
 
 /**
@@ -1492,7 +1498,6 @@ export function iniciar({ codigoWorker = null } = {}) {
   }
   $('centrar-previa').addEventListener('click', () => st.v3d.previa && st.v3d.previa.vistaInicial());
   $('centrar-editor').addEventListener('click', () => st.v3d.editor && st.v3d.editor.vistaInicial());
-  st.webgl = hayWebGL(document);
   try { Object.assign(st.modo, JSON.parse(localStorage.getItem('cubo-solver:modo3d') || '{}')); } catch { /* */ }
   // Para el modo aprender (y para depurar): vistas 3D y resaltado de piezas
   window.cuboSolver = {
