@@ -61,6 +61,10 @@ e13ff64 (b), 9e98f19 (e2).
   móvil, oscuro y claro: portada → 3x3, Bandaged, 2x2x3, Mirror → scramble → resolver → reproducir hasta resuelto.
   16/16 sin errores de consola ni scroll horizontal; con Worker en los tres primeros y en el hilo principal sin él.
 
+### Action y Pages
+- «Tests (rápido)» ✔ en cada push de la sesión (ac0f8ae, e13ff64, 9e98f19 y 81d733c) y Pages ✔ (81d733c). La web
+  publicada funciona con Worker y sin errores (escritorio y móvil). Artifact republicado (versión 27, build de 9e98f19).
+
 ### Pendiente
 - d (varios ficheros para Pages, con service worker): con la PWA.
 - Maquetar la portada sigue siendo lo que más pesa en la CPU del móvil (~0,6 s ×4).
