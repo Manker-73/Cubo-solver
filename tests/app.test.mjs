@@ -482,7 +482,7 @@ function instalarWorker(window, registro) {
       registro.workers.push(this);
       vivos.add(this);
     }
-    postMessage(m) { registro.peticiones.push(m.op); if (registro.mensajes) registro.mensajes.push({ ...m, a: this }); if (m && m.id != null) this.pendientes.add(m.id); this.w.postMessage(m); }
+    postMessage(m) { registro.peticiones.push(m.op); if (registro.mensajes) registro.mensajes.push({ ...m, a: this, ...(registro.alEnviar ? registro.alEnviar() : {}) }); if (m && m.id != null) this.pendientes.add(m.id); this.w.postMessage(m); }
     terminate() { vivos.delete(this); this.pendientes.clear(); this.w.terminate(); }
   };
 }
@@ -1689,8 +1689,16 @@ test('app: la portada no construye ningún puzzle (página y Workers); al entrar
     assert.match(doc.getElementById('modo-calculo').textContent, /Web Worker/);
     assert.deepEqual([...w.cuboSolver.construidos()], [], 'página: ninguno en la portada');
     assert.deepEqual(JSON.parse(JSON.stringify(await w.cuboSolver.construidosWorkers())), { principal: [], fondo: [] }, 'Workers: ninguno en la portada');
+    // qué tenía construido la página al enviar cada mensaje a un Worker
+    reg.alEnviar = () => ({ enPagina: [...w.cuboSolver.construidos()] });
     w.location.hash = '#/wca/3x3';
     await herramientaLista(ctx, 'wca', '3x3');
+    // Primer uso: el scramble se pide al Worker sin esperar a que la página construya el 3x3 (los dos lo
+    // construyen a la vez); antes, la página lo construía y solo entonces lo pedía (el Worker esperaba).
+    const primero = reg.mensajes.find((m) => m.op === 'scramble' && m.puzzle === '3x3');
+    assert.ok(primero, 'se pide un scramble del 3x3');
+    assert.deepEqual(primero.enPagina, [], 'el scramble se pide antes de tener el 3x3 construido en la página');
+    assert.equal(reg.mensajes.filter((m) => m.op === 'scramble' && m.puzzle === '3x3' && m.enPagina.length === 0).length, 1, 'una sola petición (nuevoScramble la encuentra en camino)');
     assert.deepEqual([...w.cuboSolver.construidos()], ['3x3'], 'página: solo el 3x3');
     const enWorkers = JSON.parse(JSON.stringify(await w.cuboSolver.construidosWorkers()));
     // (copias: los arrays de jsdom son de otro «realm» y deepStrictEqual los da por distintos)

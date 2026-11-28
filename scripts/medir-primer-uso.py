@@ -19,7 +19,7 @@ MEDIR = """(hash) => new Promise((ok) => {
   const i = setInterval(() => {
     const s = document.getElementById('scramble'), c = document.getElementById('cargar');
     if (location.hash.startsWith(hash.split('?')[0]) && s && s.textContent.length > 0 && !s.classList.contains('generando')
-        && document.querySelector('#vista-scramble svg, #vista-scramble canvas') && c && !c.disabled) {
+        && document.querySelector('#vista-scramble:not([hidden]) svg, #vista3d-scramble:not([hidden]) canvas') && c && !c.disabled) {
       clearInterval(i); ok(performance.now() - t0);
     }
   }, 10);
@@ -59,7 +59,7 @@ async def main():
     res = {e: {} for e in etiquetas}
     try:
         async with async_playwright() as p:
-            b = await p.chromium.launch(executable_path=CHROME, args=['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'])
+            b = await p.chromium.launch(executable_path=CHROME)
             for cpu in (1, 4):
                 for nombre, hash_ in PUZZLES:
                     vals = {e: [] for e in etiquetas}

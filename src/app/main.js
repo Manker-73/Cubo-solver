@@ -356,6 +356,11 @@ async function seleccionar(id) {
   const turno = ++turnoSeleccion;
   if (!puzzleCargado(id)) {
     if (!existePuzzle(id)) return;
+    // La primera vez se construye aquí y, A LA VEZ, en el Worker: si no tiene bloques, su scramble se pide ya
+    // (la misma petición que haría nuevoScramble al acabar de construirlo, que la encontrará en camino; el
+    // Worker construye el puzzle al recibirla). Así el primer uso no espera a las dos construcciones una tras
+    // otra. (Pedirle además al Worker solo que lo construya lo retrasaba: ver DECISIONES, «carga más rápida».)
+    if ((st.seccion !== 'bandaged' || !st.bloqueos.length) && !st.precargados.has(id)) pedirScramble({ id }, 'alta').catch(() => {});
     try {
       await cargarPuzzle(id);
     } catch (err) {
